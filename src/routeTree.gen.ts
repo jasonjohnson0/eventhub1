@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MarketingSubscribeRouteImport } from './routes/marketing.subscribe'
+import { Route as MarketingConfirmRouteImport } from './routes/marketing.confirm'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -43,6 +44,11 @@ const IndexRoute = IndexRouteImport.update({
 const MarketingSubscribeRoute = MarketingSubscribeRouteImport.update({
   id: '/marketing/subscribe',
   path: '/marketing/subscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketingConfirmRoute = MarketingConfirmRouteImport.update({
+  id: '/marketing/confirm',
+  path: '/marketing/confirm',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/moderation': typeof AuthenticatedAdminModerationRoute
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/auth/callback'
     | '/invite/$token'
+    | '/marketing/confirm'
     | '/marketing/subscribe'
     | '/admin/audit'
     | '/admin/moderation'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/auth/callback'
     | '/invite/$token'
+    | '/marketing/confirm'
     | '/marketing/subscribe'
     | '/admin/audit'
     | '/admin/moderation'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/auth/callback'
     | '/invite/$token'
+    | '/marketing/confirm'
     | '/marketing/subscribe'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/moderation'
@@ -219,6 +231,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   InviteTokenRoute: typeof InviteTokenRoute
+  MarketingConfirmRoute: typeof MarketingConfirmRoute
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
 }
 
@@ -250,6 +263,13 @@ declare module '@tanstack/react-router' {
       path: '/marketing/subscribe'
       fullPath: '/marketing/subscribe'
       preLoaderRoute: typeof MarketingSubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketing/confirm': {
+      id: '/marketing/confirm'
+      path: '/marketing/confirm'
+      fullPath: '/marketing/confirm'
+      preLoaderRoute: typeof MarketingConfirmRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invite/$token': {
@@ -392,6 +412,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   InviteTokenRoute: InviteTokenRoute,
+  MarketingConfirmRoute: MarketingConfirmRoute,
   MarketingSubscribeRoute: MarketingSubscribeRoute,
 }
 export const routeTree = rootRouteImport
