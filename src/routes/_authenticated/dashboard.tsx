@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar as CalendarIcon, PlusCircle, Users, Megaphone } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -8,31 +9,77 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Dashboard() {
-  const { user } = Route.useRouteContext() as { user: { email?: string } };
+  const { user, isAdmin } = Route.useRouteContext();
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="mx-auto max-w-4xl space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Welcome{user.email ? `, ${user.email}` : ""}</h1>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              await supabase.auth.signOut();
-              window.location.href = "/";
-            }}
-          >
-            Sign out
-          </Button>
+    <div className="p-8">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Welcome back{user.email ? `, ${user.email.split("@")[0]}` : ""}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage your calendar, staff, and sponsorship from one place.
+          </p>
         </div>
-        <p className="text-muted-foreground">
-          Phase 1a scaffolding is live. Calendar, event management, sponsorship, and admin dashboards land in Phase 1c.
-        </p>
-        <div className="flex gap-3">
-          <Button asChild>
-            <Link to="/">Home</Link>
-          </Button>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <QuickCard
+            title="Your calendar"
+            desc="Month, week, and day views with drag-drop rescheduling."
+            icon={<CalendarIcon className="h-5 w-5" />}
+            action={<Link to="/calendar">Open calendar</Link>}
+          />
+          <QuickCard
+            title="Create an event"
+            desc="Publish an event visible on the public calendar in seconds."
+            icon={<PlusCircle className="h-5 w-5" />}
+            action={<Link to="/calendar">Go to calendar</Link>}
+          />
+          <QuickCard
+            title="Workspace staff"
+            desc="Invite staff by email to manage your events with you."
+            icon={<Users className="h-5 w-5" />}
+            action={<Link to="/settings">Manage staff</Link>}
+          />
+          {isAdmin && (
+            <QuickCard
+              title="Admin overview"
+              desc="Moderation, users, audit log, and sponsorship revenue."
+              icon={<Megaphone className="h-5 w-5" />}
+              action={<Link to="/admin">Open admin</Link>}
+            />
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function QuickCard({
+  title,
+  desc,
+  icon,
+  action,
+}: {
+  title: string;
+  desc: string;
+  icon: React.ReactNode;
+  action: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          {icon}
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">{desc}</p>
+        <Button asChild size="sm" variant="secondary">
+          {action}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
