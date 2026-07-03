@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MarketingUnsubscribeRouteImport } from './routes/marketing.unsubscribe'
 import { Route as MarketingSubscribeRouteImport } from './routes/marketing.subscribe'
 import { Route as MarketingConfirmRouteImport } from './routes/marketing.confirm'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
@@ -39,6 +40,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketingUnsubscribeRoute = MarketingUnsubscribeRouteImport.update({
+  id: '/marketing/unsubscribe',
+  path: '/marketing/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MarketingSubscribeRoute = MarketingSubscribeRouteImport.update({
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
+  '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
+  '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
+  '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/_authenticated/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
@@ -182,6 +191,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/marketing/confirm'
     | '/marketing/subscribe'
+    | '/marketing/unsubscribe'
     | '/admin/audit'
     | '/admin/moderation'
     | '/admin/sponsorship'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/marketing/confirm'
     | '/marketing/subscribe'
+    | '/marketing/unsubscribe'
     | '/admin/audit'
     | '/admin/moderation'
     | '/admin/sponsorship'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/marketing/confirm'
     | '/marketing/subscribe'
+    | '/marketing/unsubscribe'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/moderation'
     | '/_authenticated/admin/sponsorship'
@@ -233,6 +245,7 @@ export interface RootRouteChildren {
   InviteTokenRoute: typeof InviteTokenRoute
   MarketingConfirmRoute: typeof MarketingConfirmRoute
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
+  MarketingUnsubscribeRoute: typeof MarketingUnsubscribeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -256,6 +269,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketing/unsubscribe': {
+      id: '/marketing/unsubscribe'
+      path: '/marketing/unsubscribe'
+      fullPath: '/marketing/unsubscribe'
+      preLoaderRoute: typeof MarketingUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marketing/subscribe': {
@@ -414,6 +434,7 @@ const rootRouteChildren: RootRouteChildren = {
   InviteTokenRoute: InviteTokenRoute,
   MarketingConfirmRoute: MarketingConfirmRoute,
   MarketingSubscribeRoute: MarketingSubscribeRoute,
+  MarketingUnsubscribeRoute: MarketingUnsubscribeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
