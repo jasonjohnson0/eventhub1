@@ -14,13 +14,13 @@ export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — EventHub" }] }),
 });
 
-const tabs = [
+const tabs: ReadonlyArray<{ title: string; to: string; exact?: boolean }> = [
   { title: "Overview", to: "/admin", exact: true },
   { title: "Moderation", to: "/admin/moderation" },
   { title: "Sponsorship", to: "/admin/sponsorship" },
   { title: "Users", to: "/admin/users" },
   { title: "Audit Log", to: "/admin/audit" },
-] as const;
+];
 
 function AdminLayout() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
