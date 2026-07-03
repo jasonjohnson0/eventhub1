@@ -77,14 +77,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "EventHub — Interactive Event Calendar" },
+      { name: "description", content: "EventHub is a colorful, multi-tenant event calendar with sharing, RSVPs, and sponsorship tools for coordinators." },
+      { name: "author", content: "EventHub" },
+      { property: "og:title", content: "EventHub — Interactive Event Calendar" },
+      { property: "og:description", content: "Discover, share, and RSVP to events. Coordinators run their own calendar with staff, sponsorship, and analytics." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:site", content: "@EventHub" },
     ],
     links: [
       {

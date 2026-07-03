@@ -1,24 +1,49 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSignedIn(!!s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="min-h-screen bg-gradient-to-br from-fuchsia-50 via-white to-sky-50">
+      <header className="mx-auto flex max-w-6xl items-center justify-between p-6">
+        <h1 className="text-2xl font-bold tracking-tight">EventHub</h1>
+        <nav className="flex gap-3">
+          {signedIn ? (
+            <Button asChild><Link to="/dashboard">Dashboard</Link></Button>
+          ) : (
+            <Button asChild><Link to="/auth">Sign in</Link></Button>
+          )}
+        </nav>
+      </header>
+
+      <main className="mx-auto max-w-4xl px-6 py-24 text-center">
+        <h2 className="text-5xl font-bold tracking-tight">
+          A colorful, interactive event calendar
+        </h2>
+        <p className="mx-auto mt-6 max-w-xl text-lg text-muted-foreground">
+          EventHub gives coordinators a beautiful calendar, workspace staff, RSVPs, sharing, and sponsorship tools — all in one place.
+        </p>
+        <div className="mt-10 flex justify-center gap-3">
+          <Button asChild size="lg">
+            <Link to={signedIn ? "/dashboard" : "/auth"}>{signedIn ? "Open dashboard" : "Get started"}</Link>
+          </Button>
+        </div>
+        <p className="mt-16 text-xs uppercase tracking-widest text-muted-foreground">
+          Phase 1a scaffolding · Calendar and admin dashboard land next
+        </p>
+      </main>
     </div>
   );
 }
