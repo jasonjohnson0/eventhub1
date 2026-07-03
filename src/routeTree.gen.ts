@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MarketingSubscribeRouteImport } from './routes/marketing.subscribe'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -37,6 +38,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketingSubscribeRoute = MarketingSubscribeRouteImport.update({
+  id: '/marketing/subscribe',
+  path: '/marketing/subscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/marketing/subscribe': typeof MarketingSubscribeRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/marketing/subscribe': typeof MarketingSubscribeRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/marketing/subscribe': typeof MarketingSubscribeRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/_authenticated/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/auth/callback'
     | '/invite/$token'
+    | '/marketing/subscribe'
     | '/admin/audit'
     | '/admin/moderation'
     | '/admin/sponsorship'
@@ -177,6 +187,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/auth/callback'
     | '/invite/$token'
+    | '/marketing/subscribe'
     | '/admin/audit'
     | '/admin/moderation'
     | '/admin/sponsorship'
@@ -194,6 +205,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/auth/callback'
     | '/invite/$token'
+    | '/marketing/subscribe'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/moderation'
     | '/_authenticated/admin/sponsorship'
@@ -207,6 +219,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   InviteTokenRoute: typeof InviteTokenRoute
+  MarketingSubscribeRoute: typeof MarketingSubscribeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -230,6 +243,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketing/subscribe': {
+      id: '/marketing/subscribe'
+      path: '/marketing/subscribe'
+      fullPath: '/marketing/subscribe'
+      preLoaderRoute: typeof MarketingSubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invite/$token': {
@@ -372,6 +392,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   InviteTokenRoute: InviteTokenRoute,
+  MarketingSubscribeRoute: MarketingSubscribeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
