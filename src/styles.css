@@ -132,6 +132,16 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+/* Event palette — vibrant, ClickUp-inspired */
+:root {
+  --event-fuchsia: #ec4899;
+  --event-cyan: #06b6d4;
+  --event-lime: #84cc16;
+  --event-orange: #f97316;
+  --event-violet: #a855f7;
+  --event-blue: #3b82f6;
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
