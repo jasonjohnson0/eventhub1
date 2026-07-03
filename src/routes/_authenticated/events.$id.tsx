@@ -40,16 +40,10 @@ function EventPage() {
   async function handleRsvp(status: "going" | "interested" | "declined") {
     if (busy) return;
     setBusy(true);
-    // Optimistic update
     const previous = data;
+    if (!previous) return;
     const toggling = myRsvp === status;
-    setData({
-      ...data,
-      myRsvp: toggling ? null : status,
-      counts: {
-        ...data.counts,
-      },
-    });
+    setData({ ...previous, myRsvp: toggling ? null : status });
     try {
       const res = await upsertRsvp({ data: { event_id: id, status } });
       setData({ ...previous, myRsvp: res.myRsvp, counts: { ...previous.counts, ...res.counts } });
