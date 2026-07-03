@@ -38,6 +38,17 @@ export const createEvent = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
+    const nowIso = new Date().toISOString();
+    const { data: activeBans } = await context.supabase
+      .from("bans")
+      .select("id, reason, expires_at")
+      .eq("scope", "user")
+      .eq("target_user_id", context.userId)
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .limit(1);
+    if (activeBans && activeBans.length > 0) {
+      throw new Error(`You are banned from creating events: ${activeBans[0].reason ?? "no reason provided"}`);
+    }
     const { data: row, error } = await context.supabase
       .from("events")
       .insert({

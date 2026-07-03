@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { getEvent } from "@/lib/events.functions";
+import { recordShare, recordClick, upsertRsvp } from "@/lib/tracking.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,11 +20,14 @@ function EventPage() {
   const { id } = Route.useParams();
   const [data, setData] = useState<Data | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     getEvent({ data: { id } })
       .then(setData)
       .catch((e) => setErr(e instanceof Error ? e.message : "Failed to load"));
+    // Fire click tracking once on mount; server dedupes per (event,user,day)
+    recordClick({ data: { event_id: id } }).catch(() => undefined);
   }, [id]);
 
   if (err) return <div className="p-8 text-sm text-red-600">{err}</div>;
@@ -33,8 +37,38 @@ function EventPage() {
   const c = colorForEvent(event.id);
   const cover = details?.landscape_image_url ?? null;
 
-  function stubToast(name: string) {
-    return () => toast(`${name} wiring lands in Phase 1d`);
+  async function handleRsvp(status: "going" | "interested" | "declined") {
+    if (busy) return;
+    setBusy(true);
+    const previous = data;
+    if (!previous) return;
+    const toggling = myRsvp === status;
+    setData({ ...previous, myRsvp: toggling ? null : status });
+    try {
+      const res = await upsertRsvp({ data: { event_id: id, status } });
+      setData({ ...previous, myRsvp: res.myRsvp, counts: { ...previous.counts, ...res.counts } });
+    } catch (e) {
+      setData(previous);
+      toast.error(e instanceof Error ? e.message : "RSVP failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleShare(platform: "facebook" | "twitter" | "email" | "link") {
+    try {
+      const res = await recordShare({ data: { event_id: id, platform } });
+      setData((d) => (d ? { ...d, counts: { ...d.counts, shares: res.shares } } : d));
+      if (platform === "link") {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Link copied");
+      } else {
+        const labels = { facebook: "Facebook", twitter: "Twitter", email: "Email" } as const;
+        toast(`Share would open ${labels[platform]} — wiring in Phase 1b`);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Share failed");
+    }
   }
 
   return (
@@ -86,7 +120,8 @@ function EventPage() {
                 key={s}
                 variant={myRsvp === s ? "default" : "outline"}
                 size="sm"
-                onClick={stubToast("RSVP")}
+                onClick={() => handleRsvp(s)}
+                disabled={busy}
                 className="capitalize"
               >
                 {s}
@@ -107,23 +142,16 @@ function EventPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={stubToast("Facebook share")}>
+            <Button size="sm" variant="outline" onClick={() => handleShare("facebook")}>
               <Facebook className="mr-1 h-4 w-4" /> Facebook
             </Button>
-            <Button size="sm" variant="outline" onClick={stubToast("Twitter share")}>
+            <Button size="sm" variant="outline" onClick={() => handleShare("twitter")}>
               <Twitter className="mr-1 h-4 w-4" /> Twitter
             </Button>
-            <Button size="sm" variant="outline" onClick={stubToast("Email share")}>
+            <Button size="sm" variant="outline" onClick={() => handleShare("email")}>
               <Mail className="mr-1 h-4 w-4" /> Email
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                navigator.clipboard.writeText(window.location.href);
-                toast.success("Link copied");
-              }}
-            >
+            <Button size="sm" variant="outline" onClick={() => handleShare("link")}>
               <Link2 className="mr-1 h-4 w-4" /> Copy link
             </Button>
           </div>
@@ -154,7 +182,7 @@ function EventPage() {
                   </div>
                 </div>
                 {s.status === "available" ? (
-                  <Button size="sm" variant="secondary" onClick={stubToast("Sponsor checkout")}>
+                  <Button size="sm" variant="secondary" onClick={() => toast("Sponsor checkout lands in Phase 1b")}>
                     Sponsor · ${(s.cost_cents / 100).toFixed(0)}
                   </Button>
                 ) : (
