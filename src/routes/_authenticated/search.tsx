@@ -68,7 +68,10 @@ function SearchPage() {
   }, [search.q, search.category, search.startDate, search.endDate, search.near, search.radius]);
 
   function updateSearch(patch: Partial<SearchParams>) {
-    navigate({ to: "/search", search: (prev: SearchParams) => ({ ...prev, ...patch }) });
+    navigate({
+      to: "/search",
+      search: (prev) => ({ ...parseSearch(prev as Record<string, unknown>), ...patch }),
+    });
   }
 
   function toggleCategory(cat: string) {
