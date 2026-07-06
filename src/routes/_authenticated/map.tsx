@@ -13,15 +13,17 @@ export const Route = createFileRoute("/_authenticated/map")({
   head: () => ({ meta: [{ title: "Map — EventHub" }] }),
 });
 
-// Fix leaflet default marker icons in bundlers
-const DefaultIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+// Fix leaflet default marker icons in bundlers (browser-only; leaflet touches `window`)
+if (typeof window !== "undefined") {
+  const DefaultIcon = L.icon({
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+  });
+  L.Marker.prototype.options.icon = DefaultIcon;
+}
 
 type EventMarker = Awaited<ReturnType<typeof getMapEvents>>[number];
 
