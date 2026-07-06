@@ -349,6 +349,42 @@ function SettingsPage() {
             </Button>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-4 w-4" /> iCal subscription
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Subscribe to your coordinator calendar in Google Calendar, Apple Calendar, or
+              Outlook. The URL is private — anyone with it can view your approved events.
+            </p>
+            {!icalUrl ? (
+              <Button size="sm" onClick={showIcalUrl} disabled={icalBusy}>
+                Subscribe to my calendar
+              </Button>
+            ) : (
+              <>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input readOnly value={icalUrl} className="font-mono text-xs" />
+                  <Button size="sm" variant="outline" onClick={copyIcalUrl}>
+                    <Copy className="mr-1 h-4 w-4" /> Copy
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={rotateToken} disabled={icalBusy}>
+                    <RefreshCw className="mr-1 h-4 w-4" /> Rotate
+                  </Button>
+                </div>
+                <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                  <li><strong>Google Calendar</strong>: Other calendars → From URL → paste</li>
+                  <li><strong>Apple Calendar</strong>: File → New Calendar Subscription → paste</li>
+                  <li><strong>Outlook</strong>: Add calendar → Subscribe from web → paste</li>
+                </ul>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
