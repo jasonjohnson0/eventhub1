@@ -198,12 +198,46 @@ export function EventModal({
               placeholder="https://…"
             />
           </div>
+          <div className="rounded-md border p-3">
+            <div className="mb-2 grid grid-cols-2 gap-3">
+              <div>
+                <Label>Repeat</Label>
+                <Select value={repeat} onValueChange={(v) => setRepeat(v as typeof repeat)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Does not repeat</SelectItem>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {repeat !== "none" && (
+                <div>
+                  <Label htmlFor="until">Until (optional)</Label>
+                  <Input
+                    id="until"
+                    type="date"
+                    value={repeatUntil}
+                    onChange={(e) => setRepeatUntil(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+            {repeat !== "none" && (
+              <p className="text-xs text-muted-foreground">
+                Up to 100 occurrences will be generated. Each can be edited individually or as a series.
+              </p>
+            )}
+          </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Creating…" : "Create event"}
+              {loading ? "Creating…" : repeat === "none" ? "Create event" : "Create series"}
             </Button>
           </DialogFooter>
         </form>
