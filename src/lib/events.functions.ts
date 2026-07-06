@@ -105,11 +105,19 @@ export const getEvent = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: ev, error } = await context.supabase
       .from("events")
-      .select("id, title, description, location, start_time, end_time, status, coordinator_id, created_at, category, tags")
+      .select("id, title, description, location, start_time, end_time, status, coordinator_id, created_at, category, tags, series_id, is_exception")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!ev) throw new Error("Event not found");
+
+    const { data: series } = ev.series_id
+      ? await context.supabase
+          .from("event_series")
+          .select("id, rrule, dtstart, until")
+          .eq("id", ev.series_id)
+          .maybeSingle()
+      : { data: null };
 
     const { data: details } = await context.supabase
       .from("event_details")
@@ -152,6 +160,7 @@ export const getEvent = createServerFn({ method: "GET" })
     return {
       event: ev,
       details,
+      series: series ?? null,
       geo: loc ?? null,
       counts: {
         going: rsvpGoing ?? 0,
