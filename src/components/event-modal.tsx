@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { createEvent } from "@/lib/events.functions";
+import { createSeries } from "@/lib/series.functions";
 import { CATEGORIES, categoryLabel, type EventCategory } from "@/lib/categories";
 import {
   Select,
@@ -42,6 +43,8 @@ export function EventModal({
   const [tagsText, setTagsText] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
+  const [repeat, setRepeat] = useState<"none" | "daily" | "weekly" | "monthly">("none");
+  const [repeatUntil, setRepeatUntil] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -64,23 +67,48 @@ export function EventModal({
         setLoading(false);
         return;
       }
-      await createEvent({
-        data: {
-          title,
-          description: description || null,
-          location: location || null,
-          start_time: startIso,
-          end_time: endIso,
-          category,
-          tags: tagsText
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean),
-          latitude: lat ? Number(lat) : null,
-          longitude: lng ? Number(lng) : null,
-        },
-      });
-      toast.success("Event created");
+      const tags = tagsText.split(",").map((t) => t.trim()).filter(Boolean);
+      if (repeat === "none") {
+        await createEvent({
+          data: {
+            title,
+            description: description || null,
+            location: location || null,
+            start_time: startIso,
+            end_time: endIso,
+            category,
+            tags,
+            latitude: lat ? Number(lat) : null,
+            longitude: lng ? Number(lng) : null,
+          },
+        });
+        toast.success("Event created");
+      } else {
+        const rrule =
+          repeat === "daily"
+            ? "FREQ=DAILY"
+            : repeat === "weekly"
+              ? "FREQ=WEEKLY"
+              : "FREQ=MONTHLY";
+        const durationMin = Math.round(
+          (new Date(endIso).getTime() - new Date(startIso).getTime()) / 60_000,
+        );
+        const res = await createSeries({
+          data: {
+            title,
+            description: description || null,
+            location: location || null,
+            category,
+            tags,
+            dtstart: startIso,
+            duration_minutes: durationMin,
+            rrule,
+            until: repeatUntil ? new Date(repeatUntil).toISOString() : null,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          },
+        });
+        toast.success(`Series created — ${res.count} occurrences`);
+      }
       if (imageUrl) toast("Media upload wiring lands in Phase 1d");
       setTitle("");
       setDescription("");
@@ -90,6 +118,8 @@ export function EventModal({
       setLat("");
       setLng("");
       setCategory("other");
+      setRepeat("none");
+      setRepeatUntil("");
       onCreated?.();
       onOpenChange(false);
     } catch (err) {
