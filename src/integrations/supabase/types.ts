@@ -265,6 +265,59 @@ export type Database = {
           },
         ]
       }
+      event_invitations: {
+        Row: {
+          clicked_at: string | null
+          created_at: string
+          custom_message: string | null
+          event_id: string
+          id: string
+          opened_at: string | null
+          recipient_email: string
+          rsvp_status: Database["public"]["Enums"]["invitation_rsvp_status"]
+          sent_at: string
+          sent_by: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          clicked_at?: string | null
+          created_at?: string
+          custom_message?: string | null
+          event_id: string
+          id?: string
+          opened_at?: string | null
+          recipient_email: string
+          rsvp_status?: Database["public"]["Enums"]["invitation_rsvp_status"]
+          sent_at?: string
+          sent_by: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          clicked_at?: string | null
+          created_at?: string
+          custom_message?: string | null
+          event_id?: string
+          id?: string
+          opened_at?: string | null
+          recipient_email?: string
+          rsvp_status?: Database["public"]["Enums"]["invitation_rsvp_status"]
+          sent_at?: string
+          sent_by?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_invitations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_locations: {
         Row: {
           created_at: string
@@ -546,6 +599,33 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          days_before: number[]
+          email_reminders: boolean
+          push_reminders: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          days_before?: number[]
+          email_reminders?: boolean
+          push_reminders?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          days_before?: number[]
+          email_reminders?: boolean
+          push_reminders?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -752,6 +832,53 @@ export type Database = {
             columns: ["slot_id"]
             isOneToOne: false
             referencedRelation: "sponsored_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_notifications: {
+        Row: {
+          created_at: string
+          custom_message: string | null
+          event_id: string
+          id: string
+          read_at: string | null
+          scheduled_for: string
+          sent_at: string | null
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_message?: string | null
+          event_id: string
+          id?: string
+          read_at?: string | null
+          scheduled_for?: string
+          sent_at?: string | null
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_message?: string | null
+          event_id?: string
+          id?: string
+          read_at?: string | null
+          scheduled_for?: string
+          sent_at?: string | null
+          type?: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notifications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -1805,6 +1932,8 @@ export type Database = {
         | "workshop"
         | "other"
       event_status: "draft" | "approved" | "removed"
+      invitation_rsvp_status: "pending" | "going" | "interested" | "declined"
+      notification_type: "reminder" | "announcement" | "update"
       oauth_provider: "google" | "apple" | "facebook" | "email"
       payment_status: "pending" | "succeeded" | "failed" | "refunded"
       rsvp_status: "going" | "interested" | "declined"
@@ -1961,6 +2090,8 @@ export const Constants = {
         "other",
       ],
       event_status: ["draft", "approved", "removed"],
+      invitation_rsvp_status: ["pending", "going", "interested", "declined"],
+      notification_type: ["reminder", "announcement", "update"],
       oauth_provider: ["google", "apple", "facebook", "email"],
       payment_status: ["pending", "succeeded", "failed", "refunded"],
       rsvp_status: ["going", "interested", "declined"],

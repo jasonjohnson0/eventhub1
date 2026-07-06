@@ -12,6 +12,10 @@ import { listMyEvents } from "@/lib/events.functions";
 import { exportRsvpList, updateEventCapacity, getCapacityStatus } from "@/lib/attendee.functions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Download } from "lucide-react";
+import {
+  getUserNotificationPrefs,
+  updateNotificationPrefs,
+} from "@/lib/communications.functions";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -38,6 +42,11 @@ function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [events, setEvents] = useState<EventRow[]>([]);
   const [caps, setCaps] = useState<Record<string, { max: number | null; has_waitlist: boolean; going: number; waitlist: number }>>({});
+  const [prefs, setPrefs] = useState<{
+    email_reminders: boolean;
+    push_reminders: boolean;
+    days_before: number[];
+  }>({ email_reminders: true, push_reminders: false, days_before: [1, 7] });
 
   async function reload() {
     try {
@@ -70,7 +79,37 @@ function SettingsPage() {
   useEffect(() => {
     void reload();
     void loadEvents();
+    void (async () => {
+      try {
+        const p = await getUserNotificationPrefs();
+        setPrefs({
+          email_reminders: p.email_reminders,
+          push_reminders: p.push_reminders,
+          days_before: p.days_before,
+        });
+      } catch {
+        /* keep defaults */
+      }
+    })();
   }, []);
+
+  function toggleDay(d: number) {
+    setPrefs((p) => ({
+      ...p,
+      days_before: p.days_before.includes(d)
+        ? p.days_before.filter((x) => x !== d)
+        : [...p.days_before, d].sort((a, b) => a - b),
+    }));
+  }
+
+  async function savePrefs() {
+    try {
+      await updateNotificationPrefs({ data: prefs });
+      toast.success("Notification preferences saved");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    }
+  }
 
   async function saveCapacity(eventId: string, maxStr: string, hasWaitlist: boolean) {
     const max = maxStr.trim() === "" ? null : Math.max(1, parseInt(maxStr, 10) || 0) || null;
@@ -225,6 +264,49 @@ function SettingsPage() {
                 />
               ))}
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Notification preferences</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={prefs.email_reminders}
+                onCheckedChange={(v) =>
+                  setPrefs((p) => ({ ...p, email_reminders: Boolean(v) }))
+                }
+              />
+              Email reminders before events
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={prefs.push_reminders}
+                onCheckedChange={(v) =>
+                  setPrefs((p) => ({ ...p, push_reminders: Boolean(v) }))
+                }
+              />
+              Push reminders (coming soon)
+            </label>
+            <div>
+              <div className="mb-2 text-sm font-medium">Remind me before</div>
+              <div className="flex flex-wrap gap-3 text-sm">
+                {[1, 3, 7, 14].map((d) => (
+                  <label key={d} className="flex items-center gap-1">
+                    <Checkbox
+                      checked={prefs.days_before.includes(d)}
+                      onCheckedChange={() => toggleDay(d)}
+                    />
+                    {d} day{d === 1 ? "" : "s"}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <Button size="sm" onClick={savePrefs}>
+              Save preferences
+            </Button>
           </CardContent>
         </Card>
       </div>
