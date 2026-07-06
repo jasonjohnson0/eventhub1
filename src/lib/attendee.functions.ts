@@ -2,6 +2,46 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+type AdminClient = Awaited<
+  ReturnType<typeof import("@/integrations/supabase/client.server").then extends never ? never : never>
+>;
+
+async function loadUserDirectory(
+  supabaseAdmin: Awaited<
+    ReturnType<() => Promise<typeof import("@/integrations/supabase/client.server")>>
+  >["supabaseAdmin"],
+  ids: string[],
+): Promise<Map<string, { name: string; email: string }>> {
+  const uniqIds = Array.from(new Set(ids));
+  const map = new Map<string, { name: string; email: string }>();
+  if (uniqIds.length === 0) return map;
+  const { data: profiles } = await supabaseAdmin
+    .from("profiles")
+    .select("id, display_name")
+    .in("id", uniqIds);
+  const nameById = new Map((profiles ?? []).map((p) => [p.id, p.display_name ?? "Unknown"]));
+  // Bulk email via auth admin listUsers (paged; small demo scale).
+  let page = 1;
+  const perPage = 200;
+  const wantEmail = new Set(uniqIds);
+  while (wantEmail.size > 0 && page <= 10) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+    if (error) break;
+    for (const u of data.users) {
+      if (wantEmail.has(u.id)) {
+        map.set(u.id, { name: nameById.get(u.id) ?? "Unknown", email: u.email ?? "" });
+        wantEmail.delete(u.id);
+      }
+    }
+    if (data.users.length < perPage) break;
+    page += 1;
+  }
+  for (const id of wantEmail) {
+    map.set(id, { name: nameById.get(id) ?? "Unknown", email: "" });
+  }
+  return map;
+}
+
 async function assertCoordinatorOrAdmin(
   supabase: import("@supabase/supabase-js").SupabaseClient,
   userId: string,
