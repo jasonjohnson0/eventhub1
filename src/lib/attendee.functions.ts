@@ -14,11 +14,12 @@ async function loadUserDirectory(
   const uniqIds = Array.from(new Set(ids));
   const map = new Map<string, { name: string; email: string }>();
   if (uniqIds.length === 0) return map;
-  const { data: profiles } = await supabaseAdmin
+  const profilesResp = await supabaseAdmin
     .from("profiles")
     .select("id, display_name")
     .in("id", uniqIds);
-  const nameById = new Map((profiles ?? []).map((p) => [p.id, p.display_name ?? "Unknown"]));
+  const profiles = (profilesResp.data ?? []) as Array<{ id: string; display_name: string | null }>;
+  const nameById = new Map<string, string>(profiles.map((p) => [p.id, p.display_name ?? "Unknown"]));
   // Bulk email via auth admin listUsers (paged; small demo scale).
   let page = 1;
   const perPage = 200;
@@ -26,13 +27,13 @@ async function loadUserDirectory(
   while (wantEmail.size > 0 && page <= 10) {
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
     if (error) break;
-    for (const u of data.users) {
+    for (const u of data.users as Array<{ id: string; email: string | null }>) {
       if (wantEmail.has(u.id)) {
         map.set(u.id, { name: nameById.get(u.id) ?? "Unknown", email: u.email ?? "" });
         wantEmail.delete(u.id);
       }
     }
-    if (data.users.length < perPage) break;
+    if ((data.users as unknown[]).length < perPage) break;
     page += 1;
   }
   for (const id of wantEmail) {
