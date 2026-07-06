@@ -16,7 +16,7 @@ export const listMyEvents = createServerFn({ method: "GET" })
     const coordinatorIds = [context.userId, ...(staff ?? []).map((s) => s.coordinator_id)];
     const { data, error } = await context.supabase
       .from("events")
-      .select("id, title, description, location, start_time, end_time, status, coordinator_id")
+      .select("id, title, description, location, start_time, end_time, status, coordinator_id, category, tags")
       .in("coordinator_id", coordinatorIds)
       .neq("status", "removed")
       .order("start_time", { ascending: true });
@@ -34,6 +34,12 @@ export const createEvent = createServerFn({ method: "POST" })
         location: z.string().max(300).optional().nullable(),
         start_time: isoDate,
         end_time: isoDate,
+        category: z
+          .enum(["sports", "networking", "education", "social", "fundraiser", "workshop", "other"])
+          .default("other"),
+        tags: z.array(z.string().min(1).max(40)).max(20).default([]),
+        latitude: z.number().min(-90).max(90).optional().nullable(),
+        longitude: z.number().min(-180).max(180).optional().nullable(),
       })
       .parse(data),
   )
@@ -59,10 +65,23 @@ export const createEvent = createServerFn({ method: "POST" })
         start_time: data.start_time,
         end_time: data.end_time,
         status: "approved",
+        category: data.category,
+        tags: data.tags,
       })
       .select()
       .single();
     if (error) throw new Error(error.message);
+    if (data.latitude != null && data.longitude != null && data.location) {
+      await context.supabase.from("event_locations").upsert(
+        {
+          event_id: row.id,
+          location_name: data.location,
+          latitude: data.latitude,
+          longitude: data.longitude,
+        },
+        { onConflict: "event_id" },
+      );
+    }
     return row;
   });
 
@@ -86,7 +105,7 @@ export const getEvent = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: ev, error } = await context.supabase
       .from("events")
-      .select("id, title, description, location, start_time, end_time, status, coordinator_id, created_at")
+      .select("id, title, description, location, start_time, end_time, status, coordinator_id, created_at, category, tags")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -95,6 +114,12 @@ export const getEvent = createServerFn({ method: "GET" })
     const { data: details } = await context.supabase
       .from("event_details")
       .select("landscape_image_url, portrait_image_url, metadata")
+      .eq("event_id", data.id)
+      .maybeSingle();
+
+    const { data: loc } = await context.supabase
+      .from("event_locations")
+      .select("latitude, longitude, location_name")
       .eq("event_id", data.id)
       .maybeSingle();
 
@@ -127,6 +152,7 @@ export const getEvent = createServerFn({ method: "GET" })
     return {
       event: ev,
       details,
+      geo: loc ?? null,
       counts: {
         going: rsvpGoing ?? 0,
         interested: rsvpInterested ?? 0,
