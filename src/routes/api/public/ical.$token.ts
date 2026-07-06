@@ -14,7 +14,10 @@ export const Route = createFileRoute("/api/public/ical/$token")({
         const { data, error } = await (supabaseAdmin as any).rpc("get_ical_feed_events", {
           _token: token,
         });
-        if (error) return new Response("Server error", { status: 500 });
+        if (error) {
+          console.error("ical feed rpc error", error);
+          return new Response(`Server error: ${error.message}`, { status: 500 });
+        }
         const events = (data ?? []) as Array<{
           id: string;
           title: string;
