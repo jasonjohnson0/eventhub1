@@ -18,6 +18,7 @@ import {
 } from "@/lib/communications.functions";
 import { createOrGetIcalToken, rotateIcalToken } from "@/lib/distribution.functions";
 import { Copy, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
+import { CoordinatorAnalyticsCard } from "@/components/coordinator-analytics-card";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -209,6 +210,8 @@ function SettingsPage() {
           <CardHeader>
             <CardTitle>Invite workspace staff</CardTitle>
           </CardHeader>
+
+        {/* placeholder to keep JSX valid */}
           <CardContent>
             <form onSubmit={onInvite} className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <div className="flex-1">
