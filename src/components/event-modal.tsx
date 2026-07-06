@@ -45,6 +45,9 @@ export function EventModal({
   const [lng, setLng] = useState("");
   const [repeat, setRepeat] = useState<"none" | "daily" | "weekly" | "monthly">("none");
   const [repeatUntil, setRepeatUntil] = useState("");
+  const [format, setFormat] = useState<"in_person" | "virtual" | "hybrid">("in_person");
+  const [virtualLink, setVirtualLink] = useState("");
+  const [provider, setProvider] = useState<"zoom" | "google_meet" | "youtube" | "none">("none");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -80,6 +83,9 @@ export function EventModal({
             tags,
             latitude: lat ? Number(lat) : null,
             longitude: lng ? Number(lng) : null,
+            event_format: format,
+            virtual_link: format === "in_person" ? null : virtualLink || null,
+            livestream_provider: format === "in_person" ? "none" : provider,
           },
         });
         toast.success("Event created");
@@ -120,6 +126,9 @@ export function EventModal({
       setCategory("other");
       setRepeat("none");
       setRepeatUntil("");
+      setFormat("in_person");
+      setVirtualLink("");
+      setProvider("none");
       onCreated?.();
       onOpenChange(false);
     } catch (err) {
