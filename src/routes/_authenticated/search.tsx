@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
-import { zodValidator } from "@tanstack/zod-adapter";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,18 +11,29 @@ import { Calendar as CalIcon, MapPin, Loader2 } from "lucide-react";
 import { searchEvents } from "@/lib/search.functions";
 import { CATEGORIES, categoryLabel, categoryClasses } from "@/lib/categories";
 
-const searchSchema = z.object({
-  q: z.string().optional().default(""),
-  category: z.string().optional().default(""),
-  startDate: z.string().optional().default(""),
-  endDate: z.string().optional().default(""),
-  near: z.string().optional().default(""), // "lat,lng"
-  radius: z.coerce.number().optional().default(0),
-});
+type SearchParams = {
+  q: string;
+  category: string;
+  startDate: string;
+  endDate: string;
+  near: string;
+  radius: number;
+};
+
+function parseSearch(input: Record<string, unknown>): SearchParams {
+  return {
+    q: (input.q as string) ?? "",
+    category: (input.category as string) ?? "",
+    startDate: (input.startDate as string) ?? "",
+    endDate: (input.endDate as string) ?? "",
+    near: (input.near as string) ?? "",
+    radius: Number(input.radius) || 0,
+  };
+}
 
 export const Route = createFileRoute("/_authenticated/search")({
   component: SearchPage,
-  validateSearch: zodValidator(searchSchema),
+  validateSearch: parseSearch,
   head: () => ({ meta: [{ title: "Search — EventHub" }] }),
 });
 
@@ -58,8 +68,8 @@ function SearchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.q, search.category, search.startDate, search.endDate, search.near, search.radius]);
 
-  function updateSearch(patch: Partial<z.infer<typeof searchSchema>>) {
-    navigate({ to: "/search", search: (prev) => ({ ...prev, ...patch }) });
+  function updateSearch(patch: Partial<SearchParams>) {
+    navigate({ to: "/search", search: (prev: SearchParams) => ({ ...prev, ...patch }) });
   }
 
   function toggleCategory(cat: string) {
