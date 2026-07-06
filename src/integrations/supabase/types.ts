@@ -308,6 +308,7 @@ export type Database = {
       }
       event_rsvps: {
         Row: {
+          checked_in_at: string | null
           created_at: string
           event_id: string
           id: string
@@ -316,6 +317,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          checked_in_at?: string | null
           created_at?: string
           event_id: string
           id?: string
@@ -324,6 +326,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          checked_in_at?: string | null
           created_at?: string
           event_id?: string
           id?: string
@@ -392,6 +395,44 @@ export type Database = {
         }
         Relationships: []
       }
+      event_waitlist: {
+        Row: {
+          added_at: string
+          event_id: string
+          id: string
+          position: number
+          status: Database["public"]["Enums"]["waitlist_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          event_id: string
+          id?: string
+          position: number
+          status?: Database["public"]["Enums"]["waitlist_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          event_id?: string
+          id?: string
+          position?: number
+          status?: Database["public"]["Enums"]["waitlist_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_waitlist_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           category: Database["public"]["Enums"]["event_category"]
@@ -399,9 +440,11 @@ export type Database = {
           created_at: string
           description: string | null
           end_time: string
+          has_waitlist: boolean
           id: string
           is_exception: boolean
           location: string | null
+          max_capacity: number | null
           removed_at: string | null
           removed_by: string | null
           removed_reason: string | null
@@ -419,9 +462,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_time: string
+          has_waitlist?: boolean
           id?: string
           is_exception?: boolean
           location?: string | null
+          max_capacity?: number | null
           removed_at?: string | null
           removed_by?: string | null
           removed_reason?: string | null
@@ -439,9 +484,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_time?: string
+          has_waitlist?: boolean
           id?: string
           is_exception?: boolean
           location?: string | null
+          max_capacity?: number | null
           removed_at?: string | null
           removed_by?: string | null
           removed_reason?: string | null
@@ -1765,6 +1812,7 @@ export type Database = {
       slot_status: "available" | "reserved" | "paid" | "expired"
       slot_type: "banner" | "featured" | "sidebar"
       staff_role: "coordinator" | "staff"
+      waitlist_status: "waitlisted" | "promoted" | "declined"
     }
     CompositeTypes: {
       geometry_dump: {
@@ -1920,6 +1968,7 @@ export const Constants = {
       slot_status: ["available", "reserved", "paid", "expired"],
       slot_type: ["banner", "featured", "sidebar"],
       staff_role: ["coordinator", "staff"],
+      waitlist_status: ["waitlisted", "promoted", "declined"],
     },
   },
 } as const
