@@ -13,6 +13,13 @@ import { deleteSeriesInstance } from "@/lib/series.functions";
 import { Repeat, ClipboardCheck, UserCheck } from "lucide-react";
 import { leaveWaitlist } from "@/lib/attendee.functions";
 import { useNavigate } from "@tanstack/react-router";
+import { InviteAttendeesModal } from "@/components/invite-attendees-modal";
+import {
+  listEventInvitations,
+  sendEventAnnouncement,
+  scheduleReminders,
+} from "@/lib/communications.functions";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/events/$id")({
   component: EventPage,
@@ -51,6 +58,14 @@ function EventPage() {
   const c = colorForEvent(event.id);
   const cover = details?.landscape_image_url ?? null;
   const [distanceMi, setDistanceMi] = useState<number | null>(null);
+  const [invStats, setInvStats] = useState<{
+    total: number;
+    opened: number;
+    clicked: number;
+    responded: number;
+  } | null>(null);
+  const [announcement, setAnnouncement] = useState("");
+  const [commsBusy, setCommsBusy] = useState(false);
   useEffect(() => {
     if (!geo || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition((pos) => {
@@ -64,6 +79,47 @@ function EventPage() {
       setDistanceMi(2 * R * Math.asin(Math.sqrt(a)));
     });
   }, [geo]);
+
+  async function loadInvStats() {
+    try {
+      const res = await listEventInvitations({ data: { event_id: id } });
+      setInvStats(res.stats);
+    } catch {
+      /* ignore */
+    }
+  }
+  useEffect(() => {
+    if (isCoordinator) void loadInvStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, isCoordinator]);
+
+  async function handleAnnouncement() {
+    if (!announcement.trim()) return;
+    setCommsBusy(true);
+    try {
+      const res = await sendEventAnnouncement({
+        data: { event_id: id, message: announcement.trim() },
+      });
+      toast.success(`Announcement sent to ${res.sent} attendee${res.sent === 1 ? "" : "s"}`);
+      setAnnouncement("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setCommsBusy(false);
+    }
+  }
+
+  async function handleScheduleReminders() {
+    setCommsBusy(true);
+    try {
+      const res = await scheduleReminders({ data: { event_id: id } });
+      toast.success(`Scheduled ${res.scheduled} reminder${res.scheduled === 1 ? "" : "s"}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setCommsBusy(false);
+    }
+  }
 
   async function handleRsvp(status: "going" | "interested" | "declined") {
     if (busy) return;
@@ -351,6 +407,33 @@ function EventPage() {
                 <Link to="/settings">
                   <UserCheck className="mr-1 h-4 w-4" /> Capacity settings
                 </Link>
+              </Button>
+              <InviteAttendeesModal eventId={id} onSent={loadInvStats} />
+              <Button size="sm" variant="outline" onClick={handleScheduleReminders} disabled={commsBusy}>
+                Schedule reminders
+              </Button>
+            </div>
+            {invStats && invStats.total > 0 && (
+              <div className="rounded-md border p-3 text-sm">
+                <div className="font-medium">Invitations</div>
+                <div className="mt-1 flex flex-wrap gap-3 text-muted-foreground">
+                  <span>{invStats.total} sent</span>
+                  <span>{invStats.opened} opened</span>
+                  <span>{invStats.clicked} clicked</span>
+                  <span>{invStats.responded} responded</span>
+                </div>
+              </div>
+            )}
+            <div className="space-y-2 pt-2">
+              <div className="text-sm font-medium">Broadcast announcement</div>
+              <Textarea
+                rows={2}
+                value={announcement}
+                onChange={(e) => setAnnouncement(e.target.value)}
+                placeholder="Message for everyone who RSVP'd going or interested…"
+              />
+              <Button size="sm" onClick={handleAnnouncement} disabled={commsBusy || !announcement.trim()}>
+                Send announcement
               </Button>
             </div>
           </CardContent>
