@@ -206,12 +206,12 @@ function SettingsPage() {
           </p>
         </div>
 
+        <CoordinatorAnalyticsCard />
+
         <Card>
           <CardHeader>
             <CardTitle>Invite workspace staff</CardTitle>
           </CardHeader>
-
-        {/* placeholder to keep JSX valid */}
           <CardContent>
             <form onSubmit={onInvite} className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <div className="flex-1">
