@@ -2,6 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { RRule, rrulestr } from "rrule";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
+
+type EventUpdate = Database["public"]["Tables"]["events"]["Update"];
+type SeriesUpdate = Database["public"]["Tables"]["event_series"]["Update"];
 
 const isoDate = z.string().datetime({ offset: true });
 const categoryEnum = z.enum([
@@ -115,10 +119,12 @@ export const updateSeriesInstance = createServerFn({ method: "POST" })
     if (!ev) throw new Error("Event not found");
     if (ev.coordinator_id !== context.userId) throw new Error("Not the coordinator");
 
-    const patch: Record<string, unknown> = {};
-    for (const k of ["title", "description", "location", "category", "tags"] as const) {
-      if (data[k] !== undefined) patch[k] = data[k];
-    }
+    const patch: EventUpdate = {};
+    if (data.title !== undefined) patch.title = data.title;
+    if (data.description !== undefined) patch.description = data.description;
+    if (data.location !== undefined) patch.location = data.location;
+    if (data.category !== undefined) patch.category = data.category;
+    if (data.tags !== undefined) patch.tags = data.tags;
     if (Object.keys(patch).length === 0) return { updated: 0 };
 
     if (!ev.series_id || data.scope === "this") {
@@ -130,15 +136,20 @@ export const updateSeriesInstance = createServerFn({ method: "POST" })
       return { updated: 1 };
     }
 
-    let query = context.supabase.from("events").update(patch).eq("series_id", ev.series_id).eq("is_exception", false);
+    let query = context.supabase
+      .from("events")
+      .update(patch)
+      .eq("series_id", ev.series_id)
+      .eq("is_exception", false);
     if (data.scope === "future") query = query.gte("start_time", ev.start_time);
-    const { error: uErr, count } = await query.select("id", { count: "exact" });
+    const { data: updated, error: uErr } = await query.select("id");
     if (uErr) throw new Error(uErr.message);
 
     if (data.scope === "all") {
-      await context.supabase.from("event_series").update(patch).eq("id", ev.series_id);
+      const seriesPatch: SeriesUpdate = { ...patch };
+      await context.supabase.from("event_series").update(seriesPatch).eq("id", ev.series_id);
     }
-    return { updated: count ?? 0 };
+    return { updated: updated?.length ?? 0 };
   });
 
 export const deleteSeriesInstance = createServerFn({ method: "POST" })
@@ -163,12 +174,12 @@ export const deleteSeriesInstance = createServerFn({ method: "POST" })
     }
     let query = context.supabase.from("events").delete().eq("series_id", ev.series_id);
     if (data.scope === "future") query = query.gte("start_time", ev.start_time);
-    const { error: dErr, count } = await query.select("id", { count: "exact" });
+    const { data: deleted, error: dErr } = await query.select("id");
     if (dErr) throw new Error(dErr.message);
     if (data.scope === "all") {
       await context.supabase.from("event_series").delete().eq("id", ev.series_id);
     }
-    return { deleted: count ?? 0 };
+    return { deleted: deleted?.length ?? 0 };
   });
 
 export const listMySeries = createServerFn({ method: "GET" })
