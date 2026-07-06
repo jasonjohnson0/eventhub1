@@ -16,6 +16,8 @@ import {
   getUserNotificationPrefs,
   updateNotificationPrefs,
 } from "@/lib/communications.functions";
+import { createOrGetIcalToken, rotateIcalToken } from "@/lib/distribution.functions";
+import { Copy, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -47,6 +49,44 @@ function SettingsPage() {
     push_reminders: boolean;
     days_before: number[];
   }>({ email_reminders: true, push_reminders: false, days_before: [1, 7] });
+  const [icalToken, setIcalToken] = useState<string | null>(null);
+  const [icalBusy, setIcalBusy] = useState(false);
+
+  const icalUrl = icalToken
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/api/public/ical/${icalToken}.ics`
+    : null;
+
+  async function showIcalUrl() {
+    setIcalBusy(true);
+    try {
+      const { token } = await createOrGetIcalToken();
+      setIcalToken(token);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setIcalBusy(false);
+    }
+  }
+
+  async function rotateToken() {
+    if (!confirm("Rotating invalidates existing calendar subscriptions. Continue?")) return;
+    setIcalBusy(true);
+    try {
+      const { token } = await rotateIcalToken();
+      setIcalToken(token);
+      toast.success("Token rotated — update your calendar subscription");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setIcalBusy(false);
+    }
+  }
+
+  async function copyIcalUrl() {
+    if (!icalUrl) return;
+    await navigator.clipboard.writeText(icalUrl);
+    toast.success("Feed URL copied");
+  }
 
   async function reload() {
     try {
