@@ -110,6 +110,13 @@ export type Database = {
             foreignKeyName: "bans_target_event_id_fkey"
             columns: ["target_event_id"]
             isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "bans_target_event_id_fkey"
+            columns: ["target_event_id"]
+            isOneToOne: false
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
@@ -191,6 +198,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "click_tracking_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
           {
             foreignKeyName: "click_tracking_event_id_fkey"
             columns: ["event_id"]
@@ -281,6 +295,13 @@ export type Database = {
             foreignKeyName: "event_details_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: true
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "event_details_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
@@ -334,6 +355,13 @@ export type Database = {
             foreignKeyName: "event_invitations_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "event_invitations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
@@ -375,6 +403,58 @@ export type Database = {
             foreignKeyName: "event_locations_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: true
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "event_locations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          event_id: string
+          id: string
+          photo_url: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          photo_url: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          photo_url?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_photos_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "event_photos_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
@@ -409,6 +489,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "event_rsvps_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
           {
             foreignKeyName: "event_rsvps_event_id_fkey"
             columns: ["event_id"]
@@ -469,6 +556,69 @@ export type Database = {
         }
         Relationships: []
       }
+      event_tickets: {
+        Row: {
+          created_at: string
+          description: string | null
+          early_bird: boolean
+          early_bird_price_cents: number | null
+          event_id: string
+          id: string
+          name: string
+          price_cents: number
+          quantity_available: number
+          quantity_sold: number
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          early_bird?: boolean
+          early_bird_price_cents?: number | null
+          event_id: string
+          id?: string
+          name: string
+          price_cents?: number
+          quantity_available?: number
+          quantity_sold?: number
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          early_bird?: boolean
+          early_bird_price_cents?: number | null
+          event_id?: string
+          id?: string
+          name?: string
+          price_cents?: number
+          quantity_available?: number
+          quantity_sold?: number
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_tickets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "event_tickets_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_waitlist: {
         Row: {
           added_at: string
@@ -498,6 +648,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "event_waitlist_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
           {
             foreignKeyName: "event_waitlist_event_id_fkey"
             columns: ["event_id"]
@@ -731,6 +888,13 @@ export type Database = {
             foreignKeyName: "share_tracking_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "share_tracking_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
@@ -823,6 +987,13 @@ export type Database = {
             foreignKeyName: "sponsored_slots_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "sponsored_slots_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
@@ -866,6 +1037,73 @@ export type Database = {
           },
         ]
       }
+      ticket_purchases: {
+        Row: {
+          amount_cents: number
+          check_in_count: number
+          created_at: string
+          event_id: string
+          id: string
+          purchased_at: string
+          qr_token: string
+          quantity: number
+          status: string
+          stripe_charge_id: string | null
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          check_in_count?: number
+          created_at?: string
+          event_id: string
+          id?: string
+          purchased_at?: string
+          qr_token?: string
+          quantity?: number
+          status?: string
+          stripe_charge_id?: string | null
+          ticket_id: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          check_in_count?: number
+          created_at?: string
+          event_id?: string
+          id?: string
+          purchased_at?: string
+          qr_token?: string
+          quantity?: number
+          status?: string
+          stripe_charge_id?: string | null
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_purchases_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "ticket_purchases_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_purchases_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "event_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_notifications: {
         Row: {
           created_at: string
@@ -904,6 +1142,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_notifications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
           {
             foreignKeyName: "user_notifications_event_id_fkey"
             columns: ["event_id"]
@@ -978,6 +1223,54 @@ export type Database = {
       }
     }
     Views: {
+      event_analytics: {
+        Row: {
+          attendance_rate_pct: number | null
+          check_ins: number | null
+          coordinator_id: string | null
+          event_id: string | null
+          max_capacity: number | null
+          rsvp_declined: number | null
+          rsvp_going: number | null
+          rsvp_interested: number | null
+          rsvp_waitlist: number | null
+          start_time: string | null
+          ticket_revenue_cents: number | null
+          title: string | null
+          view_count: number | null
+        }
+        Insert: {
+          attendance_rate_pct?: never
+          check_ins?: never
+          coordinator_id?: string | null
+          event_id?: string | null
+          max_capacity?: number | null
+          rsvp_declined?: never
+          rsvp_going?: never
+          rsvp_interested?: never
+          rsvp_waitlist?: never
+          start_time?: string | null
+          ticket_revenue_cents?: never
+          title?: string | null
+          view_count?: never
+        }
+        Update: {
+          attendance_rate_pct?: never
+          check_ins?: never
+          coordinator_id?: string | null
+          event_id?: string | null
+          max_capacity?: number | null
+          rsvp_declined?: never
+          rsvp_going?: never
+          rsvp_interested?: never
+          rsvp_waitlist?: never
+          start_time?: string | null
+          ticket_revenue_cents?: never
+          title?: string | null
+          view_count?: never
+        }
+        Relationships: []
+      }
       geography_columns: {
         Row: {
           coord_dimension: number | null
@@ -1149,6 +1442,17 @@ export type Database = {
             }
             Returns: string
           }
+      check_in_ticket: {
+        Args: { _qr_token: string }
+        Returns: {
+          check_in_count: number
+          event_id: string
+          purchase_id: string
+          quantity: number
+          ticket_name: string
+          user_id: string
+        }[]
+      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
