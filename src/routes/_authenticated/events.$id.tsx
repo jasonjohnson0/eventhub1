@@ -283,6 +283,22 @@ function EventPage() {
 
       {event.description && <p className="whitespace-pre-line text-sm text-foreground/80">{event.description}</p>}
 
+      <div className="flex flex-wrap gap-2">
+        {eventFormat !== "in_person" && virtualLink && (
+          <Button asChild size="sm">
+            <a href={virtualLink} target="_blank" rel="noopener noreferrer">
+              <Video className="mr-1 h-4 w-4" />
+              Join {livestreamProvider === "zoom" ? "Zoom" : livestreamProvider === "google_meet" ? "Google Meet" : livestreamProvider === "youtube" ? "YouTube" : "link"}
+              <ExternalLink className="ml-1 h-3 w-3" />
+            </a>
+          </Button>
+        )}
+        <Button size="sm" variant="outline" onClick={handleDownloadIcs}>
+          <Download className="mr-1 h-4 w-4" />
+          Add to Calendar (.ics)
+        </Button>
+      </div>
+
       {series && (
         <Card>
           <CardHeader>
