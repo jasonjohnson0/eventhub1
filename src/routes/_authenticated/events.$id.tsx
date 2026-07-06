@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { colorForEvent } from "@/lib/event-colors";
-import { Calendar, MapPin, Users, Share2, Eye, Facebook, Twitter, Mail, Link2 } from "lucide-react";
+import { Calendar, MapPin, Users, Share2, Eye, Facebook, Twitter, Mail, Link2, Video, Download, ExternalLink } from "lucide-react";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
 import { deleteSeriesInstance } from "@/lib/series.functions";
 import { Repeat, ClipboardCheck, UserCheck } from "lucide-react";
@@ -20,6 +20,15 @@ import {
   scheduleReminders,
 } from "@/lib/communications.functions";
 import { Textarea } from "@/components/ui/textarea";
+import { generateEventIcal, updateEventFormat } from "@/lib/distribution.functions";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/events/$id")({
   component: EventPage,
