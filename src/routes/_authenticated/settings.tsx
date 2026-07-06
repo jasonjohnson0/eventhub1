@@ -18,6 +18,7 @@ import {
 } from "@/lib/communications.functions";
 import { createOrGetIcalToken, rotateIcalToken } from "@/lib/distribution.functions";
 import { Copy, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
+import { CoordinatorAnalyticsCard } from "@/components/coordinator-analytics-card";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -204,6 +205,8 @@ function SettingsPage() {
             Workspace staff, billing, and admin bootstrapping.
           </p>
         </div>
+
+        <CoordinatorAnalyticsCard />
 
         <Card>
           <CardHeader>
