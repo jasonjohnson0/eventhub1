@@ -9,6 +9,9 @@ import { toast } from "sonner";
 import { colorForEvent } from "@/lib/event-colors";
 import { Calendar, MapPin, Users, Share2, Eye, Facebook, Twitter, Mail, Link2 } from "lucide-react";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
+import { deleteSeriesInstance } from "@/lib/series.functions";
+import { Repeat } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/events/$id")({
   component: EventPage,
@@ -19,6 +22,7 @@ type Data = Awaited<ReturnType<typeof getEvent>>;
 
 function EventPage() {
   const { id } = Route.useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState<Data | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -35,6 +39,7 @@ function EventPage() {
   if (!data) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
 
   const { event, details, counts, myRsvp, slots, isCoordinator } = data;
+  const series = (data as unknown as { series: { rrule: string } | null }).series;
   const geo = (data as unknown as { geo: { latitude: number; longitude: number } | null }).geo;
   const c = colorForEvent(event.id);
   const cover = details?.landscape_image_url ?? null;
