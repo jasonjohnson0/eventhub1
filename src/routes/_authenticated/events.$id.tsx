@@ -92,6 +92,17 @@ function EventPage() {
     }
   }
 
+  async function handleDeleteSeries(scope: "this" | "future" | "all") {
+    if (!confirm(`Delete ${scope === "this" ? "this occurrence" : scope === "future" ? "this and future occurrences" : "the entire series"}?`)) return;
+    try {
+      const res = await deleteSeriesInstance({ data: { event_id: id, scope } });
+      toast.success(`Deleted ${res.deleted} event${res.deleted === 1 ? "" : "s"}`);
+      navigate({ to: "/calendar" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6">
       <div
