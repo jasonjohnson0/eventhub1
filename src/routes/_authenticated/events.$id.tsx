@@ -58,6 +58,9 @@ function EventPage() {
   const { event, details, counts, myRsvp, slots, isCoordinator } = data;
   const maxCapacity = (event as unknown as { max_capacity: number | null }).max_capacity;
   const hasWaitlist = (event as unknown as { has_waitlist: boolean }).has_waitlist;
+  const eventFormat = (event as unknown as { event_format?: "in_person" | "virtual" | "hybrid" | null }).event_format ?? "in_person";
+  const virtualLink = (event as unknown as { virtual_link?: string | null }).virtual_link ?? null;
+  const livestreamProvider = (event as unknown as { livestream_provider?: string | null }).livestream_provider ?? "none";
   const waitlistCount = (counts as unknown as { waitlist?: number }).waitlist ?? 0;
   const myWaitlistPosition =
     (data as unknown as { myWaitlistPosition: number | null }).myWaitlistPosition;
