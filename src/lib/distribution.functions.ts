@@ -121,13 +121,15 @@ export function validateVirtualLink(url: string): { ok: boolean; provider: strin
 export const createOrGetIcalToken = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: existing } = await context.supabase
+    // biome-ignore lint/suspicious/noExplicitAny: types not regenerated yet
+    const sb = context.supabase as any;
+    const { data: existing } = await sb
       .from("coordinator_ical_feeds")
       .select("feed_token")
       .eq("coordinator_id", context.userId)
       .maybeSingle();
     if (existing) return { token: existing.feed_token };
-    const { data, error } = await context.supabase
+    const { data, error } = await sb
       .from("coordinator_ical_feeds")
       .insert({ coordinator_id: context.userId })
       .select("feed_token")
@@ -140,12 +142,13 @@ export const createOrGetIcalToken = createServerFn({ method: "POST" })
 export const rotateIcalToken = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // delete + re-insert so the default expression regenerates a random token
-    await context.supabase
+    // biome-ignore lint/suspicious/noExplicitAny: types not regenerated yet
+    const sb = context.supabase as any;
+    await sb
       .from("coordinator_ical_feeds")
       .delete()
       .eq("coordinator_id", context.userId);
-    const { data, error } = await context.supabase
+    const { data, error } = await sb
       .from("coordinator_ical_feeds")
       .insert({ coordinator_id: context.userId })
       .select("feed_token")
@@ -159,10 +162,11 @@ export const generateEventIcal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ event_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: ev, error } = await context.supabase
+    // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
+    const sb = context.supabase as any;
+    const { data: ev, error } = await sb
       .from("events")
-      // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
-      .select("id, title, description, location, start_time, end_time, event_format, virtual_link" as any)
+      .select("id, title, description, location, start_time, end_time, event_format, virtual_link")
       .eq("id", data.event_id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -190,14 +194,15 @@ export const updateEventFormat = createServerFn({ method: "POST" })
       const check = validateVirtualLink(data.virtual_link);
       if (!check.ok) throw new Error(check.reason ?? "Invalid virtual link");
     }
-    const { error } = await context.supabase
+    // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
+    const sb = context.supabase as any;
+    const { error } = await sb
       .from("events")
       .update({
         event_format: data.event_format,
         virtual_link: data.event_format === "in_person" ? null : data.virtual_link,
         livestream_provider: data.event_format === "in_person" ? "none" : data.livestream_provider,
-        // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
-      } as any)
+      })
       .eq("id", data.event_id)
       .eq("coordinator_id", context.userId);
     if (error) throw new Error(error.message);
