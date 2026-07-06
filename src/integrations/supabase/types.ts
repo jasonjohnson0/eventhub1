@@ -227,6 +227,27 @@ export type Database = {
         }
         Relationships: []
       }
+      coordinator_ical_feeds: {
+        Row: {
+          coordinator_id: string
+          created_at: string
+          feed_token: string
+          updated_at: string
+        }
+        Insert: {
+          coordinator_id: string
+          created_at?: string
+          feed_token?: string
+          updated_at?: string
+        }
+        Update: {
+          coordinator_id?: string
+          created_at?: string
+          feed_token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_details: {
         Row: {
           created_at: string
@@ -493,9 +514,11 @@ export type Database = {
           created_at: string
           description: string | null
           end_time: string
+          event_format: Database["public"]["Enums"]["event_format"]
           has_waitlist: boolean
           id: string
           is_exception: boolean
+          livestream_provider: Database["public"]["Enums"]["livestream_provider"]
           location: string | null
           max_capacity: number | null
           removed_at: string | null
@@ -508,6 +531,7 @@ export type Database = {
           tags: string[]
           title: string
           updated_at: string
+          virtual_link: string | null
         }
         Insert: {
           category?: Database["public"]["Enums"]["event_category"]
@@ -515,9 +539,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_time: string
+          event_format?: Database["public"]["Enums"]["event_format"]
           has_waitlist?: boolean
           id?: string
           is_exception?: boolean
+          livestream_provider?: Database["public"]["Enums"]["livestream_provider"]
           location?: string | null
           max_capacity?: number | null
           removed_at?: string | null
@@ -530,6 +556,7 @@ export type Database = {
           tags?: string[]
           title: string
           updated_at?: string
+          virtual_link?: string | null
         }
         Update: {
           category?: Database["public"]["Enums"]["event_category"]
@@ -537,9 +564,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_time?: string
+          event_format?: Database["public"]["Enums"]["event_format"]
           has_waitlist?: boolean
           id?: string
           is_exception?: boolean
+          livestream_provider?: Database["public"]["Enums"]["livestream_provider"]
           location?: string | null
           max_capacity?: number | null
           removed_at?: string | null
@@ -552,6 +581,7 @@ export type Database = {
           tags?: string[]
           title?: string
           updated_at?: string
+          virtual_link?: string | null
         }
         Relationships: [
           {
@@ -1250,6 +1280,19 @@ export type Database = {
         Returns: boolean
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
+      get_ical_feed_events: {
+        Args: { _token: string }
+        Returns: {
+          description: string
+          end_time: string
+          event_format: Database["public"]["Enums"]["event_format"]
+          id: string
+          location: string
+          start_time: string
+          title: string
+          virtual_link: string
+        }[]
+      }
       gettransactionid: { Args: never; Returns: unknown }
       has_role: {
         Args: {
@@ -1931,8 +1974,10 @@ export type Database = {
         | "fundraiser"
         | "workshop"
         | "other"
+      event_format: "in_person" | "virtual" | "hybrid"
       event_status: "draft" | "approved" | "removed"
       invitation_rsvp_status: "pending" | "going" | "interested" | "declined"
+      livestream_provider: "zoom" | "google_meet" | "youtube" | "none"
       notification_type: "reminder" | "announcement" | "update"
       oauth_provider: "google" | "apple" | "facebook" | "email"
       payment_status: "pending" | "succeeded" | "failed" | "refunded"
@@ -2089,8 +2134,10 @@ export const Constants = {
         "workshop",
         "other",
       ],
+      event_format: ["in_person", "virtual", "hybrid"],
       event_status: ["draft", "approved", "removed"],
       invitation_rsvp_status: ["pending", "going", "interested", "declined"],
+      livestream_provider: ["zoom", "google_meet", "youtube", "none"],
       notification_type: ["reminder", "announcement", "update"],
       oauth_provider: ["google", "apple", "facebook", "email"],
       payment_status: ["pending", "succeeded", "failed", "refunded"],
