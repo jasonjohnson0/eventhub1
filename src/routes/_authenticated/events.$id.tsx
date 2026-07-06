@@ -10,7 +10,8 @@ import { colorForEvent } from "@/lib/event-colors";
 import { Calendar, MapPin, Users, Share2, Eye, Facebook, Twitter, Mail, Link2 } from "lucide-react";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
 import { deleteSeriesInstance } from "@/lib/series.functions";
-import { Repeat } from "lucide-react";
+import { Repeat, ClipboardCheck, UserCheck } from "lucide-react";
+import { leaveWaitlist } from "@/lib/attendee.functions";
 import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/events/$id")({
@@ -39,6 +40,12 @@ function EventPage() {
   if (!data) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
 
   const { event, details, counts, myRsvp, slots, isCoordinator } = data;
+  const maxCapacity = (event as unknown as { max_capacity: number | null }).max_capacity;
+  const hasWaitlist = (event as unknown as { has_waitlist: boolean }).has_waitlist;
+  const waitlistCount = (counts as unknown as { waitlist?: number }).waitlist ?? 0;
+  const myWaitlistPosition =
+    (data as unknown as { myWaitlistPosition: number | null }).myWaitlistPosition;
+  const atCapacity = maxCapacity != null && counts.going >= maxCapacity;
   const series = (data as unknown as { series: { rrule: string } | null }).series;
   const geo = (data as unknown as { geo: { latitude: number; longitude: number } | null }).geo;
   const c = colorForEvent(event.id);
@@ -68,11 +75,25 @@ function EventPage() {
     try {
       const res = await upsertRsvp({ data: { event_id: id, status } });
       setData({ ...previous, myRsvp: res.myRsvp, counts: { ...previous.counts, ...res.counts } });
+      if (res.waitlisted && res.waitlistPosition != null) {
+        toast.success(`Event is full — you're #${res.waitlistPosition} on the waitlist`);
+      }
     } catch (e) {
       setData(previous);
       toast.error(e instanceof Error ? e.message : "RSVP failed");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleLeaveWaitlist() {
+    try {
+      await leaveWaitlist({ data: { event_id: id } });
+      toast.success("Left waitlist");
+      const fresh = await getEvent({ data: { id } });
+      setData(fresh);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
     }
   }
 
@@ -143,6 +164,18 @@ function EventPage() {
             {distanceMi != null && (
               <Badge variant="outline">{distanceMi.toFixed(1)} miles away</Badge>
             )}
+            {maxCapacity != null && (
+              <Badge
+                variant={atCapacity ? "destructive" : "outline"}
+                className="gap-1"
+              >
+                <Users className="h-3 w-3" />
+                {counts.going}/{maxCapacity} RSVPs
+              </Badge>
+            )}
+            {waitlistCount > 0 && (
+              <Badge variant="secondary">{waitlistCount} on waitlist</Badge>
+            )}
           </div>
           {event.tags && event.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
@@ -194,6 +227,25 @@ function EventPage() {
           <CardTitle className="text-base">RSVP</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {myWaitlistPosition != null && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+              You're <strong>#{myWaitlistPosition}</strong> on the waitlist. We'll promote
+              you automatically when a spot opens.
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-2 h-7"
+                onClick={handleLeaveWaitlist}
+              >
+                Leave waitlist
+              </Button>
+            </div>
+          )}
+          {atCapacity && myRsvp !== "going" && myWaitlistPosition == null && hasWaitlist && (
+            <p className="text-sm text-muted-foreground">
+              This event is full. Click <strong>Going</strong> to join the waitlist.
+            </p>
+          )}
           <div className="flex gap-2">
             {(["going", "interested", "declined"] as const).map((s) => (
               <Button
@@ -204,7 +256,9 @@ function EventPage() {
                 disabled={busy}
                 className="capitalize"
               >
-                {s}
+                {s === "going" && atCapacity && myRsvp !== "going" && hasWaitlist
+                  ? "Join waitlist"
+                  : s}
               </Button>
             ))}
           </div>
@@ -212,6 +266,7 @@ function EventPage() {
             <span>{counts.going} going</span>
             <span>{counts.interested} interested</span>
             <span>{counts.declined} declined</span>
+            {waitlistCount > 0 && <span>{waitlistCount} waitlisted</span>}
           </div>
         </CardContent>
       </Card>
@@ -281,11 +336,23 @@ function EventPage() {
           <CardHeader>
             <CardTitle className="text-base">Coordinator insights</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Eye className="h-4 w-4" />
               This event has been viewed {counts.clicksLast24h} times in the last 24 hours by registered users.
             </p>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm" variant="outline">
+                <Link to="/events/$id/checkin" params={{ id }}>
+                  <ClipboardCheck className="mr-1 h-4 w-4" /> Check-in page
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/settings">
+                  <UserCheck className="mr-1 h-4 w-4" /> Capacity settings
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
