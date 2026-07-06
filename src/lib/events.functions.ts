@@ -16,7 +16,7 @@ export const listMyEvents = createServerFn({ method: "GET" })
     const coordinatorIds = [context.userId, ...(staff ?? []).map((s) => s.coordinator_id)];
     const { data, error } = await context.supabase
       .from("events")
-      .select("id, title, description, location, start_time, end_time, status, coordinator_id, category, tags")
+      .select("id, title, description, location, start_time, end_time, status, coordinator_id, category, tags, series_id")
       .in("coordinator_id", coordinatorIds)
       .neq("status", "removed")
       .order("start_time", { ascending: true });
