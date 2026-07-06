@@ -73,7 +73,7 @@ function SearchPage() {
   }
 
   function toggleCategory(cat: string) {
-    const next = cats.includes(cat) ? cats.filter((c) => c !== cat) : [...cats, cat];
+    const next = cats.includes(cat) ? cats.filter((c: string) => c !== cat) : [...cats, cat];
     updateSearch({ category: next.join(",") });
   }
 
