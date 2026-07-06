@@ -142,7 +142,7 @@ export const updateEventLocation = createServerFn({ method: "POST" })
         },
         { onConflict: "event_id" },
       )
-      .select()
+      .select("id, event_id, location_name, latitude, longitude, created_at, updated_at")
       .single();
     if (error) throw new Error(error.message);
     return row;
