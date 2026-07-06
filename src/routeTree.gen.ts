@@ -31,6 +31,7 @@ import { Route as AuthenticatedAdminModerationRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as ApiPublicIcalTokenRouteImport } from './routes/api/public/ical.$token'
 import { Route as AuthenticatedEventsIdCheckinRouteImport } from './routes/_authenticated/events.$id.checkin'
+import { Route as AuthenticatedEventsIdAnalyticsRouteImport } from './routes/_authenticated/events.$id.analytics'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -144,6 +145,12 @@ const AuthenticatedEventsIdCheckinRoute =
     path: '/checkin',
     getParentRoute: () => AuthenticatedEventsIdRoute,
   } as any)
+const AuthenticatedEventsIdAnalyticsRoute =
+  AuthenticatedEventsIdAnalyticsRouteImport.update({
+    id: '/analytics',
+    path: '/analytics',
+    getParentRoute: () => AuthenticatedEventsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/events/$id': typeof AuthenticatedEventsIdRouteWithChildren
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
 }
@@ -187,6 +195,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/events/$id': typeof AuthenticatedEventsIdRouteWithChildren
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
 }
@@ -212,6 +221,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/events/$id': typeof AuthenticatedEventsIdRouteWithChildren
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/_authenticated/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
 }
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/events/$id'
     | '/admin/'
+    | '/events/$id/analytics'
     | '/events/$id/checkin'
     | '/api/public/ical/$token'
   fileRoutesByTo: FileRoutesByTo
@@ -259,6 +270,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/events/$id'
     | '/admin'
+    | '/events/$id/analytics'
     | '/events/$id/checkin'
     | '/api/public/ical/$token'
   id:
@@ -283,6 +295,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users'
     | '/_authenticated/events/$id'
     | '/_authenticated/admin/'
+    | '/_authenticated/events/$id/analytics'
     | '/_authenticated/events/$id/checkin'
     | '/api/public/ical/$token'
   fileRoutesById: FileRoutesById
@@ -454,6 +467,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEventsIdCheckinRouteImport
       parentRoute: typeof AuthenticatedEventsIdRoute
     }
+    '/_authenticated/events/$id/analytics': {
+      id: '/_authenticated/events/$id/analytics'
+      path: '/analytics'
+      fullPath: '/events/$id/analytics'
+      preLoaderRoute: typeof AuthenticatedEventsIdAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedEventsIdRoute
+    }
   }
 }
 
@@ -477,10 +497,12 @@ const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
 interface AuthenticatedEventsIdRouteChildren {
+  AuthenticatedEventsIdAnalyticsRoute: typeof AuthenticatedEventsIdAnalyticsRoute
   AuthenticatedEventsIdCheckinRoute: typeof AuthenticatedEventsIdCheckinRoute
 }
 
 const AuthenticatedEventsIdRouteChildren: AuthenticatedEventsIdRouteChildren = {
+  AuthenticatedEventsIdAnalyticsRoute: AuthenticatedEventsIdAnalyticsRoute,
   AuthenticatedEventsIdCheckinRoute: AuthenticatedEventsIdCheckinRoute,
 }
 
