@@ -30,6 +30,7 @@ import { Route as AuthenticatedAdminSponsorshipRouteImport } from './routes/_aut
 import { Route as AuthenticatedAdminModerationRouteImport } from './routes/_authenticated/admin.moderation'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as ApiPublicIcalTokenRouteImport } from './routes/api/public/ical.$token'
+import { Route as AuthenticatedEventsIdCheckinMobileRouteImport } from './routes/_authenticated/events.$id.checkin-mobile'
 import { Route as AuthenticatedEventsIdCheckinRouteImport } from './routes/_authenticated/events.$id.checkin'
 import { Route as AuthenticatedEventsIdAnalyticsRouteImport } from './routes/_authenticated/events.$id.analytics'
 
@@ -139,6 +140,12 @@ const ApiPublicIcalTokenRoute = ApiPublicIcalTokenRouteImport.update({
   path: '/api/public/ical/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedEventsIdCheckinMobileRoute =
+  AuthenticatedEventsIdCheckinMobileRouteImport.update({
+    id: '/checkin-mobile',
+    path: '/checkin-mobile',
+    getParentRoute: () => AuthenticatedEventsIdRoute,
+  } as any)
 const AuthenticatedEventsIdCheckinRoute =
   AuthenticatedEventsIdCheckinRouteImport.update({
     id: '/checkin',
@@ -174,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
+  '/events/$id/checkin-mobile': typeof AuthenticatedEventsIdCheckinMobileRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
 }
 export interface FileRoutesByTo {
@@ -197,6 +205,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
+  '/events/$id/checkin-mobile': typeof AuthenticatedEventsIdCheckinMobileRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
 }
 export interface FileRoutesById {
@@ -223,6 +232,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/_authenticated/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
+  '/_authenticated/events/$id/checkin-mobile': typeof AuthenticatedEventsIdCheckinMobileRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
 }
 export interface FileRouteTypes {
@@ -249,6 +259,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/events/$id/analytics'
     | '/events/$id/checkin'
+    | '/events/$id/checkin-mobile'
     | '/api/public/ical/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -272,6 +283,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/events/$id/analytics'
     | '/events/$id/checkin'
+    | '/events/$id/checkin-mobile'
     | '/api/public/ical/$token'
   id:
     | '__root__'
@@ -297,6 +309,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/events/$id/analytics'
     | '/_authenticated/events/$id/checkin'
+    | '/_authenticated/events/$id/checkin-mobile'
     | '/api/public/ical/$token'
   fileRoutesById: FileRoutesById
 }
@@ -460,6 +473,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicIcalTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/events/$id/checkin-mobile': {
+      id: '/_authenticated/events/$id/checkin-mobile'
+      path: '/checkin-mobile'
+      fullPath: '/events/$id/checkin-mobile'
+      preLoaderRoute: typeof AuthenticatedEventsIdCheckinMobileRouteImport
+      parentRoute: typeof AuthenticatedEventsIdRoute
+    }
     '/_authenticated/events/$id/checkin': {
       id: '/_authenticated/events/$id/checkin'
       path: '/checkin'
@@ -499,11 +519,14 @@ const AuthenticatedAdminRouteWithChildren =
 interface AuthenticatedEventsIdRouteChildren {
   AuthenticatedEventsIdAnalyticsRoute: typeof AuthenticatedEventsIdAnalyticsRoute
   AuthenticatedEventsIdCheckinRoute: typeof AuthenticatedEventsIdCheckinRoute
+  AuthenticatedEventsIdCheckinMobileRoute: typeof AuthenticatedEventsIdCheckinMobileRoute
 }
 
 const AuthenticatedEventsIdRouteChildren: AuthenticatedEventsIdRouteChildren = {
   AuthenticatedEventsIdAnalyticsRoute: AuthenticatedEventsIdAnalyticsRoute,
   AuthenticatedEventsIdCheckinRoute: AuthenticatedEventsIdCheckinRoute,
+  AuthenticatedEventsIdCheckinMobileRoute:
+    AuthenticatedEventsIdCheckinMobileRoute,
 }
 
 const AuthenticatedEventsIdRouteWithChildren =
