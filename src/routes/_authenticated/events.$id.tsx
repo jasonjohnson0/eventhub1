@@ -145,6 +145,34 @@ function EventPage() {
 
       {event.description && <p className="whitespace-pre-line text-sm text-foreground/80">{event.description}</p>}
 
+      {series && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Repeat className="h-4 w-4" /> Part of a recurring series
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Rule: <code className="rounded bg-muted px-1 text-xs">{series.rrule}</code>
+            </p>
+            {isCoordinator && (
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => handleDeleteSeries("this")}>
+                  Delete this occurrence
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleDeleteSeries("future")}>
+                  Delete this and future
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => handleDeleteSeries("all")}>
+                  Delete entire series
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">RSVP</CardTitle>
