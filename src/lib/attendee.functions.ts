@@ -2,14 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-type AdminClient = Awaited<
-  ReturnType<typeof import("@/integrations/supabase/client.server").then extends never ? never : never>
->;
-
 async function loadUserDirectory(
-  supabaseAdmin: Awaited<
-    ReturnType<() => Promise<typeof import("@/integrations/supabase/client.server")>>
-  >["supabaseAdmin"],
+  supabaseAdmin: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    from: (t: string) => any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    auth: { admin: { listUsers: (a: { page: number; perPage: number }) => Promise<any> } };
+  },
   ids: string[],
 ): Promise<Map<string, { name: string; email: string }>> {
   const uniqIds = Array.from(new Set(ids));
