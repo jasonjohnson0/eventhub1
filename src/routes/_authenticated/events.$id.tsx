@@ -9,6 +9,9 @@ import { toast } from "sonner";
 import { colorForEvent } from "@/lib/event-colors";
 import { Calendar, MapPin, Users, Share2, Eye, Facebook, Twitter, Mail, Link2 } from "lucide-react";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
+import { deleteSeriesInstance } from "@/lib/series.functions";
+import { Repeat } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/events/$id")({
   component: EventPage,
@@ -19,6 +22,7 @@ type Data = Awaited<ReturnType<typeof getEvent>>;
 
 function EventPage() {
   const { id } = Route.useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState<Data | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -35,6 +39,7 @@ function EventPage() {
   if (!data) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
 
   const { event, details, counts, myRsvp, slots, isCoordinator } = data;
+  const series = (data as unknown as { series: { rrule: string } | null }).series;
   const geo = (data as unknown as { geo: { latitude: number; longitude: number } | null }).geo;
   const c = colorForEvent(event.id);
   const cover = details?.landscape_image_url ?? null;
@@ -84,6 +89,17 @@ function EventPage() {
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Share failed");
+    }
+  }
+
+  async function handleDeleteSeries(scope: "this" | "future" | "all") {
+    if (!confirm(`Delete ${scope === "this" ? "this occurrence" : scope === "future" ? "this and future occurrences" : "the entire series"}?`)) return;
+    try {
+      const res = await deleteSeriesInstance({ data: { event_id: id, scope } });
+      toast.success(`Deleted ${res.deleted} event${res.deleted === 1 ? "" : "s"}`);
+      navigate({ to: "/calendar" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
     }
   }
 
@@ -144,6 +160,34 @@ function EventPage() {
       </div>
 
       {event.description && <p className="whitespace-pre-line text-sm text-foreground/80">{event.description}</p>}
+
+      {series && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Repeat className="h-4 w-4" /> Part of a recurring series
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Rule: <code className="rounded bg-muted px-1 text-xs">{series.rrule}</code>
+            </p>
+            {isCoordinator && (
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => handleDeleteSeries("this")}>
+                  Delete this occurrence
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => handleDeleteSeries("future")}>
+                  Delete this and future
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => handleDeleteSeries("all")}>
+                  Delete entire series
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

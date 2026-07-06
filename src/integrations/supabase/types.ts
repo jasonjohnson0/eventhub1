@@ -341,6 +341,57 @@ export type Database = {
           },
         ]
       }
+      event_series: {
+        Row: {
+          category: Database["public"]["Enums"]["event_category"]
+          coordinator_id: string
+          created_at: string
+          description: string | null
+          dtstart: string
+          duration_minutes: number
+          id: string
+          location: string | null
+          rrule: string
+          tags: string[]
+          timezone: string
+          title: string
+          until: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["event_category"]
+          coordinator_id: string
+          created_at?: string
+          description?: string | null
+          dtstart: string
+          duration_minutes: number
+          id?: string
+          location?: string | null
+          rrule: string
+          tags?: string[]
+          timezone?: string
+          title: string
+          until?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["event_category"]
+          coordinator_id?: string
+          created_at?: string
+          description?: string | null
+          dtstart?: string
+          duration_minutes?: number
+          id?: string
+          location?: string | null
+          rrule?: string
+          tags?: string[]
+          timezone?: string
+          title?: string
+          until?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           category: Database["public"]["Enums"]["event_category"]
@@ -349,10 +400,13 @@ export type Database = {
           description: string | null
           end_time: string
           id: string
+          is_exception: boolean
           location: string | null
           removed_at: string | null
           removed_by: string | null
           removed_reason: string | null
+          series_id: string | null
+          series_original_start: string | null
           start_time: string
           status: Database["public"]["Enums"]["event_status"]
           tags: string[]
@@ -366,10 +420,13 @@ export type Database = {
           description?: string | null
           end_time: string
           id?: string
+          is_exception?: boolean
           location?: string | null
           removed_at?: string | null
           removed_by?: string | null
           removed_reason?: string | null
+          series_id?: string | null
+          series_original_start?: string | null
           start_time: string
           status?: Database["public"]["Enums"]["event_status"]
           tags?: string[]
@@ -383,17 +440,28 @@ export type Database = {
           description?: string | null
           end_time?: string
           id?: string
+          is_exception?: boolean
           location?: string | null
           removed_at?: string | null
           removed_by?: string | null
           removed_reason?: string | null
+          series_id?: string | null
+          series_original_start?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["event_status"]
           tags?: string[]
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "event_series"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       marketing_consent: {
         Row: {

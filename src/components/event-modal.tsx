@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { createEvent } from "@/lib/events.functions";
+import { createSeries } from "@/lib/series.functions";
 import { CATEGORIES, categoryLabel, type EventCategory } from "@/lib/categories";
 import {
   Select,
@@ -42,6 +43,8 @@ export function EventModal({
   const [tagsText, setTagsText] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
+  const [repeat, setRepeat] = useState<"none" | "daily" | "weekly" | "monthly">("none");
+  const [repeatUntil, setRepeatUntil] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -64,23 +67,48 @@ export function EventModal({
         setLoading(false);
         return;
       }
-      await createEvent({
-        data: {
-          title,
-          description: description || null,
-          location: location || null,
-          start_time: startIso,
-          end_time: endIso,
-          category,
-          tags: tagsText
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean),
-          latitude: lat ? Number(lat) : null,
-          longitude: lng ? Number(lng) : null,
-        },
-      });
-      toast.success("Event created");
+      const tags = tagsText.split(",").map((t) => t.trim()).filter(Boolean);
+      if (repeat === "none") {
+        await createEvent({
+          data: {
+            title,
+            description: description || null,
+            location: location || null,
+            start_time: startIso,
+            end_time: endIso,
+            category,
+            tags,
+            latitude: lat ? Number(lat) : null,
+            longitude: lng ? Number(lng) : null,
+          },
+        });
+        toast.success("Event created");
+      } else {
+        const rrule =
+          repeat === "daily"
+            ? "FREQ=DAILY"
+            : repeat === "weekly"
+              ? "FREQ=WEEKLY"
+              : "FREQ=MONTHLY";
+        const durationMin = Math.round(
+          (new Date(endIso).getTime() - new Date(startIso).getTime()) / 60_000,
+        );
+        const res = await createSeries({
+          data: {
+            title,
+            description: description || null,
+            location: location || null,
+            category,
+            tags,
+            dtstart: startIso,
+            duration_minutes: durationMin,
+            rrule,
+            until: repeatUntil ? new Date(repeatUntil).toISOString() : null,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          },
+        });
+        toast.success(`Series created — ${res.count} occurrences`);
+      }
       if (imageUrl) toast("Media upload wiring lands in Phase 1d");
       setTitle("");
       setDescription("");
@@ -90,6 +118,8 @@ export function EventModal({
       setLat("");
       setLng("");
       setCategory("other");
+      setRepeat("none");
+      setRepeatUntil("");
       onCreated?.();
       onOpenChange(false);
     } catch (err) {
@@ -168,12 +198,46 @@ export function EventModal({
               placeholder="https://…"
             />
           </div>
+          <div className="rounded-md border p-3">
+            <div className="mb-2 grid grid-cols-2 gap-3">
+              <div>
+                <Label>Repeat</Label>
+                <Select value={repeat} onValueChange={(v) => setRepeat(v as typeof repeat)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Does not repeat</SelectItem>
+                    <SelectItem value="daily">Daily</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {repeat !== "none" && (
+                <div>
+                  <Label htmlFor="until">Until (optional)</Label>
+                  <Input
+                    id="until"
+                    type="date"
+                    value={repeatUntil}
+                    onChange={(e) => setRepeatUntil(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+            {repeat !== "none" && (
+              <p className="text-xs text-muted-foreground">
+                Up to 100 occurrences will be generated. Each can be edited individually or as a series.
+              </p>
+            )}
+          </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Creating…" : "Create event"}
+              {loading ? "Creating…" : repeat === "none" ? "Create event" : "Create series"}
             </Button>
           </DialogFooter>
         </form>
