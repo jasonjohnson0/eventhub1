@@ -412,6 +412,9 @@ function EventPage() {
         </Card>
       )}
 
+      <TicketManager eventId={id} isCoordinator={isCoordinator} />
+      <PhotoGallery eventId={id} canManage={isCoordinator} />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">RSVP</CardTitle>
