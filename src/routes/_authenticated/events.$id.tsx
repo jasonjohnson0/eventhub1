@@ -37,6 +37,88 @@ export const Route = createFileRoute("/_authenticated/events/$id")({
 
 type Data = Awaited<ReturnType<typeof getEvent>>;
 
+function EventFormatEditor({
+  eventId,
+  initialFormat,
+  initialLink,
+  initialProvider,
+  onSaved,
+}: {
+  eventId: string;
+  initialFormat: "in_person" | "virtual" | "hybrid";
+  initialLink: string | null;
+  initialProvider: string;
+  onSaved: () => void;
+}) {
+  const [format, setFormat] = useState<"in_person" | "virtual" | "hybrid">(initialFormat);
+  const [link, setLink] = useState(initialLink ?? "");
+  const [provider, setProvider] = useState<"zoom" | "google_meet" | "youtube" | "none">(
+    (initialProvider as "zoom" | "google_meet" | "youtube" | "none") ?? "none",
+  );
+  const [saving, setSaving] = useState(false);
+  async function save() {
+    setSaving(true);
+    try {
+      await updateEventFormat({
+        data: {
+          event_id: eventId,
+          event_format: format,
+          virtual_link: format === "in_person" ? null : link || null,
+          livestream_provider: format === "in_person" ? "none" : provider,
+        },
+      });
+      toast.success("Format updated");
+      onSaved();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <div className="rounded-md border p-3 space-y-3">
+      <div className="text-sm font-medium">Event format</div>
+      <div className="flex flex-wrap gap-3 text-sm">
+        {(["in_person", "virtual", "hybrid"] as const).map((f) => (
+          <label key={f} className="flex items-center gap-1">
+            <input
+              type="radio"
+              name={`fmt-${eventId}`}
+              checked={format === f}
+              onChange={() => setFormat(f)}
+            />
+            <span className="capitalize">{f.replace("_", " ")}</span>
+          </label>
+        ))}
+      </div>
+      {format !== "in_person" && (
+        <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
+          <Input
+            type="url"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            placeholder="https://zoom.us/j/…"
+          />
+          <Select value={provider} onValueChange={(v) => setProvider(v as typeof provider)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="zoom">Zoom</SelectItem>
+              <SelectItem value="google_meet">Google Meet</SelectItem>
+              <SelectItem value="youtube">YouTube</SelectItem>
+              <SelectItem value="none">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <Button size="sm" variant="outline" onClick={save} disabled={saving}>
+        {saving ? "Saving…" : "Save format"}
+      </Button>
+    </div>
+  );
+}
+
 function EventPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
