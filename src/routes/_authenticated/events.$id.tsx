@@ -259,6 +259,12 @@ function EventPage() {
             {waitlistCount > 0 && (
               <Badge variant="secondary">{waitlistCount} on waitlist</Badge>
             )}
+            {eventFormat !== "in_person" && (
+              <Badge variant="secondary" className="gap-1 capitalize">
+                <Video className="h-3 w-3" />
+                {eventFormat === "hybrid" ? "Hybrid" : "Virtual"}
+              </Badge>
+            )}
           </div>
           {event.tags && event.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
