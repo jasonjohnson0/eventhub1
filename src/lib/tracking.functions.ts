@@ -60,6 +60,16 @@ export const upsertRsvp = createServerFn({ method: "POST" })
       .maybeSingle();
 
     let newStatus: "going" | "interested" | "declined" | null = data.status;
+    let waitlisted = false;
+    let waitlistPosition: number | null = null;
+
+    // Load capacity settings
+    const { data: ev } = await context.supabase
+      .from("events")
+      .select("max_capacity, has_waitlist")
+      .eq("id", data.event_id)
+      .maybeSingle();
+
     if (existing?.status === data.status) {
       // Toggle off
       const { error } = await context.supabase
@@ -69,7 +79,82 @@ export const upsertRsvp = createServerFn({ method: "POST" })
         .eq("user_id", context.userId);
       if (error) throw new Error(error.message);
       newStatus = null;
+      // A "going" seat opened up — promote next waitlisted user if any.
+      if (existing?.status === "going" && ev?.max_capacity != null) {
+        try {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const { data: next } = await supabaseAdmin
+            .from("event_waitlist")
+            .select("id, user_id, position")
+            .eq("event_id", data.event_id)
+            .eq("status", "waitlisted")
+            .order("position", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (next) {
+            await supabaseAdmin
+              .from("event_rsvps")
+              .upsert(
+                { event_id: data.event_id, user_id: next.user_id, status: "going" },
+                { onConflict: "event_id,user_id" },
+              );
+            await supabaseAdmin
+              .from("event_waitlist")
+              .update({ status: "promoted" })
+              .eq("id", next.id);
+            await supabaseAdmin.from("admin_audit_log").insert({
+              admin_id: context.userId,
+              action: "waitlist_auto_promote",
+              table_name: "event_waitlist",
+              record_id: next.id,
+              change_details: { event_id: data.event_id, user_id: next.user_id },
+            });
+          }
+        } catch {
+          // best-effort promotion
+        }
+      }
     } else {
+      // Enforce capacity on "going"
+      if (data.status === "going" && ev?.max_capacity != null) {
+        const { count: goingCount } = await context.supabase
+          .from("event_rsvps")
+          .select("*", { count: "exact", head: true })
+          .eq("event_id", data.event_id)
+          .eq("status", "going");
+        const wasGoing = existing?.status === "going";
+        const currentGoing = (goingCount ?? 0) - (wasGoing ? 1 : 0);
+        if (currentGoing >= ev.max_capacity) {
+          if (!ev.has_waitlist) {
+            throw new Error("This event is at capacity");
+          }
+          // Auto-add to waitlist instead of RSVP
+          const { data: last } = await context.supabase
+            .from("event_waitlist")
+            .select("position")
+            .eq("event_id", data.event_id)
+            .eq("status", "waitlisted")
+            .order("position", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          waitlistPosition = (last?.position ?? 0) + 1;
+          const { error: wErr } = await context.supabase
+            .from("event_waitlist")
+            .upsert(
+              {
+                event_id: data.event_id,
+                user_id: context.userId,
+                position: waitlistPosition,
+                status: "waitlisted",
+              },
+              { onConflict: "event_id,user_id" },
+            );
+          if (wErr) throw new Error(wErr.message);
+          waitlisted = true;
+          newStatus = existing?.status ?? null;
+        }
+      }
+      if (!waitlisted) {
       const { error } = await context.supabase
         .from("event_rsvps")
         .upsert(
@@ -82,6 +167,7 @@ export const upsertRsvp = createServerFn({ method: "POST" })
           { onConflict: "event_id,user_id" },
         );
       if (error) throw new Error(error.message);
+      }
     }
 
     const [{ count: going }, { count: interested }, { count: declined }] = await Promise.all([
@@ -92,5 +178,7 @@ export const upsertRsvp = createServerFn({ method: "POST" })
     return {
       myRsvp: newStatus,
       counts: { going: going ?? 0, interested: interested ?? 0, declined: declined ?? 0 },
+      waitlisted,
+      waitlistPosition,
     };
   });

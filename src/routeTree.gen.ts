@@ -29,6 +29,7 @@ import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminSponsorshipRouteImport } from './routes/_authenticated/admin.sponsorship'
 import { Route as AuthenticatedAdminModerationRouteImport } from './routes/_authenticated/admin.moderation'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as AuthenticatedEventsIdCheckinRouteImport } from './routes/_authenticated/events.$id.checkin'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -131,6 +132,12 @@ const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedEventsIdCheckinRoute =
+  AuthenticatedEventsIdCheckinRouteImport.update({
+    id: '/checkin',
+    path: '/checkin',
+    getParentRoute: () => AuthenticatedEventsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -150,8 +157,9 @@ export interface FileRoutesByFullPath {
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
-  '/events/$id': typeof AuthenticatedEventsIdRoute
+  '/events/$id': typeof AuthenticatedEventsIdRouteWithChildren
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -170,8 +178,9 @@ export interface FileRoutesByTo {
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
-  '/events/$id': typeof AuthenticatedEventsIdRoute
+  '/events/$id': typeof AuthenticatedEventsIdRouteWithChildren
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -193,8 +202,9 @@ export interface FileRoutesById {
   '/_authenticated/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/_authenticated/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
-  '/_authenticated/events/$id': typeof AuthenticatedEventsIdRoute
+  '/_authenticated/events/$id': typeof AuthenticatedEventsIdRouteWithChildren
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -218,6 +228,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/events/$id'
     | '/admin/'
+    | '/events/$id/checkin'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/events/$id'
     | '/admin'
+    | '/events/$id/checkin'
   id:
     | '__root__'
     | '/'
@@ -260,6 +272,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users'
     | '/_authenticated/events/$id'
     | '/_authenticated/admin/'
+    | '/_authenticated/events/$id/checkin'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -414,6 +427,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/events/$id/checkin': {
+      id: '/_authenticated/events/$id/checkin'
+      path: '/checkin'
+      fullPath: '/events/$id/checkin'
+      preLoaderRoute: typeof AuthenticatedEventsIdCheckinRouteImport
+      parentRoute: typeof AuthenticatedEventsIdRoute
+    }
   }
 }
 
@@ -436,6 +456,19 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
+interface AuthenticatedEventsIdRouteChildren {
+  AuthenticatedEventsIdCheckinRoute: typeof AuthenticatedEventsIdCheckinRoute
+}
+
+const AuthenticatedEventsIdRouteChildren: AuthenticatedEventsIdRouteChildren = {
+  AuthenticatedEventsIdCheckinRoute: AuthenticatedEventsIdCheckinRoute,
+}
+
+const AuthenticatedEventsIdRouteWithChildren =
+  AuthenticatedEventsIdRoute._addFileChildren(
+    AuthenticatedEventsIdRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
@@ -443,7 +476,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
-  AuthenticatedEventsIdRoute: typeof AuthenticatedEventsIdRoute
+  AuthenticatedEventsIdRoute: typeof AuthenticatedEventsIdRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -453,7 +486,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
-  AuthenticatedEventsIdRoute: AuthenticatedEventsIdRoute,
+  AuthenticatedEventsIdRoute: AuthenticatedEventsIdRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =

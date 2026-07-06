@@ -105,7 +105,7 @@ export const getEvent = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: ev, error } = await context.supabase
       .from("events")
-      .select("id, title, description, location, start_time, end_time, status, coordinator_id, created_at, category, tags, series_id, is_exception")
+      .select("id, title, description, location, start_time, end_time, status, coordinator_id, created_at, category, tags, series_id, is_exception, max_capacity, has_waitlist")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -151,6 +151,19 @@ export const getEvent = createServerFn({ method: "GET" })
       .eq("user_id", context.userId)
       .maybeSingle();
 
+    const { count: waitlistCount } = await context.supabase
+      .from("event_waitlist")
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", data.id)
+      .eq("status", "waitlisted");
+
+    const { data: myWaitlist } = await context.supabase
+      .from("event_waitlist")
+      .select("position, status")
+      .eq("event_id", data.id)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+
     const { data: slots } = await context.supabase
       .from("sponsored_slots")
       .select("id, position, slot_type, status, cost_cents")
@@ -168,8 +181,11 @@ export const getEvent = createServerFn({ method: "GET" })
         declined: rsvpDeclined ?? 0,
         shares: shareCount ?? 0,
         clicksLast24h: clickCount ?? 0,
+        waitlist: waitlistCount ?? 0,
       },
       myRsvp: myRsvp?.status ?? null,
+      myWaitlistPosition:
+        myWaitlist && myWaitlist.status === "waitlisted" ? myWaitlist.position : null,
       slots: slots ?? [],
       isCoordinator: ev.coordinator_id === context.userId,
     };
