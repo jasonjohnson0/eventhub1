@@ -442,6 +442,16 @@ function EventPage() {
             <CardTitle className="text-base">Coordinator insights</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <EventFormatEditor
+              eventId={id}
+              initialFormat={eventFormat}
+              initialLink={virtualLink}
+              initialProvider={livestreamProvider}
+              onSaved={async () => {
+                const fresh = await getEvent({ data: { id } });
+                setData(fresh);
+              }}
+            />
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Eye className="h-4 w-4" />
               This event has been viewed {counts.clicksLast24h} times in the last 24 hours by registered users.
