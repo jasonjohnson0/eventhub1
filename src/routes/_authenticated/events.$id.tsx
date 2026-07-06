@@ -22,6 +22,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { generateEventIcal, updateEventFormat } from "@/lib/distribution.functions";
 import { Input } from "@/components/ui/input";
+import { TicketManager } from "@/components/ticket-manager";
+import { PhotoGallery } from "@/components/photo-gallery";
+import { BarChart3, Smartphone } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -542,6 +545,16 @@ function EventPage() {
               <Button asChild size="sm" variant="outline">
                 <Link to="/events/$id/checkin" params={{ id }}>
                   <ClipboardCheck className="mr-1 h-4 w-4" /> Check-in page
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/events/$id/checkin-mobile" params={{ id }}>
+                  <Smartphone className="mr-1 h-4 w-4" /> Mobile QR check-in
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/events/$id/analytics" params={{ id }}>
+                  <BarChart3 className="mr-1 h-4 w-4" /> View analytics
                 </Link>
               </Button>
               <Button asChild size="sm" variant="outline">
