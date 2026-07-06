@@ -8,6 +8,10 @@ import { toast } from "sonner";
 import { inviteStaff, listStaff, revokeStaff } from "@/lib/workspace.functions";
 import { bootstrapFirstAdmin } from "@/lib/admin.functions";
 import { Badge } from "@/components/ui/badge";
+import { listMyEvents } from "@/lib/events.functions";
+import { exportRsvpList, updateEventCapacity, getCapacityStatus } from "@/lib/attendee.functions";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Download } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -23,10 +27,17 @@ type StaffRow = {
   staff_user_id: string | null;
 };
 
+type EventRow = Awaited<ReturnType<typeof listMyEvents>>[number] & {
+  max_capacity?: number | null;
+  has_waitlist?: boolean;
+};
+
 function SettingsPage() {
   const [staff, setStaff] = useState<StaffRow[]>([]);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [events, setEvents] = useState<EventRow[]>([]);
+  const [caps, setCaps] = useState<Record<string, { max: number | null; has_waitlist: boolean; going: number; waitlist: number }>>({});
 
   async function reload() {
     try {
@@ -36,9 +47,58 @@ function SettingsPage() {
       toast.error(err instanceof Error ? err.message : "Failed to load staff");
     }
   }
+
+  async function loadEvents() {
+    try {
+      const evs = (await listMyEvents()) as EventRow[];
+      setEvents(evs);
+      const entries = await Promise.all(
+        evs.map(async (e) => {
+          const s = await getCapacityStatus({ data: { event_id: e.id } });
+          return [
+            e.id,
+            { max: s.max, has_waitlist: s.has_waitlist, going: s.current, waitlist: s.waitlist_count },
+          ] as const;
+        }),
+      );
+      setCaps(Object.fromEntries(entries));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load events");
+    }
+  }
+
   useEffect(() => {
     void reload();
+    void loadEvents();
   }, []);
+
+  async function saveCapacity(eventId: string, maxStr: string, hasWaitlist: boolean) {
+    const max = maxStr.trim() === "" ? null : Math.max(1, parseInt(maxStr, 10) || 0) || null;
+    try {
+      await updateEventCapacity({
+        data: { event_id: eventId, max_capacity: max, has_waitlist: hasWaitlist },
+      });
+      toast.success("Capacity updated");
+      await loadEvents();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    }
+  }
+
+  async function downloadCsv(eventId: string) {
+    try {
+      const { filename, csv } = await exportRsvpList({ data: { event_id: eventId } });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export failed");
+    }
+  }
 
   async function onInvite(e: React.FormEvent) {
     e.preventDefault();
@@ -145,6 +205,82 @@ function SettingsPage() {
             </Button>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Event capacity & RSVP export</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {events.length === 0 && (
+              <p className="text-sm text-muted-foreground">No events yet.</p>
+            )}
+            <div className="divide-y rounded-md border">
+              {events.map((e) => (
+                <EventCapacityRow
+                  key={e.id}
+                  event={e}
+                  status={caps[e.id]}
+                  onSave={(m, w) => saveCapacity(e.id, m, w)}
+                  onExport={() => downloadCsv(e.id)}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function EventCapacityRow({
+  event,
+  status,
+  onSave,
+  onExport,
+}: {
+  event: EventRow;
+  status?: { max: number | null; has_waitlist: boolean; going: number; waitlist: number };
+  onSave: (max: string, waitlist: boolean) => void | Promise<void>;
+  onExport: () => void;
+}) {
+  const [maxStr, setMaxStr] = useState<string>(status?.max?.toString() ?? "");
+  const [waitlist, setWaitlist] = useState<boolean>(status?.has_waitlist ?? false);
+  useEffect(() => {
+    setMaxStr(status?.max?.toString() ?? "");
+    setWaitlist(status?.has_waitlist ?? false);
+  }, [status?.max, status?.has_waitlist]);
+
+  return (
+    <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium">{event.title}</div>
+        <div className="text-xs text-muted-foreground">
+          {new Date(event.start_time).toLocaleDateString()}{" "}
+          {status && `· ${status.going} going${status.waitlist ? ` · ${status.waitlist} waitlisted` : ""}`}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          type="number"
+          min={1}
+          placeholder="No limit"
+          value={maxStr}
+          onChange={(e) => setMaxStr(e.target.value)}
+          className="h-9 w-28"
+        />
+        <label className="flex items-center gap-1 text-xs">
+          <Checkbox
+            checked={waitlist}
+            onCheckedChange={(v) => setWaitlist(Boolean(v))}
+          />
+          Waitlist
+        </label>
+        <Button size="sm" variant="outline" onClick={() => onSave(maxStr, waitlist)}>
+          Save
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onExport}>
+          <Download className="mr-1 h-4 w-4" /> CSV
+        </Button>
       </div>
     </div>
   );
