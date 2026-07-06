@@ -1,42 +1,26 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { createFileRoute } from "@tanstack/react-router";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { getMapEvents } from "@/lib/search.functions";
 import { CATEGORIES, categoryLabel, categoryClasses } from "@/lib/categories";
 import { Button } from "@/components/ui/button";
 import { MapPin } from "lucide-react";
+
+// Client-only: leaflet accesses `window` at module load, so keep it out of the SSR graph.
+const MapCanvas = lazy(() => import("@/components/map-canvas"));
 
 export const Route = createFileRoute("/_authenticated/map")({
   component: MapPage,
   head: () => ({ meta: [{ title: "Map — EventHub" }] }),
 });
 
-// Fix leaflet default marker icons in bundlers
-const DefaultIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-L.Marker.prototype.options.icon = DefaultIcon;
-
 type EventMarker = Awaited<ReturnType<typeof getMapEvents>>[number];
-
-function Recenter({ lat, lng }: { lat: number; lng: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView([lat, lng], 12);
-  }, [lat, lng, map]);
-  return null;
-}
 
 function MapPage() {
   const [events, setEvents] = useState<EventMarker[]>([]);
   const [activeCats, setActiveCats] = useState<Set<string>>(new Set());
   const [center, setCenter] = useState<[number, number]>([30.7744, -85.2264]);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     getMapEvents().then(setEvents);
@@ -86,41 +70,13 @@ function MapPage() {
         </Button>
       </div>
       <div className="flex-1">
-        <MapContainer center={center} zoom={11} className="h-full w-full">
-          <Recenter lat={center[0]} lng={center[1]} />
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          {filtered.map((ev) => (
-            <Marker key={ev.id} position={[ev.latitude, ev.longitude]}>
-              <Popup>
-                <div className="space-y-1">
-                  <div className={`inline-block rounded-full px-2 py-0.5 text-[10px] capitalize ${categoryClasses(ev.category)}`}>
-                    {categoryLabel(ev.category)}
-                  </div>
-                  <div className="font-semibold">{ev.title}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(ev.start_time).toLocaleString([], {
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </div>
-                  {ev.location && <div className="text-xs">{ev.location}</div>}
-                  <Link
-                    to="/events/$id"
-                    params={{ id: ev.id }}
-                    className="text-xs font-medium text-primary underline"
-                  >
-                    Open event →
-                  </Link>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
+        {mounted ? (
+          <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading map…</div>}>
+            <MapCanvas center={center} events={filtered} />
+          </Suspense>
+        ) : (
+          <div className="p-6 text-sm text-muted-foreground">Loading map…</div>
+        )}
       </div>
     </div>
   );

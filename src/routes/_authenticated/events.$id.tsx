@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { colorForEvent } from "@/lib/event-colors";
-import { Calendar, MapPin, Users, Share2, Eye, Facebook, Twitter, Mail, Link2 } from "lucide-react";
+import { Calendar, MapPin, Users, Share2, Eye, Facebook, Twitter, Mail, Link2, Video, Download, ExternalLink } from "lucide-react";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
 import { deleteSeriesInstance } from "@/lib/series.functions";
 import { Repeat, ClipboardCheck, UserCheck } from "lucide-react";
@@ -20,6 +20,15 @@ import {
   scheduleReminders,
 } from "@/lib/communications.functions";
 import { Textarea } from "@/components/ui/textarea";
+import { generateEventIcal, updateEventFormat } from "@/lib/distribution.functions";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/events/$id")({
   component: EventPage,
@@ -27,6 +36,88 @@ export const Route = createFileRoute("/_authenticated/events/$id")({
 });
 
 type Data = Awaited<ReturnType<typeof getEvent>>;
+
+function EventFormatEditor({
+  eventId,
+  initialFormat,
+  initialLink,
+  initialProvider,
+  onSaved,
+}: {
+  eventId: string;
+  initialFormat: "in_person" | "virtual" | "hybrid";
+  initialLink: string | null;
+  initialProvider: string;
+  onSaved: () => void;
+}) {
+  const [format, setFormat] = useState<"in_person" | "virtual" | "hybrid">(initialFormat);
+  const [link, setLink] = useState(initialLink ?? "");
+  const [provider, setProvider] = useState<"zoom" | "google_meet" | "youtube" | "none">(
+    (initialProvider as "zoom" | "google_meet" | "youtube" | "none") ?? "none",
+  );
+  const [saving, setSaving] = useState(false);
+  async function save() {
+    setSaving(true);
+    try {
+      await updateEventFormat({
+        data: {
+          event_id: eventId,
+          event_format: format,
+          virtual_link: format === "in_person" ? null : link || null,
+          livestream_provider: format === "in_person" ? "none" : provider,
+        },
+      });
+      toast.success("Format updated");
+      onSaved();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <div className="rounded-md border p-3 space-y-3">
+      <div className="text-sm font-medium">Event format</div>
+      <div className="flex flex-wrap gap-3 text-sm">
+        {(["in_person", "virtual", "hybrid"] as const).map((f) => (
+          <label key={f} className="flex items-center gap-1">
+            <input
+              type="radio"
+              name={`fmt-${eventId}`}
+              checked={format === f}
+              onChange={() => setFormat(f)}
+            />
+            <span className="capitalize">{f.replace("_", " ")}</span>
+          </label>
+        ))}
+      </div>
+      {format !== "in_person" && (
+        <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
+          <Input
+            type="url"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            placeholder="https://zoom.us/j/…"
+          />
+          <Select value={provider} onValueChange={(v) => setProvider(v as typeof provider)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="zoom">Zoom</SelectItem>
+              <SelectItem value="google_meet">Google Meet</SelectItem>
+              <SelectItem value="youtube">YouTube</SelectItem>
+              <SelectItem value="none">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <Button size="sm" variant="outline" onClick={save} disabled={saving}>
+        {saving ? "Saving…" : "Save format"}
+      </Button>
+    </div>
+  );
+}
 
 function EventPage() {
   const { id } = Route.useParams();
@@ -49,6 +140,9 @@ function EventPage() {
   const { event, details, counts, myRsvp, slots, isCoordinator } = data;
   const maxCapacity = (event as unknown as { max_capacity: number | null }).max_capacity;
   const hasWaitlist = (event as unknown as { has_waitlist: boolean }).has_waitlist;
+  const eventFormat = (event as unknown as { event_format?: "in_person" | "virtual" | "hybrid" | null }).event_format ?? "in_person";
+  const virtualLink = (event as unknown as { virtual_link?: string | null }).virtual_link ?? null;
+  const livestreamProvider = (event as unknown as { livestream_provider?: string | null }).livestream_provider ?? "none";
   const waitlistCount = (counts as unknown as { waitlist?: number }).waitlist ?? 0;
   const myWaitlistPosition =
     (data as unknown as { myWaitlistPosition: number | null }).myWaitlistPosition;
@@ -118,6 +212,21 @@ function EventPage() {
       toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
       setCommsBusy(false);
+    }
+  }
+
+  async function handleDownloadIcs() {
+    try {
+      const { filename, ics } = await generateEventIcal({ data: { event_id: id } });
+      const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
     }
   }
 
@@ -232,6 +341,12 @@ function EventPage() {
             {waitlistCount > 0 && (
               <Badge variant="secondary">{waitlistCount} on waitlist</Badge>
             )}
+            {eventFormat !== "in_person" && (
+              <Badge variant="secondary" className="gap-1 capitalize">
+                <Video className="h-3 w-3" />
+                {eventFormat === "hybrid" ? "Hybrid" : "Virtual"}
+              </Badge>
+            )}
           </div>
           {event.tags && event.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-1">
@@ -249,6 +364,22 @@ function EventPage() {
       </div>
 
       {event.description && <p className="whitespace-pre-line text-sm text-foreground/80">{event.description}</p>}
+
+      <div className="flex flex-wrap gap-2">
+        {eventFormat !== "in_person" && virtualLink && (
+          <Button asChild size="sm">
+            <a href={virtualLink} target="_blank" rel="noopener noreferrer">
+              <Video className="mr-1 h-4 w-4" />
+              Join {livestreamProvider === "zoom" ? "Zoom" : livestreamProvider === "google_meet" ? "Google Meet" : livestreamProvider === "youtube" ? "YouTube" : "link"}
+              <ExternalLink className="ml-1 h-3 w-3" />
+            </a>
+          </Button>
+        )}
+        <Button size="sm" variant="outline" onClick={handleDownloadIcs}>
+          <Download className="mr-1 h-4 w-4" />
+          Add to Calendar (.ics)
+        </Button>
+      </div>
 
       {series && (
         <Card>
@@ -393,6 +524,16 @@ function EventPage() {
             <CardTitle className="text-base">Coordinator insights</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <EventFormatEditor
+              eventId={id}
+              initialFormat={eventFormat}
+              initialLink={virtualLink}
+              initialProvider={livestreamProvider}
+              onSaved={async () => {
+                const fresh = await getEvent({ data: { id } });
+                setData(fresh);
+              }}
+            />
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Eye className="h-4 w-4" />
               This event has been viewed {counts.clicksLast24h} times in the last 24 hours by registered users.

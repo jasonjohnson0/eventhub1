@@ -40,6 +40,9 @@ export const createEvent = createServerFn({ method: "POST" })
         tags: z.array(z.string().min(1).max(40)).max(20).default([]),
         latitude: z.number().min(-90).max(90).optional().nullable(),
         longitude: z.number().min(-180).max(180).optional().nullable(),
+        event_format: z.enum(["in_person", "virtual", "hybrid"]).default("in_person"),
+        virtual_link: z.string().url().max(500).optional().nullable(),
+        livestream_provider: z.enum(["zoom", "google_meet", "youtube", "none"]).default("none"),
       })
       .parse(data),
   )
@@ -67,6 +70,12 @@ export const createEvent = createServerFn({ method: "POST" })
         status: "approved",
         category: data.category,
         tags: data.tags,
+        // biome-ignore lint/suspicious/noExplicitAny: new columns not yet in generated types
+        ...({
+          event_format: data.event_format,
+          virtual_link: data.event_format === "in_person" ? null : data.virtual_link ?? null,
+          livestream_provider: data.event_format === "in_person" ? "none" : data.livestream_provider,
+        } as any),
       })
       .select()
       .single();

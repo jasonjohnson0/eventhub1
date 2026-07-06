@@ -16,6 +16,8 @@ import {
   getUserNotificationPrefs,
   updateNotificationPrefs,
 } from "@/lib/communications.functions";
+import { createOrGetIcalToken, rotateIcalToken } from "@/lib/distribution.functions";
+import { Copy, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -47,6 +49,44 @@ function SettingsPage() {
     push_reminders: boolean;
     days_before: number[];
   }>({ email_reminders: true, push_reminders: false, days_before: [1, 7] });
+  const [icalToken, setIcalToken] = useState<string | null>(null);
+  const [icalBusy, setIcalBusy] = useState(false);
+
+  const icalUrl = icalToken
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/api/public/ical/${icalToken}.ics`
+    : null;
+
+  async function showIcalUrl() {
+    setIcalBusy(true);
+    try {
+      const { token } = await createOrGetIcalToken();
+      setIcalToken(token);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setIcalBusy(false);
+    }
+  }
+
+  async function rotateToken() {
+    if (!confirm("Rotating invalidates existing calendar subscriptions. Continue?")) return;
+    setIcalBusy(true);
+    try {
+      const { token } = await rotateIcalToken();
+      setIcalToken(token);
+      toast.success("Token rotated — update your calendar subscription");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setIcalBusy(false);
+    }
+  }
+
+  async function copyIcalUrl() {
+    if (!icalUrl) return;
+    await navigator.clipboard.writeText(icalUrl);
+    toast.success("Feed URL copied");
+  }
 
   async function reload() {
     try {
@@ -307,6 +347,42 @@ function SettingsPage() {
             <Button size="sm" onClick={savePrefs}>
               Save preferences
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-4 w-4" /> iCal subscription
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Subscribe to your coordinator calendar in Google Calendar, Apple Calendar, or
+              Outlook. The URL is private — anyone with it can view your approved events.
+            </p>
+            {!icalUrl ? (
+              <Button size="sm" onClick={showIcalUrl} disabled={icalBusy}>
+                Subscribe to my calendar
+              </Button>
+            ) : (
+              <>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input readOnly value={icalUrl} className="font-mono text-xs" />
+                  <Button size="sm" variant="outline" onClick={copyIcalUrl}>
+                    <Copy className="mr-1 h-4 w-4" /> Copy
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={rotateToken} disabled={icalBusy}>
+                    <RefreshCw className="mr-1 h-4 w-4" /> Rotate
+                  </Button>
+                </div>
+                <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                  <li><strong>Google Calendar</strong>: Other calendars → From URL → paste</li>
+                  <li><strong>Apple Calendar</strong>: File → New Calendar Subscription → paste</li>
+                  <li><strong>Outlook</strong>: Add calendar → Subscribe from web → paste</li>
+                </ul>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

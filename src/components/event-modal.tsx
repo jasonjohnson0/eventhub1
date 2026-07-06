@@ -45,6 +45,9 @@ export function EventModal({
   const [lng, setLng] = useState("");
   const [repeat, setRepeat] = useState<"none" | "daily" | "weekly" | "monthly">("none");
   const [repeatUntil, setRepeatUntil] = useState("");
+  const [format, setFormat] = useState<"in_person" | "virtual" | "hybrid">("in_person");
+  const [virtualLink, setVirtualLink] = useState("");
+  const [provider, setProvider] = useState<"zoom" | "google_meet" | "youtube" | "none">("none");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -80,6 +83,9 @@ export function EventModal({
             tags,
             latitude: lat ? Number(lat) : null,
             longitude: lng ? Number(lng) : null,
+            event_format: format,
+            virtual_link: format === "in_person" ? null : virtualLink || null,
+            livestream_provider: format === "in_person" ? "none" : provider,
           },
         });
         toast.success("Event created");
@@ -120,6 +126,9 @@ export function EventModal({
       setCategory("other");
       setRepeat("none");
       setRepeatUntil("");
+      setFormat("in_person");
+      setVirtualLink("");
+      setProvider("none");
       onCreated?.();
       onOpenChange(false);
     } catch (err) {
@@ -197,6 +206,52 @@ export function EventModal({
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="https://…"
             />
+          </div>
+          <div className="rounded-md border p-3 space-y-3">
+            <div>
+              <Label>Event format</Label>
+              <div className="mt-1 flex gap-3 text-sm">
+                {(["in_person", "virtual", "hybrid"] as const).map((f) => (
+                  <label key={f} className="flex items-center gap-1">
+                    <input
+                      type="radio"
+                      name="event-format"
+                      checked={format === f}
+                      onChange={() => setFormat(f)}
+                    />
+                    <span className="capitalize">{f.replace("_", " ")}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            {format !== "in_person" && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Label htmlFor="vlink">Virtual link</Label>
+                  <Input
+                    id="vlink"
+                    type="url"
+                    value={virtualLink}
+                    onChange={(e) => setVirtualLink(e.target.value)}
+                    placeholder="https://zoom.us/j/…"
+                  />
+                </div>
+                <div>
+                  <Label>Provider</Label>
+                  <Select value={provider} onValueChange={(v) => setProvider(v as typeof provider)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="zoom">Zoom</SelectItem>
+                      <SelectItem value="google_meet">Google Meet</SelectItem>
+                      <SelectItem value="youtube">YouTube</SelectItem>
+                      <SelectItem value="none">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
           <div className="rounded-md border p-3">
             <div className="mb-2 grid grid-cols-2 gap-3">
