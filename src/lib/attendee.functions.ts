@@ -261,17 +261,12 @@ export const listAttendees = createServerFn({ method: "GET" })
       .in("status", ["going", "interested"])
       .order("created_at", { ascending: true });
     if (error) throw new Error(error.message);
-    const ids = (rsvps ?? []).map((r) => r.user_id);
-    const { data: profiles } = await supabaseAdmin
-      .from("profiles")
-      .select("id, display_name, email")
-      .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
-    const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+    const byId = await loadUserDirectory(supabaseAdmin, (rsvps ?? []).map((r) => r.user_id));
     return (rsvps ?? []).map((r) => {
       const p = byId.get(r.user_id);
       return {
         user_id: r.user_id,
-        name: p?.display_name ?? "Unknown",
+        name: p?.name ?? "Unknown",
         email: p?.email ?? "",
         status: r.status,
         checked_in_at: r.checked_in_at,
@@ -295,19 +290,14 @@ export const exportRsvpList = createServerFn({ method: "POST" })
       .select("user_id, status, checked_in_at, created_at")
       .eq("event_id", data.event_id)
       .order("created_at", { ascending: true });
-    const ids = (rsvps ?? []).map((r) => r.user_id);
-    const { data: profiles } = await supabaseAdmin
-      .from("profiles")
-      .select("id, display_name, email")
-      .in("id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
-    const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+    const byId = await loadUserDirectory(supabaseAdmin, (rsvps ?? []).map((r) => r.user_id));
     const escape = (s: string) => `"${s.replace(/"/g, '""')}"`;
     const rows = [
       ["Name", "Email", "Status", "Checked In At", "RSVP At"].map(escape).join(","),
       ...(rsvps ?? []).map((r) => {
         const p = byId.get(r.user_id);
         return [
-          p?.display_name ?? "Unknown",
+          p?.name ?? "Unknown",
           p?.email ?? "",
           r.status,
           r.checked_in_at ?? "",
