@@ -133,6 +133,21 @@ function EventPage() {
     }
   }
 
+  async function handleDownloadIcs() {
+    try {
+      const { filename, ics } = await generateEventIcal({ data: { event_id: id } });
+      const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    }
+  }
+
   async function handleRsvp(status: "going" | "interested" | "declined") {
     if (busy) return;
     setBusy(true);
