@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { colorForEvent } from "@/lib/event-colors";
 import { Calendar, MapPin, Users, Share2, Eye, Facebook, Twitter, Mail, Link2 } from "lucide-react";
+import { categoryClasses, categoryLabel } from "@/lib/categories";
 
 export const Route = createFileRoute("/_authenticated/events/$id")({
   component: EventPage,
@@ -34,8 +35,23 @@ function EventPage() {
   if (!data) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
 
   const { event, details, counts, myRsvp, slots, isCoordinator } = data;
+  const geo = (data as unknown as { geo: { latitude: number; longitude: number } | null }).geo;
   const c = colorForEvent(event.id);
   const cover = details?.landscape_image_url ?? null;
+  const [distanceMi, setDistanceMi] = useState<number | null>(null);
+  useEffect(() => {
+    if (!geo || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const toRad = (d: number) => (d * Math.PI) / 180;
+      const R = 3958.8;
+      const dLat = toRad(geo.latitude - pos.coords.latitude);
+      const dLon = toRad(geo.longitude - pos.coords.longitude);
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(pos.coords.latitude)) * Math.cos(toRad(geo.latitude)) * Math.sin(dLon / 2) ** 2;
+      setDistanceMi(2 * R * Math.asin(Math.sqrt(a)));
+    });
+  }, [geo]);
 
   async function handleRsvp(status: "going" | "interested" | "declined") {
     if (busy) return;
@@ -84,6 +100,11 @@ function EventPage() {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold">{event.title}</h1>
           <div className="flex flex-wrap gap-2">
+            {event.category && (
+              <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${categoryClasses(event.category)}`}>
+                {categoryLabel(event.category)}
+              </span>
+            )}
             <Badge variant="outline" className="gap-1">
               <Calendar className="h-3 w-3" />
               {new Date(event.start_time).toLocaleString([], {
@@ -95,12 +116,27 @@ function EventPage() {
               })}
             </Badge>
             {event.location && (
-              <Badge variant="outline" className="gap-1">
+              <Link
+                to="/map"
+                className="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs hover:bg-muted"
+              >
                 <MapPin className="h-3 w-3" />
                 {event.location}
-              </Badge>
+              </Link>
+            )}
+            {distanceMi != null && (
+              <Badge variant="outline">{distanceMi.toFixed(1)} miles away</Badge>
             )}
           </div>
+          {event.tags && event.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 pt-1">
+              {event.tags.map((t: string) => (
+                <Badge key={t} variant="secondary" className="text-[10px]">
+                  #{t}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
         <Button asChild variant="outline" size="sm">
           <Link to="/calendar">Back to calendar</Link>

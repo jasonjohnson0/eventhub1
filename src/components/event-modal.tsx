@@ -6,6 +6,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { createEvent } from "@/lib/events.functions";
+import { CATEGORIES, categoryLabel, type EventCategory } from "@/lib/categories";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 function toLocalInput(d: Date): string {
   const off = d.getTimezoneOffset();
@@ -30,6 +38,10 @@ export function EventModal({
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [category, setCategory] = useState<EventCategory>("other");
+  const [tagsText, setTagsText] = useState("");
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -59,6 +71,13 @@ export function EventModal({
           location: location || null,
           start_time: startIso,
           end_time: endIso,
+          category,
+          tags: tagsText
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
+          latitude: lat ? Number(lat) : null,
+          longitude: lng ? Number(lng) : null,
         },
       });
       toast.success("Event created");
@@ -67,6 +86,10 @@ export function EventModal({
       setDescription("");
       setLocation("");
       setImageUrl("");
+      setTagsText("");
+      setLat("");
+      setLng("");
+      setCategory("other");
       onCreated?.();
       onOpenChange(false);
     } catch (err) {
@@ -94,6 +117,37 @@ export function EventModal({
           <div>
             <Label htmlFor="loc">Location</Label>
             <Input id="loc" value={location} onChange={(e) => setLocation(e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Category</Label>
+              <Select value={category} onValueChange={(v) => setCategory(v as EventCategory)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {categoryLabel(c)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="tags">Tags (comma-separated)</Label>
+              <Input id="tags" value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="outdoor, free" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="lat">Latitude (optional)</Label>
+              <Input id="lat" type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} placeholder="30.7744" />
+            </div>
+            <div>
+              <Label htmlFor="lng">Longitude (optional)</Label>
+              <Input id="lng" type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} placeholder="-85.2264" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
