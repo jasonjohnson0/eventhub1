@@ -70,7 +70,7 @@ function SearchPage() {
   function updateSearch(patch: Partial<SearchParams>) {
     navigate({
       to: "/search",
-      search: (prev) => ({ ...parseSearch(prev as Record<string, unknown>), ...patch }),
+      search: (prev: Record<string, unknown>) => ({ ...parseSearch(prev), ...patch }),
     });
   }
 
