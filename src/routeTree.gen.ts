@@ -25,6 +25,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as EventsIdPublicRouteImport } from './routes/events.$id.public'
 import { Route as AuthenticatedEventsIdRouteImport } from './routes/_authenticated/events.$id'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminSponsorshipRouteImport } from './routes/_authenticated/admin.sponsorship'
@@ -114,6 +115,11 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const EventsIdPublicRoute = EventsIdPublicRouteImport.update({
+  id: '/$id/public',
+  path: '/$id/public',
+  getParentRoute: () => EventsRoute,
+} as any)
 const AuthenticatedEventsIdRoute = AuthenticatedEventsIdRouteImport.update({
   id: '/events/$id',
   path: '/events/$id',
@@ -168,7 +174,7 @@ const AuthenticatedEventsIdAnalyticsRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
-  '/events': typeof EventsRoute
+  '/events': typeof EventsRouteWithChildren
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/events/$id': typeof AuthenticatedEventsIdRouteWithChildren
+  '/events/$id/public': typeof EventsIdPublicRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
@@ -194,7 +201,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
-  '/events': typeof EventsRoute
+  '/events': typeof EventsRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/map': typeof AuthenticatedMapRoute
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/events/$id': typeof AuthenticatedEventsIdRouteWithChildren
+  '/events/$id/public': typeof EventsIdPublicRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
@@ -221,7 +229,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
-  '/events': typeof EventsRoute
+  '/events': typeof EventsRouteWithChildren
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -238,6 +246,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/events/$id': typeof AuthenticatedEventsIdRouteWithChildren
+  '/events/$id/public': typeof EventsIdPublicRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/_authenticated/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
@@ -266,6 +275,7 @@ export interface FileRouteTypes {
     | '/admin/sponsorship'
     | '/admin/users'
     | '/events/$id'
+    | '/events/$id/public'
     | '/admin/'
     | '/events/$id/analytics'
     | '/events/$id/checkin'
@@ -291,6 +301,7 @@ export interface FileRouteTypes {
     | '/admin/sponsorship'
     | '/admin/users'
     | '/events/$id'
+    | '/events/$id/public'
     | '/admin'
     | '/events/$id/analytics'
     | '/events/$id/checkin'
@@ -318,6 +329,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/sponsorship'
     | '/_authenticated/admin/users'
     | '/_authenticated/events/$id'
+    | '/events/$id/public'
     | '/_authenticated/admin/'
     | '/_authenticated/events/$id/analytics'
     | '/_authenticated/events/$id/checkin'
@@ -329,7 +341,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
-  EventsRoute: typeof EventsRoute
+  EventsRoute: typeof EventsRouteWithChildren
   InviteTokenRoute: typeof InviteTokenRoute
   MarketingConfirmRoute: typeof MarketingConfirmRoute
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
@@ -450,6 +462,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/events/$id/public': {
+      id: '/events/$id/public'
+      path: '/$id/public'
+      fullPath: '/events/$id/public'
+      preLoaderRoute: typeof EventsIdPublicRouteImport
+      parentRoute: typeof EventsRoute
     }
     '/_authenticated/events/$id': {
       id: '/_authenticated/events/$id'
@@ -587,11 +606,22 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
+interface EventsRouteChildren {
+  EventsIdPublicRoute: typeof EventsIdPublicRoute
+}
+
+const EventsRouteChildren: EventsRouteChildren = {
+  EventsIdPublicRoute: EventsIdPublicRoute,
+}
+
+const EventsRouteWithChildren =
+  EventsRoute._addFileChildren(EventsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
-  EventsRoute: EventsRoute,
+  EventsRoute: EventsRouteWithChildren,
   InviteTokenRoute: InviteTokenRoute,
   MarketingConfirmRoute: MarketingConfirmRoute,
   MarketingSubscribeRoute: MarketingSubscribeRoute,
