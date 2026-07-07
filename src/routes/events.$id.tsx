@@ -25,9 +25,13 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
+  Ticket,
+  Megaphone,
+  Settings,
+  Star,
 } from "lucide-react";
 
-export const Route = createFileRoute("/events/$id/public")({
+export const Route = createFileRoute("/events/$id")({
   component: PublicEventDetail,
   head: () => ({
     meta: [
@@ -55,6 +59,9 @@ type Detail = {
   goingCount: number;
   coordinatorName: string | null;
   moreFromCoordinator: { id: string; title: string; start_time: string; category: string | null }[];
+  tickets: { id: string; name: string; description: string | null; price_cents: number; quantity_available: number | null; quantity_sold: number | null; early_bird?: boolean | null; early_bird_price_cents: number | null }[];
+  sponsors: { id: string; position: number; slot_type: string; status: string; cost_cents: number }[];
+  isOwner: boolean;
 };
 
 function PublicEventDetail() {
@@ -63,18 +70,22 @@ function PublicEventDetail() {
   const [data, setData] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [rsvpOpen, setRsvpOpen] = useState(false);
   const [photoIdx, setPhotoIdx] = useState(0);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    supabase.auth.getSession().then(({ data }) => {
+      setSignedIn(!!data.session);
+      setUserId(data.session?.user.id ?? null);
+    });
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
-      // biome-ignore lint/suspicious/noExplicitAny: extended columns
+      // biome-ignore lint/suspicious/noExplicitAny: extended columns not yet in generated types
       const { data: ev } = await (supabase as any)
         .from("events")
         .select("id, title, description, location, start_time, end_time, category, coordinator_id, event_format, virtual_link, status")
@@ -87,11 +98,13 @@ function PublicEventDetail() {
         }
         return;
       }
-      const [detailsRes, photosRes, rsvpRes, profileRes] = await Promise.all([
+      const [detailsRes, photosRes, rsvpRes, profileRes, ticketsRes, slotsRes] = await Promise.all([
         supabase.from("event_details").select("landscape_image_url, portrait_image_url").eq("event_id", id).maybeSingle(),
         supabase.from("event_photos").select("id, photo_url, caption").eq("event_id", id).order("created_at", { ascending: false }),
         supabase.from("event_rsvps").select("event_id", { count: "exact", head: true }).eq("event_id", id).eq("status", "going"),
         supabase.from("profiles").select("display_name").eq("id", ev.coordinator_id).maybeSingle(),
+        supabase.from("event_tickets").select("id, name, description, price_cents, quantity_available, quantity_sold, early_bird, early_bird_price_cents").eq("event_id", id).order("price_cents"),
+        supabase.from("sponsored_slots").select("id, position, slot_type, status, cost_cents").eq("event_id", id).order("position"),
       ]);
       const nowIso = new Date().toISOString();
       const { data: more } = await supabase
@@ -112,6 +125,10 @@ function PublicEventDetail() {
           // biome-ignore lint/suspicious/noExplicitAny: profile may not exist
           coordinatorName: (profileRes.data as any)?.display_name ?? null,
           moreFromCoordinator: more ?? [],
+          // biome-ignore lint/suspicious/noExplicitAny: extended types
+          tickets: (ticketsRes.data as any) ?? [],
+          sponsors: slotsRes.data ?? [],
+          isOwner: !!userId && userId === ev.coordinator_id,
         });
         setLoading(false);
       }
@@ -120,7 +137,7 @@ function PublicEventDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, userId]);
 
   if (loading) {
     return (
@@ -148,7 +165,7 @@ function PublicEventDetail() {
     );
   }
 
-  const { event, image, photos, goingCount, coordinatorName, moreFromCoordinator } = data;
+  const { event, image, photos, goingCount, coordinatorName, moreFromCoordinator, tickets, sponsors, isOwner } = data;
   const start = new Date(event.start_time);
   const end = new Date(event.end_time);
   const dateLabel = start.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
@@ -159,11 +176,19 @@ function PublicEventDetail() {
 
   const handleRsvpClick = () => {
     if (signedIn) {
-      navigate({ to: "/events/$id", params: { id: event.id } });
+      navigate({ to: "/events/$id/manage", params: { id: event.id } });
     } else {
       setRsvpOpen(true);
     }
   };
+
+  const formatPrice = (cents: number) => {
+    if (cents === 0) return "Free";
+    return `$${(cents / 100).toFixed(2)}`;
+  };
+
+  const availableSponsorSlots = sponsors.filter((s) => s.status === "available" || s.status === "reserved");
+  const activeSponsors = sponsors.filter((s) => s.status === "sold" || s.status === "active");
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/60 via-white to-white">
@@ -171,9 +196,18 @@ function PublicEventDetail() {
         <Link to="/events" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-fuchsia-600">
           <ArrowLeft className="h-4 w-4" /> All events
         </Link>
-        <Link to="/events" className="flex items-center gap-2 font-black text-slate-900">
-          <PartyPopper className="h-5 w-5 text-fuchsia-500" /> EventHub
-        </Link>
+        <div className="flex items-center gap-3">
+          {isOwner && (
+            <Button asChild size="sm" variant="outline" className="rounded-full">
+              <Link to="/events/$id/manage" params={{ id: event.id }}>
+                <Settings className="mr-1 h-4 w-4" /> Manage
+              </Link>
+            </Button>
+          )}
+          <Link to="/events" className="flex items-center gap-2 font-black text-slate-900">
+            <PartyPopper className="h-5 w-5 text-fuchsia-500" /> EventHub
+          </Link>
+        </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-6 pb-16">
@@ -304,6 +338,133 @@ function PublicEventDetail() {
           </div>
         </div>
 
+        {/* Sponsorship / ad slots */}
+        {sponsors.length > 0 && (
+          <section className="mt-10">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
+                <Megaphone className="h-5 w-5 text-amber-500" /> Featured Sponsors & Ad Slots
+              </h2>
+              {availableSponsorSlots.length > 0 && (
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                  {availableSponsorSlots.length} slot{availableSponsorSlots.length === 1 ? "" : "s"} available
+                </span>
+              )}
+            </div>
+            <div className="space-y-3">
+              {activeSponsors.map((slot) => (
+                <div
+                  key={slot.id}
+                  className="relative overflow-hidden rounded-2xl border-2 border-amber-200 bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 p-6 shadow-sm"
+                >
+                  <div className="absolute right-4 top-4 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-white shadow">
+                    ⭐ Featured
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl shadow">
+                      {slot.slot_type === "banner" ? "🎯" : slot.slot_type === "video" ? "🎬" : "📣"}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xs font-semibold uppercase tracking-wider text-amber-700">
+                        Position #{slot.position} · {slot.slot_type}
+                      </div>
+                      <div className="mt-1 text-lg font-bold text-slate-900">
+                        Your brand could be here
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        Reach {goingCount}+ attendees at this event.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {availableSponsorSlots.map((slot) => (
+                <div
+                  key={slot.id}
+                  className="flex items-center gap-4 rounded-2xl border-2 border-dashed border-slate-200 bg-white p-5 hover:border-fuchsia-300 transition-colors"
+                >
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-100 to-amber-100 text-2xl">
+                    ✨
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      {slot.slot_type} · Position #{slot.position}
+                    </div>
+                    <div className="font-bold text-slate-900">Sponsor slot available</div>
+                    <div className="text-sm text-slate-500">
+                      Starting at {formatPrice(slot.cost_cents)}
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => (signedIn ? navigate({ to: "/events/$id/manage", params: { id: event.id } }) : setRsvpOpen(true))}
+                  >
+                    Become a sponsor
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Ticket tiers */}
+        {tickets.length > 0 && (
+          <section className="mt-10">
+            <h2 className="mb-4 flex items-center gap-2 text-xl font-bold text-slate-900">
+              <Ticket className="h-5 w-5 text-fuchsia-500" /> Get your tickets
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {tickets.map((t) => {
+                const remaining =
+                  t.quantity_available != null
+                    ? Math.max(0, t.quantity_available - (t.quantity_sold ?? 0))
+                    : null;
+                const soldOut = remaining === 0;
+                const price = t.early_bird && t.early_bird_price_cents != null ? t.early_bird_price_cents : t.price_cents;
+                return (
+                  <div
+                    key={t.id}
+                    className={`relative rounded-2xl border-2 p-5 transition-all ${
+                      soldOut
+                        ? "border-slate-200 bg-slate-50 opacity-70"
+                        : "border-fuchsia-100 bg-white shadow-sm hover:-translate-y-0.5 hover:border-fuchsia-300 hover:shadow-md"
+                    }`}
+                  >
+                    {t.early_bird && !soldOut && (
+                      <div className="absolute -top-2 right-4 rounded-full bg-emerald-500 px-3 py-0.5 text-xs font-bold text-white shadow">
+                        <Star className="mr-1 inline h-3 w-3" /> Early bird
+                      </div>
+                    )}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-slate-900">{t.name}</div>
+                        {t.description && (
+                          <div className="mt-1 text-sm text-slate-500">{t.description}</div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-black text-fuchsia-600">{formatPrice(price)}</div>
+                        {remaining != null && !soldOut && (
+                          <div className="text-xs text-slate-500">{remaining} left</div>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handleRsvpClick}
+                      disabled={soldOut}
+                      className="mt-4 w-full rounded-full"
+                    >
+                      {soldOut ? "Sold out" : signedIn ? "Buy ticket" : "Sign in to buy"}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* Photo gallery carousel */}
         {photos.length > 0 && (
           <section className="mt-10">
@@ -352,7 +513,7 @@ function PublicEventDetail() {
               {moreFromCoordinator.map((m) => (
                 <Link
                   key={m.id}
-                  to="/events/$id/public"
+                  to="/events/$id"
                   params={{ id: m.id }}
                   className="group flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
                 >

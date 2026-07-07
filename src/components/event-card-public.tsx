@@ -47,7 +47,7 @@ export function EventCardPublic({ event, index = 0 }: { event: PublicEvent; inde
 
   return (
     <Link
-      to="/events/$id/public"
+      to="/events/$id"
       params={{ id: event.id }}
       className="card-pop group relative flex flex-col overflow-hidden rounded-3xl bg-white shadow-[0_8px_30px_-12px_rgba(0,0,0,0.15)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_25px_50px_-12px_rgba(236,72,153,0.35)]"
       style={{ animationDelay: `${(index % 12) * 40}ms` }}
