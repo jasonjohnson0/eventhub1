@@ -64,6 +64,11 @@ type Detail = {
   isOwner: boolean;
 };
 
+const DEMO_SPONSOR_SLOTS = [
+  { id: "demo-hero", position: 1, slot_type: "banner", status: "available", cost_cents: 25000 },
+  { id: "demo-community", position: 2, slot_type: "card", status: "available", cost_cents: 15000 },
+];
+
 function PublicEventDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
@@ -187,7 +192,8 @@ function PublicEventDetail() {
     return `$${(cents / 100).toFixed(2)}`;
   };
 
-  const availableSponsorSlots = sponsors.filter((s) => s.status === "available" || s.status === "reserved");
+  const sponsorSlots = sponsors.length > 0 ? sponsors : DEMO_SPONSOR_SLOTS;
+  const availableSponsorSlots = sponsorSlots.filter((s) => s.status === "available" || s.status === "reserved");
   const activeSponsors = sponsors.filter((s) => s.status === "sold" || s.status === "active");
 
   return (
@@ -339,75 +345,71 @@ function PublicEventDetail() {
         </div>
 
         {/* Sponsorship / ad slots */}
-        {sponsors.length > 0 && (
-          <section className="mt-10">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
-                <Megaphone className="h-5 w-5 text-amber-500" /> Featured Sponsors & Ad Slots
-              </h2>
-              {availableSponsorSlots.length > 0 && (
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-                  {availableSponsorSlots.length} slot{availableSponsorSlots.length === 1 ? "" : "s"} available
-                </span>
-              )}
-            </div>
-            <div className="space-y-3">
-              {activeSponsors.map((slot) => (
-                <div
-                  key={slot.id}
-                  className="relative overflow-hidden rounded-2xl border-2 border-amber-200 bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 p-6 shadow-sm"
-                >
-                  <div className="absolute right-4 top-4 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-white shadow">
-                    ⭐ Featured
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl shadow">
-                      {slot.slot_type === "banner" ? "🎯" : slot.slot_type === "video" ? "🎬" : "📣"}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-xs font-semibold uppercase tracking-wider text-amber-700">
-                        Position #{slot.position} · {slot.slot_type}
-                      </div>
-                      <div className="mt-1 text-lg font-bold text-slate-900">
-                        Your brand could be here
-                      </div>
-                      <div className="text-sm text-slate-600">
-                        Reach {goingCount}+ attendees at this event.
-                      </div>
-                    </div>
-                  </div>
+        <section className="mt-10 rounded-3xl border border-amber-100 bg-gradient-to-b from-amber-50/70 to-white p-5 shadow-sm md:p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
+              <Megaphone className="h-5 w-5 text-amber-500" /> Featured Sponsors & Ad Slots
+            </h2>
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+              {availableSponsorSlots.length} slot{availableSponsorSlots.length === 1 ? "" : "s"} available
+            </span>
+          </div>
+          <div className="space-y-3">
+            {activeSponsors.map((slot) => (
+              <div
+                key={slot.id}
+                className="relative overflow-hidden rounded-2xl border-2 border-amber-200 bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 p-6 shadow-sm"
+              >
+                <div className="absolute right-4 top-4 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-white shadow">
+                  ⭐ Featured
                 </div>
-              ))}
-              {availableSponsorSlots.map((slot) => (
-                <div
-                  key={slot.id}
-                  className="flex items-center gap-4 rounded-2xl border-2 border-dashed border-slate-200 bg-white p-5 hover:border-fuchsia-300 transition-colors"
-                >
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-100 to-amber-100 text-2xl">
-                    ✨
+                <div className="flex items-center gap-4">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl shadow">
+                    {slot.slot_type === "banner" ? "🎯" : slot.slot_type === "video" ? "🎬" : "📣"}
                   </div>
                   <div className="flex-1">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      {slot.slot_type} · Position #{slot.position}
+                    <div className="text-xs font-semibold uppercase tracking-wider text-amber-700">
+                      Position #{slot.position} · {slot.slot_type}
                     </div>
-                    <div className="font-bold text-slate-900">Sponsor slot available</div>
-                    <div className="text-sm text-slate-500">
-                      Starting at {formatPrice(slot.cost_cents)}
+                    <div className="mt-1 text-lg font-bold text-slate-900">
+                      Community partner spotlight
+                    </div>
+                    <div className="text-sm text-slate-600">
+                      Sponsored placement shown to everyone viewing this event.
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
-                    onClick={() => (signedIn ? navigate({ to: "/events/$id/manage", params: { id: event.id } }) : setRsvpOpen(true))}
-                  >
-                    Become a sponsor
-                  </Button>
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
+              </div>
+            ))}
+            {availableSponsorSlots.map((slot) => (
+              <div
+                key={slot.id}
+                className="flex flex-col gap-4 rounded-2xl border-2 border-dashed border-slate-200 bg-white p-5 transition-colors hover:border-fuchsia-300 sm:flex-row sm:items-center"
+              >
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-100 to-amber-100 text-3xl">
+                  ✨
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {slot.slot_type} · Position #{slot.position}
+                  </div>
+                  <div className="font-bold text-slate-900">Sponsor slot available</div>
+                  <div className="text-sm text-slate-500">
+                    Full-width ad card placeholder · Starting at {formatPrice(slot.cost_cents)}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => (signedIn ? navigate({ to: "/events/$id/manage", params: { id: event.id } }) : setRsvpOpen(true))}
+                >
+                  Become a sponsor
+                </Button>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Ticket tiers */}
         {tickets.length > 0 && (
