@@ -81,10 +81,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "EventHub is a colorful, multi-tenant event calendar with sharing, RSVPs, and sponsorship tools for coordinators." },
       { name: "author", content: "EventHub" },
       { property: "og:title", content: "EventHub — Interactive Event Calendar" },
-      { property: "og:description", content: "Discover, share, and RSVP to events. Coordinators run their own calendar with staff, sponsorship, and analytics." },
+      { property: "og:description", content: "EventHub is a colorful, multi-tenant event calendar with sharing, RSVPs, and sponsorship tools for coordinators." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@EventHub" },
+      { name: "twitter:title", content: "EventHub — Interactive Event Calendar" },
+      { name: "twitter:description", content: "EventHub is a colorful, multi-tenant event calendar with sharing, RSVPs, and sponsorship tools for coordinators." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/dc0c1beb-a8ab-4361-bd8c-09c828549e65/id-preview-c934dc9e--daa508be-3750-4115-a773-1ec0279316d8.lovable.app-1783452705614.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/dc0c1beb-a8ab-4361-bd8c-09c828549e65/id-preview-c934dc9e--daa508be-3750-4115-a773-1ec0279316d8.lovable.app-1783452705614.png" },
     ],
     links: [
       {
