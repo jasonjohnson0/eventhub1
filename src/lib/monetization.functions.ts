@@ -113,7 +113,19 @@ export const purchaseTicket = createServerFn({ method: "POST" })
       (!tier.valid_until || new Date(tier.valid_until) >= now);
     const unit = useEarlyBird ? tier.early_bird_price_cents : tier.price_cents;
     const amount = unit * data.quantity;
-    const hasStripe = Boolean(process.env.STRIPE_SECRET_KEY);
+    // Gate on the platform Stripe Connect account configured in admin setup.
+    const { data: cfg } = await sb
+      .from("platform_config")
+      .select("stripe_connect_account_id, stripe_connected")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    const hasStripe =
+      Boolean(cfg?.stripe_connected && cfg?.stripe_connect_account_id) &&
+      Boolean(process.env.STRIPE_SECRET_KEY);
+    if (amount > 0 && !cfg?.stripe_connect_account_id) {
+      throw new Error("Stripe not configured. Please complete setup first.");
+    }
     const { data: purchase, error } = await sb
       .from("ticket_purchases")
       .insert({
