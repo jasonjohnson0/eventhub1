@@ -18,6 +18,7 @@ import { Route as MarketingSubscribeRouteImport } from './routes/marketing.subsc
 import { Route as MarketingConfirmRouteImport } from './routes/marketing.confirm'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as EventsIdRouteImport } from './routes/events.$id'
+import { Route as AuthStripeCallbackRouteImport } from './routes/auth.stripe-callback'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
@@ -28,6 +29,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminSponsorshipRouteImport } from './routes/_authenticated/admin.sponsorship'
+import { Route as AuthenticatedAdminSetupRouteImport } from './routes/_authenticated/admin.setup'
 import { Route as AuthenticatedAdminModerationRouteImport } from './routes/_authenticated/admin.moderation'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as ApiPublicIcalTokenRouteImport } from './routes/api/public/ical.$token'
@@ -80,6 +82,11 @@ const EventsIdRoute = EventsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => EventsRoute,
 } as any)
+const AuthStripeCallbackRoute = AuthStripeCallbackRouteImport.update({
+  id: '/stripe-callback',
+  path: '/stripe-callback',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/callback',
   path: '/callback',
@@ -131,6 +138,11 @@ const AuthenticatedAdminSponsorshipRoute =
     path: '/sponsorship',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminSetupRoute = AuthenticatedAdminSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminModerationRoute =
   AuthenticatedAdminModerationRouteImport.update({
     id: '/moderation',
@@ -183,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/stripe-callback': typeof AuthStripeCallbackRoute
   '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
@@ -190,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
+  '/admin/setup': typeof AuthenticatedAdminSetupRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
@@ -209,6 +223,7 @@ export interface FileRoutesByTo {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/stripe-callback': typeof AuthStripeCallbackRoute
   '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
@@ -216,6 +231,7 @@ export interface FileRoutesByTo {
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
+  '/admin/setup': typeof AuthenticatedAdminSetupRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
@@ -238,6 +254,7 @@ export interface FileRoutesById {
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/stripe-callback': typeof AuthStripeCallbackRoute
   '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
@@ -245,6 +262,7 @@ export interface FileRoutesById {
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/moderation': typeof AuthenticatedAdminModerationRoute
+  '/_authenticated/admin/setup': typeof AuthenticatedAdminSetupRoute
   '/_authenticated/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
@@ -267,6 +285,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/auth/callback'
+    | '/auth/stripe-callback'
     | '/events/$id'
     | '/invite/$token'
     | '/marketing/confirm'
@@ -274,6 +293,7 @@ export interface FileRouteTypes {
     | '/marketing/unsubscribe'
     | '/admin/audit'
     | '/admin/moderation'
+    | '/admin/setup'
     | '/admin/sponsorship'
     | '/admin/users'
     | '/admin/'
@@ -293,6 +313,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/auth/callback'
+    | '/auth/stripe-callback'
     | '/events/$id'
     | '/invite/$token'
     | '/marketing/confirm'
@@ -300,6 +321,7 @@ export interface FileRouteTypes {
     | '/marketing/unsubscribe'
     | '/admin/audit'
     | '/admin/moderation'
+    | '/admin/setup'
     | '/admin/sponsorship'
     | '/admin/users'
     | '/admin'
@@ -321,6 +343,7 @@ export interface FileRouteTypes {
     | '/_authenticated/search'
     | '/_authenticated/settings'
     | '/auth/callback'
+    | '/auth/stripe-callback'
     | '/events/$id'
     | '/invite/$token'
     | '/marketing/confirm'
@@ -328,6 +351,7 @@ export interface FileRouteTypes {
     | '/marketing/unsubscribe'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/moderation'
+    | '/_authenticated/admin/setup'
     | '/_authenticated/admin/sponsorship'
     | '/_authenticated/admin/users'
     | '/_authenticated/admin/'
@@ -415,6 +439,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsIdRouteImport
       parentRoute: typeof EventsRoute
     }
+    '/auth/stripe-callback': {
+      id: '/auth/stripe-callback'
+      path: '/stripe-callback'
+      fullPath: '/auth/stripe-callback'
+      preLoaderRoute: typeof AuthStripeCallbackRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/auth/callback': {
       id: '/auth/callback'
       path: '/callback'
@@ -485,6 +516,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSponsorshipRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/setup': {
+      id: '/_authenticated/admin/setup'
+      path: '/setup'
+      fullPath: '/admin/setup'
+      preLoaderRoute: typeof AuthenticatedAdminSetupRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/moderation': {
       id: '/_authenticated/admin/moderation'
       path: '/moderation'
@@ -540,6 +578,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
   AuthenticatedAdminModerationRoute: typeof AuthenticatedAdminModerationRoute
+  AuthenticatedAdminSetupRoute: typeof AuthenticatedAdminSetupRoute
   AuthenticatedAdminSponsorshipRoute: typeof AuthenticatedAdminSponsorshipRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
@@ -548,6 +587,7 @@ interface AuthenticatedAdminRouteChildren {
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
   AuthenticatedAdminModerationRoute: AuthenticatedAdminModerationRoute,
+  AuthenticatedAdminSetupRoute: AuthenticatedAdminSetupRoute,
   AuthenticatedAdminSponsorshipRoute: AuthenticatedAdminSponsorshipRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
@@ -588,10 +628,12 @@ const AuthenticatedRouteRouteWithChildren =
 
 interface AuthRouteChildren {
   AuthCallbackRoute: typeof AuthCallbackRoute
+  AuthStripeCallbackRoute: typeof AuthStripeCallbackRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthCallbackRoute: AuthCallbackRoute,
+  AuthStripeCallbackRoute: AuthStripeCallbackRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -621,13 +663,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
