@@ -114,7 +114,9 @@ export const purchaseTicket = createServerFn({ method: "POST" })
     const unit = useEarlyBird ? tier.early_bird_price_cents : tier.price_cents;
     const amount = unit * data.quantity;
     // Gate on the platform Stripe Connect account configured in admin setup.
-    const { data: cfg } = await sb
+    // platform_config is admin-RLS'd; use the admin client for this read-only status check.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: cfg } = await (supabaseAdmin as unknown as typeof sb)
       .from("platform_config")
       .select("stripe_connect_account_id, stripe_connected")
       .order("created_at", { ascending: true })
