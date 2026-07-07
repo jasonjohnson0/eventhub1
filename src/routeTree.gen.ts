@@ -28,6 +28,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminSponsorshipRouteImport } from './routes/_authenticated/admin.sponsorship'
+import { Route as AuthenticatedAdminSetupRouteImport } from './routes/_authenticated/admin.setup'
 import { Route as AuthenticatedAdminModerationRouteImport } from './routes/_authenticated/admin.moderation'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as ApiPublicIcalTokenRouteImport } from './routes/api/public/ical.$token'
@@ -131,6 +132,11 @@ const AuthenticatedAdminSponsorshipRoute =
     path: '/sponsorship',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminSetupRoute = AuthenticatedAdminSetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminModerationRoute =
   AuthenticatedAdminModerationRouteImport.update({
     id: '/moderation',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
+  '/admin/setup': typeof AuthenticatedAdminSetupRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
@@ -216,6 +223,7 @@ export interface FileRoutesByTo {
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
+  '/admin/setup': typeof AuthenticatedAdminSetupRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
@@ -245,6 +253,7 @@ export interface FileRoutesById {
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/moderation': typeof AuthenticatedAdminModerationRoute
+  '/_authenticated/admin/setup': typeof AuthenticatedAdminSetupRoute
   '/_authenticated/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
@@ -274,6 +283,7 @@ export interface FileRouteTypes {
     | '/marketing/unsubscribe'
     | '/admin/audit'
     | '/admin/moderation'
+    | '/admin/setup'
     | '/admin/sponsorship'
     | '/admin/users'
     | '/admin/'
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/marketing/unsubscribe'
     | '/admin/audit'
     | '/admin/moderation'
+    | '/admin/setup'
     | '/admin/sponsorship'
     | '/admin/users'
     | '/admin'
@@ -328,6 +339,7 @@ export interface FileRouteTypes {
     | '/marketing/unsubscribe'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/moderation'
+    | '/_authenticated/admin/setup'
     | '/_authenticated/admin/sponsorship'
     | '/_authenticated/admin/users'
     | '/_authenticated/admin/'
@@ -485,6 +497,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSponsorshipRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/setup': {
+      id: '/_authenticated/admin/setup'
+      path: '/setup'
+      fullPath: '/admin/setup'
+      preLoaderRoute: typeof AuthenticatedAdminSetupRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/moderation': {
       id: '/_authenticated/admin/moderation'
       path: '/moderation'
@@ -540,6 +559,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
   AuthenticatedAdminModerationRoute: typeof AuthenticatedAdminModerationRoute
+  AuthenticatedAdminSetupRoute: typeof AuthenticatedAdminSetupRoute
   AuthenticatedAdminSponsorshipRoute: typeof AuthenticatedAdminSponsorshipRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
@@ -548,6 +568,7 @@ interface AuthenticatedAdminRouteChildren {
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
   AuthenticatedAdminModerationRoute: AuthenticatedAdminModerationRoute,
+  AuthenticatedAdminSetupRoute: AuthenticatedAdminSetupRoute,
   AuthenticatedAdminSponsorshipRoute: AuthenticatedAdminSponsorshipRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
