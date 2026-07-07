@@ -15,7 +15,7 @@ export type PlatformConfigView = {
   email_api_key_masked: string | null;
   email_from_name: string | null;
   email_from_address: string | null;
-  email_extra: Record<string, unknown> | null;
+  email_extra: { mailgun_domain?: string } | null;
   email_configured: boolean;
   configured_at: string | null;
   updated_at: string;
