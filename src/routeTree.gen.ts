@@ -17,6 +17,7 @@ import { Route as MarketingUnsubscribeRouteImport } from './routes/marketing.uns
 import { Route as MarketingSubscribeRouteImport } from './routes/marketing.subscribe'
 import { Route as MarketingConfirmRouteImport } from './routes/marketing.confirm'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
+import { Route as EventsIdRouteImport } from './routes/events.$id'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
@@ -73,6 +74,11 @@ const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
   path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const EventsIdRoute = EventsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => EventsRoute,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/callback',
@@ -169,7 +175,7 @@ const AuthenticatedEventsIdAnalyticsRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
-  '/events': typeof EventsRoute
+  '/events': typeof EventsRouteWithChildren
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -177,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
@@ -195,13 +202,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
-  '/events': typeof EventsRoute
+  '/events': typeof EventsRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/map': typeof AuthenticatedMapRoute
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
@@ -222,7 +230,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
-  '/events': typeof EventsRoute
+  '/events': typeof EventsRouteWithChildren
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -230,6 +238,7 @@ export interface FileRoutesById {
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
@@ -258,6 +267,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/auth/callback'
+    | '/events/$id'
     | '/invite/$token'
     | '/marketing/confirm'
     | '/marketing/subscribe'
@@ -283,6 +293,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/auth/callback'
+    | '/events/$id'
     | '/invite/$token'
     | '/marketing/confirm'
     | '/marketing/subscribe'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/_authenticated/search'
     | '/_authenticated/settings'
     | '/auth/callback'
+    | '/events/$id'
     | '/invite/$token'
     | '/marketing/confirm'
     | '/marketing/subscribe'
@@ -330,7 +342,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
-  EventsRoute: typeof EventsRoute
+  EventsRoute: typeof EventsRouteWithChildren
   InviteTokenRoute: typeof InviteTokenRoute
   MarketingConfirmRoute: typeof MarketingConfirmRoute
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
@@ -395,6 +407,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/invite/$token'
       preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/events/$id': {
+      id: '/events/$id'
+      path: '/$id'
+      fullPath: '/events/$id'
+      preLoaderRoute: typeof EventsIdRouteImport
+      parentRoute: typeof EventsRoute
     }
     '/auth/callback': {
       id: '/auth/callback'
@@ -577,11 +596,22 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
+interface EventsRouteChildren {
+  EventsIdRoute: typeof EventsIdRoute
+}
+
+const EventsRouteChildren: EventsRouteChildren = {
+  EventsIdRoute: EventsIdRoute,
+}
+
+const EventsRouteWithChildren =
+  EventsRoute._addFileChildren(EventsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
-  EventsRoute: EventsRoute,
+  EventsRoute: EventsRouteWithChildren,
   InviteTokenRoute: InviteTokenRoute,
   MarketingConfirmRoute: MarketingConfirmRoute,
   MarketingSubscribeRoute: MarketingSubscribeRoute,
