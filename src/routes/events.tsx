@@ -24,13 +24,17 @@ export const Route = createFileRoute("/events")({
       { property: "og:description", content: "Find your next adventure. A fun, live calendar of events happening near you." },
     ],
   }),
-  component: EventsPage,
+  component: EventsRouteComponent,
 });
 
-function EventsPage() {
+function EventsRouteComponent() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   if (pathname !== "/events") return <Outlet />;
 
+  return <EventsPage />;
+}
+
+function EventsPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/events" });
   const [signedIn, setSignedIn] = useState(false);
