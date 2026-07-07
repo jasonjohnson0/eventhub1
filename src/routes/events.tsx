@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
@@ -28,6 +28,9 @@ export const Route = createFileRoute("/events")({
 });
 
 function EventsPage() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  if (pathname !== "/events") return <Outlet />;
+
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/events" });
   const [signedIn, setSignedIn] = useState(false);
