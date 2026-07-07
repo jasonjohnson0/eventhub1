@@ -18,6 +18,7 @@ import { Route as MarketingSubscribeRouteImport } from './routes/marketing.subsc
 import { Route as MarketingConfirmRouteImport } from './routes/marketing.confirm'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as EventsIdRouteImport } from './routes/events.$id'
+import { Route as AuthStripeCallbackRouteImport } from './routes/auth.stripe-callback'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
@@ -80,6 +81,11 @@ const EventsIdRoute = EventsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => EventsRoute,
+} as any)
+const AuthStripeCallbackRoute = AuthStripeCallbackRouteImport.update({
+  id: '/stripe-callback',
+  path: '/stripe-callback',
+  getParentRoute: () => AuthRoute,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/callback',
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/stripe-callback': typeof AuthStripeCallbackRoute
   '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
@@ -216,6 +223,7 @@ export interface FileRoutesByTo {
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/stripe-callback': typeof AuthStripeCallbackRoute
   '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/stripe-callback': typeof AuthStripeCallbackRoute
   '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
@@ -276,6 +285,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/auth/callback'
+    | '/auth/stripe-callback'
     | '/events/$id'
     | '/invite/$token'
     | '/marketing/confirm'
@@ -303,6 +313,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/auth/callback'
+    | '/auth/stripe-callback'
     | '/events/$id'
     | '/invite/$token'
     | '/marketing/confirm'
@@ -332,6 +343,7 @@ export interface FileRouteTypes {
     | '/_authenticated/search'
     | '/_authenticated/settings'
     | '/auth/callback'
+    | '/auth/stripe-callback'
     | '/events/$id'
     | '/invite/$token'
     | '/marketing/confirm'
@@ -426,6 +438,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/events/$id'
       preLoaderRoute: typeof EventsIdRouteImport
       parentRoute: typeof EventsRoute
+    }
+    '/auth/stripe-callback': {
+      id: '/auth/stripe-callback'
+      path: '/stripe-callback'
+      fullPath: '/auth/stripe-callback'
+      preLoaderRoute: typeof AuthStripeCallbackRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/auth/callback': {
       id: '/auth/callback'
@@ -609,10 +628,12 @@ const AuthenticatedRouteRouteWithChildren =
 
 interface AuthRouteChildren {
   AuthCallbackRoute: typeof AuthCallbackRoute
+  AuthStripeCallbackRoute: typeof AuthStripeCallbackRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthCallbackRoute: AuthCallbackRoute,
+  AuthStripeCallbackRoute: AuthStripeCallbackRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
