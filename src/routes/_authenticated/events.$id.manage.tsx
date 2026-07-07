@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export const Route = createFileRoute("/_authenticated/events/$id")({
+export const Route = createFileRoute("/_authenticated/events/$id/manage")({
   component: EventPage,
   head: () => ({ meta: [{ title: "Event — EventHub" }] }),
 });

@@ -25,13 +25,12 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
-import { Route as EventsIdPublicRouteImport } from './routes/events.$id.public'
-import { Route as AuthenticatedEventsIdRouteImport } from './routes/_authenticated/events.$id'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminSponsorshipRouteImport } from './routes/_authenticated/admin.sponsorship'
 import { Route as AuthenticatedAdminModerationRouteImport } from './routes/_authenticated/admin.moderation'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as ApiPublicIcalTokenRouteImport } from './routes/api/public/ical.$token'
+import { Route as AuthenticatedEventsIdManageRouteImport } from './routes/_authenticated/events.$id.manage'
 import { Route as AuthenticatedEventsIdCheckinMobileRouteImport } from './routes/_authenticated/events.$id.checkin-mobile'
 import { Route as AuthenticatedEventsIdCheckinRouteImport } from './routes/_authenticated/events.$id.checkin'
 import { Route as AuthenticatedEventsIdAnalyticsRouteImport } from './routes/_authenticated/events.$id.analytics'
@@ -115,16 +114,6 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
-const EventsIdPublicRoute = EventsIdPublicRouteImport.update({
-  id: '/$id/public',
-  path: '/$id/public',
-  getParentRoute: () => EventsRoute,
-} as any)
-const AuthenticatedEventsIdRoute = AuthenticatedEventsIdRouteImport.update({
-  id: '/events/$id',
-  path: '/events/$id',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -152,29 +141,35 @@ const ApiPublicIcalTokenRoute = ApiPublicIcalTokenRouteImport.update({
   path: '/api/public/ical/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedEventsIdManageRoute =
+  AuthenticatedEventsIdManageRouteImport.update({
+    id: '/events/$id/manage',
+    path: '/events/$id/manage',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedEventsIdCheckinMobileRoute =
   AuthenticatedEventsIdCheckinMobileRouteImport.update({
-    id: '/checkin-mobile',
-    path: '/checkin-mobile',
-    getParentRoute: () => AuthenticatedEventsIdRoute,
+    id: '/events/$id/checkin-mobile',
+    path: '/events/$id/checkin-mobile',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedEventsIdCheckinRoute =
   AuthenticatedEventsIdCheckinRouteImport.update({
-    id: '/checkin',
-    path: '/checkin',
-    getParentRoute: () => AuthenticatedEventsIdRoute,
+    id: '/events/$id/checkin',
+    path: '/events/$id/checkin',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedEventsIdAnalyticsRoute =
   AuthenticatedEventsIdAnalyticsRouteImport.update({
-    id: '/analytics',
-    path: '/analytics',
-    getParentRoute: () => AuthenticatedEventsIdRoute,
+    id: '/events/$id/analytics',
+    path: '/events/$id/analytics',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
-  '/events': typeof EventsRouteWithChildren
+  '/events': typeof EventsRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -190,18 +185,17 @@ export interface FileRoutesByFullPath {
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
-  '/events/$id': typeof AuthenticatedEventsIdRouteWithChildren
-  '/events/$id/public': typeof EventsIdPublicRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
   '/events/$id/checkin-mobile': typeof AuthenticatedEventsIdCheckinMobileRoute
+  '/events/$id/manage': typeof AuthenticatedEventsIdManageRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
-  '/events': typeof EventsRouteWithChildren
+  '/events': typeof EventsRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/map': typeof AuthenticatedMapRoute
@@ -216,12 +210,11 @@ export interface FileRoutesByTo {
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
-  '/events/$id': typeof AuthenticatedEventsIdRouteWithChildren
-  '/events/$id/public': typeof EventsIdPublicRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
   '/events/$id/checkin-mobile': typeof AuthenticatedEventsIdCheckinMobileRoute
+  '/events/$id/manage': typeof AuthenticatedEventsIdManageRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
 }
 export interface FileRoutesById {
@@ -229,7 +222,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
-  '/events': typeof EventsRouteWithChildren
+  '/events': typeof EventsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -245,12 +238,11 @@ export interface FileRoutesById {
   '/_authenticated/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/_authenticated/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
-  '/_authenticated/events/$id': typeof AuthenticatedEventsIdRouteWithChildren
-  '/events/$id/public': typeof EventsIdPublicRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/_authenticated/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
   '/_authenticated/events/$id/checkin-mobile': typeof AuthenticatedEventsIdCheckinMobileRoute
+  '/_authenticated/events/$id/manage': typeof AuthenticatedEventsIdManageRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
 }
 export interface FileRouteTypes {
@@ -274,12 +266,11 @@ export interface FileRouteTypes {
     | '/admin/moderation'
     | '/admin/sponsorship'
     | '/admin/users'
-    | '/events/$id'
-    | '/events/$id/public'
     | '/admin/'
     | '/events/$id/analytics'
     | '/events/$id/checkin'
     | '/events/$id/checkin-mobile'
+    | '/events/$id/manage'
     | '/api/public/ical/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -300,12 +291,11 @@ export interface FileRouteTypes {
     | '/admin/moderation'
     | '/admin/sponsorship'
     | '/admin/users'
-    | '/events/$id'
-    | '/events/$id/public'
     | '/admin'
     | '/events/$id/analytics'
     | '/events/$id/checkin'
     | '/events/$id/checkin-mobile'
+    | '/events/$id/manage'
     | '/api/public/ical/$token'
   id:
     | '__root__'
@@ -328,12 +318,11 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/moderation'
     | '/_authenticated/admin/sponsorship'
     | '/_authenticated/admin/users'
-    | '/_authenticated/events/$id'
-    | '/events/$id/public'
     | '/_authenticated/admin/'
     | '/_authenticated/events/$id/analytics'
     | '/_authenticated/events/$id/checkin'
     | '/_authenticated/events/$id/checkin-mobile'
+    | '/_authenticated/events/$id/manage'
     | '/api/public/ical/$token'
   fileRoutesById: FileRoutesById
 }
@@ -341,7 +330,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
-  EventsRoute: typeof EventsRouteWithChildren
+  EventsRoute: typeof EventsRoute
   InviteTokenRoute: typeof InviteTokenRoute
   MarketingConfirmRoute: typeof MarketingConfirmRoute
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
@@ -463,20 +452,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/events/$id/public': {
-      id: '/events/$id/public'
-      path: '/$id/public'
-      fullPath: '/events/$id/public'
-      preLoaderRoute: typeof EventsIdPublicRouteImport
-      parentRoute: typeof EventsRoute
-    }
-    '/_authenticated/events/$id': {
-      id: '/_authenticated/events/$id'
-      path: '/events/$id'
-      fullPath: '/events/$id'
-      preLoaderRoute: typeof AuthenticatedEventsIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/admin/users': {
       id: '/_authenticated/admin/users'
       path: '/users'
@@ -512,26 +487,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicIcalTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/events/$id/manage': {
+      id: '/_authenticated/events/$id/manage'
+      path: '/events/$id/manage'
+      fullPath: '/events/$id/manage'
+      preLoaderRoute: typeof AuthenticatedEventsIdManageRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/events/$id/checkin-mobile': {
       id: '/_authenticated/events/$id/checkin-mobile'
-      path: '/checkin-mobile'
+      path: '/events/$id/checkin-mobile'
       fullPath: '/events/$id/checkin-mobile'
       preLoaderRoute: typeof AuthenticatedEventsIdCheckinMobileRouteImport
-      parentRoute: typeof AuthenticatedEventsIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/events/$id/checkin': {
       id: '/_authenticated/events/$id/checkin'
-      path: '/checkin'
+      path: '/events/$id/checkin'
       fullPath: '/events/$id/checkin'
       preLoaderRoute: typeof AuthenticatedEventsIdCheckinRouteImport
-      parentRoute: typeof AuthenticatedEventsIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/events/$id/analytics': {
       id: '/_authenticated/events/$id/analytics'
-      path: '/analytics'
+      path: '/events/$id/analytics'
       fullPath: '/events/$id/analytics'
       preLoaderRoute: typeof AuthenticatedEventsIdAnalyticsRouteImport
-      parentRoute: typeof AuthenticatedEventsIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
@@ -555,24 +537,6 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
-interface AuthenticatedEventsIdRouteChildren {
-  AuthenticatedEventsIdAnalyticsRoute: typeof AuthenticatedEventsIdAnalyticsRoute
-  AuthenticatedEventsIdCheckinRoute: typeof AuthenticatedEventsIdCheckinRoute
-  AuthenticatedEventsIdCheckinMobileRoute: typeof AuthenticatedEventsIdCheckinMobileRoute
-}
-
-const AuthenticatedEventsIdRouteChildren: AuthenticatedEventsIdRouteChildren = {
-  AuthenticatedEventsIdAnalyticsRoute: AuthenticatedEventsIdAnalyticsRoute,
-  AuthenticatedEventsIdCheckinRoute: AuthenticatedEventsIdCheckinRoute,
-  AuthenticatedEventsIdCheckinMobileRoute:
-    AuthenticatedEventsIdCheckinMobileRoute,
-}
-
-const AuthenticatedEventsIdRouteWithChildren =
-  AuthenticatedEventsIdRoute._addFileChildren(
-    AuthenticatedEventsIdRouteChildren,
-  )
-
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
@@ -580,7 +544,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
-  AuthenticatedEventsIdRoute: typeof AuthenticatedEventsIdRouteWithChildren
+  AuthenticatedEventsIdAnalyticsRoute: typeof AuthenticatedEventsIdAnalyticsRoute
+  AuthenticatedEventsIdCheckinRoute: typeof AuthenticatedEventsIdCheckinRoute
+  AuthenticatedEventsIdCheckinMobileRoute: typeof AuthenticatedEventsIdCheckinMobileRoute
+  AuthenticatedEventsIdManageRoute: typeof AuthenticatedEventsIdManageRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -590,7 +557,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
-  AuthenticatedEventsIdRoute: AuthenticatedEventsIdRouteWithChildren,
+  AuthenticatedEventsIdAnalyticsRoute: AuthenticatedEventsIdAnalyticsRoute,
+  AuthenticatedEventsIdCheckinRoute: AuthenticatedEventsIdCheckinRoute,
+  AuthenticatedEventsIdCheckinMobileRoute:
+    AuthenticatedEventsIdCheckinMobileRoute,
+  AuthenticatedEventsIdManageRoute: AuthenticatedEventsIdManageRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -606,22 +577,11 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
-interface EventsRouteChildren {
-  EventsIdPublicRoute: typeof EventsIdPublicRoute
-}
-
-const EventsRouteChildren: EventsRouteChildren = {
-  EventsIdPublicRoute: EventsIdPublicRoute,
-}
-
-const EventsRouteWithChildren =
-  EventsRoute._addFileChildren(EventsRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
-  EventsRoute: EventsRouteWithChildren,
+  EventsRoute: EventsRoute,
   InviteTokenRoute: InviteTokenRoute,
   MarketingConfirmRoute: MarketingConfirmRoute,
   MarketingSubscribeRoute: MarketingSubscribeRoute,
@@ -631,13 +591,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
