@@ -40,11 +40,11 @@ function EventsPage() {
     search.range === "week" || search.range === "month" ? search.range : "all";
 
   const setQuery = (q: string) =>
-    navigate({ search: (prev) => ({ ...prev, q }), replace: true });
+    navigate({ search: (prev: Record<string, string>) => ({ ...prev, q }), replace: true });
   const setCategory = (c: string | null) =>
-    navigate({ search: (prev) => ({ ...prev, category: c ?? "" }), replace: true });
+    navigate({ search: (prev: Record<string, string>) => ({ ...prev, category: c ?? "" }), replace: true });
   const setRange = (r: "all" | "week" | "month") =>
-    navigate({ search: (prev) => ({ ...prev, range: r }), replace: true });
+    navigate({ search: (prev: Record<string, string>) => ({ ...prev, range: r }), replace: true });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
