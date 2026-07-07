@@ -1,12 +1,21 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { z } from "zod";
+import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PublicHero } from "@/components/public-hero";
 import { EventCardPublic, type PublicEvent } from "@/components/event-card-public";
 import { CalendarDays, PartyPopper } from "lucide-react";
 
+const searchSchema = z.object({
+  category: fallback(z.string(), "").default(""),
+  q: fallback(z.string(), "").default(""),
+  range: fallback(z.string(), "all").default("all"),
+});
+
 export const Route = createFileRoute("/events")({
+  validateSearch: zodValidator(searchSchema),
   head: () => ({
     meta: [
       { title: "Discover Events — EventHub" },
@@ -19,12 +28,23 @@ export const Route = createFileRoute("/events")({
 });
 
 function EventsPage() {
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/events" });
   const [signedIn, setSignedIn] = useState(false);
   const [events, setEvents] = useState<PublicEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<string | null>(null);
-  const [range, setRange] = useState<"all" | "week" | "month">("all");
+
+  const query = search.q;
+  const category = search.category ? search.category : null;
+  const range: "all" | "week" | "month" =
+    search.range === "week" || search.range === "month" ? search.range : "all";
+
+  const setQuery = (q: string) =>
+    navigate({ search: (prev) => ({ ...prev, q }), replace: true });
+  const setCategory = (c: string | null) =>
+    navigate({ search: (prev) => ({ ...prev, category: c ?? "" }), replace: true });
+  const setRange = (r: "all" | "week" | "month") =>
+    navigate({ search: (prev) => ({ ...prev, range: r }), replace: true });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
