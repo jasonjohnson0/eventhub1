@@ -813,6 +813,54 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_config: {
+        Row: {
+          configured_at: string | null
+          created_at: string
+          email_api_key: string | null
+          email_configured: boolean
+          email_extra: Json | null
+          email_from_address: string | null
+          email_from_name: string | null
+          email_provider: Database["public"]["Enums"]["email_provider_type"]
+          id: string
+          stripe_connect_account_id: string | null
+          stripe_connected: boolean
+          stripe_connected_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          configured_at?: string | null
+          created_at?: string
+          email_api_key?: string | null
+          email_configured?: boolean
+          email_extra?: Json | null
+          email_from_address?: string | null
+          email_from_name?: string | null
+          email_provider?: Database["public"]["Enums"]["email_provider_type"]
+          id?: string
+          stripe_connect_account_id?: string | null
+          stripe_connected?: boolean
+          stripe_connected_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          configured_at?: string | null
+          created_at?: string
+          email_api_key?: string | null
+          email_configured?: boolean
+          email_extra?: Json | null
+          email_from_address?: string | null
+          email_from_name?: string | null
+          email_provider?: Database["public"]["Enums"]["email_provider_type"]
+          id?: string
+          stripe_connect_account_id?: string | null
+          stripe_connected?: boolean
+          stripe_connected_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -2270,6 +2318,12 @@ export type Database = {
       app_role: "admin" | "coordinator" | "staff" | "user"
       ban_scope: "user" | "event"
       consent_status: "pending" | "confirmed" | "unsubscribed"
+      email_provider_type:
+        | "lovable"
+        | "sendgrid"
+        | "postmark"
+        | "mailgun"
+        | "none"
       event_category:
         | "sports"
         | "networking"
@@ -2429,6 +2483,13 @@ export const Constants = {
       app_role: ["admin", "coordinator", "staff", "user"],
       ban_scope: ["user", "event"],
       consent_status: ["pending", "confirmed", "unsubscribed"],
+      email_provider_type: [
+        "lovable",
+        "sendgrid",
+        "postmark",
+        "mailgun",
+        "none",
+      ],
       event_category: [
         "sports",
         "networking",
