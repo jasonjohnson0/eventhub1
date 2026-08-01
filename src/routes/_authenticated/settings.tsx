@@ -19,6 +19,9 @@ import {
 import { createOrGetIcalToken, rotateIcalToken } from "@/lib/distribution.functions";
 import { Copy, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
 import { CoordinatorAnalyticsCard } from "@/components/coordinator-analytics-card";
+import { VenueManager } from "@/components/venue-manager";
+import { OrganizerManager } from "@/components/organizer-manager";
+import { CustomFieldManager } from "@/components/custom-field-manager";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -207,6 +210,10 @@ function SettingsPage() {
         </div>
 
         <CoordinatorAnalyticsCard />
+
+        <VenueManager />
+        <OrganizerManager />
+        <CustomFieldManager />
 
         <Card>
           <CardHeader>

@@ -268,57 +268,78 @@ export type Database = {
           contact_email: string | null
           coordinator_id: string
           created_at: string
+          currency: string
           custom_domain: string | null
           description: string | null
           dns_records_acknowledged: boolean
           email_provider: Database["public"]["Enums"]["email_provider_type"]
           favicon_url: string | null
           full_name: string | null
+          language: string
           logo_url: string | null
+          phone: string | null
           primary_color: string
           secondary_color: string
+          server_config: Json
           setup_completed_at: string | null
           setup_step: number
           slug: string | null
+          terms_accepted_at: string | null
+          timezone: string
           updated_at: string
+          website: string | null
         }
         Insert: {
           company_name?: string | null
           contact_email?: string | null
           coordinator_id: string
           created_at?: string
+          currency?: string
           custom_domain?: string | null
           description?: string | null
           dns_records_acknowledged?: boolean
           email_provider?: Database["public"]["Enums"]["email_provider_type"]
           favicon_url?: string | null
           full_name?: string | null
+          language?: string
           logo_url?: string | null
+          phone?: string | null
           primary_color?: string
           secondary_color?: string
+          server_config?: Json
           setup_completed_at?: string | null
           setup_step?: number
           slug?: string | null
+          terms_accepted_at?: string | null
+          timezone?: string
           updated_at?: string
+          website?: string | null
         }
         Update: {
           company_name?: string | null
           contact_email?: string | null
           coordinator_id?: string
           created_at?: string
+          currency?: string
           custom_domain?: string | null
           description?: string | null
           dns_records_acknowledged?: boolean
           email_provider?: Database["public"]["Enums"]["email_provider_type"]
           favicon_url?: string | null
           full_name?: string | null
+          language?: string
           logo_url?: string | null
+          phone?: string | null
           primary_color?: string
           secondary_color?: string
+          server_config?: Json
           setup_completed_at?: string | null
           setup_step?: number
           slug?: string | null
+          terms_accepted_at?: string | null
+          timezone?: string
           updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }
@@ -363,6 +384,88 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: true
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_field_schemas: {
+        Row: {
+          coordinator_id: string
+          created_at: string
+          display_order: number
+          field_name: string
+          field_type: Database["public"]["Enums"]["custom_field_type"]
+          id: string
+          is_required: boolean
+          options: Json
+          updated_at: string
+        }
+        Insert: {
+          coordinator_id: string
+          created_at?: string
+          display_order?: number
+          field_name: string
+          field_type?: Database["public"]["Enums"]["custom_field_type"]
+          id?: string
+          is_required?: boolean
+          options?: Json
+          updated_at?: string
+        }
+        Update: {
+          coordinator_id?: string
+          created_at?: string
+          display_order?: number
+          field_name?: string
+          field_type?: Database["public"]["Enums"]["custom_field_type"]
+          id?: string
+          is_required?: boolean
+          options?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      event_field_values: {
+        Row: {
+          created_at: string
+          event_id: string
+          field_id: string
+          id: string
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          field_id: string
+          id?: string
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          field_id?: string
+          id?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_field_values_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "event_field_values_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_field_values_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "event_field_schemas"
             referencedColumns: ["id"]
           },
         ]
@@ -471,6 +574,52 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: true
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_organizers: {
+        Row: {
+          created_at: string
+          display_order: number
+          event_id: string
+          id: string
+          organizer_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          event_id: string
+          id?: string
+          organizer_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          event_id?: string
+          id?: string
+          organizer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_organizers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "event_organizers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_organizers_organizer_id_fkey"
+            columns: ["organizer_id"]
+            isOneToOne: false
+            referencedRelation: "organizers"
             referencedColumns: ["id"]
           },
         ]
@@ -616,6 +765,66 @@ export type Database = {
         }
         Relationships: []
       }
+      event_submissions: {
+        Row: {
+          coordinator_id: string | null
+          created_at: string
+          created_event_id: string | null
+          event_data: Json
+          id: string
+          notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["submission_status"]
+          submitted_at: string
+          submitted_by_email: string
+          updated_at: string
+        }
+        Insert: {
+          coordinator_id?: string | null
+          created_at?: string
+          created_event_id?: string | null
+          event_data: Json
+          id?: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["submission_status"]
+          submitted_at?: string
+          submitted_by_email: string
+          updated_at?: string
+        }
+        Update: {
+          coordinator_id?: string | null
+          created_at?: string
+          created_event_id?: string | null
+          event_data?: Json
+          id?: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["submission_status"]
+          submitted_at?: string
+          submitted_by_email?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_submissions_created_event_id_fkey"
+            columns: ["created_event_id"]
+            isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "event_submissions_created_event_id_fkey"
+            columns: ["created_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_tickets: {
         Row: {
           created_at: string
@@ -748,6 +957,7 @@ export type Database = {
           tags: string[]
           title: string
           updated_at: string
+          venue_id: string | null
           virtual_link: string | null
         }
         Insert: {
@@ -773,6 +983,7 @@ export type Database = {
           tags?: string[]
           title: string
           updated_at?: string
+          venue_id?: string | null
           virtual_link?: string | null
         }
         Update: {
@@ -798,6 +1009,7 @@ export type Database = {
           tags?: string[]
           title?: string
           updated_at?: string
+          venue_id?: string | null
           virtual_link?: string | null
         }
         Relationships: [
@@ -806,6 +1018,13 @@ export type Database = {
             columns: ["series_id"]
             isOneToOne: false
             referencedRelation: "event_series"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
             referencedColumns: ["id"]
           },
         ]
@@ -870,6 +1089,45 @@ export type Database = {
           push_reminders?: boolean
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      organizers: {
+        Row: {
+          bio: string | null
+          coordinator_id: string
+          created_at: string
+          credentials: string | null
+          id: string
+          name: string
+          photo_url: string | null
+          social_links: Json
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          bio?: string | null
+          coordinator_id: string
+          created_at?: string
+          credentials?: string | null
+          id?: string
+          name: string
+          photo_url?: string | null
+          social_links?: Json
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bio?: string | null
+          coordinator_id?: string
+          created_at?: string
+          credentials?: string | null
+          id?: string
+          name?: string
+          photo_url?: string | null
+          social_links?: Json
+          title?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1293,6 +1551,57 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      venues: {
+        Row: {
+          accessibility_info: string | null
+          address: string | null
+          capacity: number | null
+          coordinator_id: string
+          created_at: string
+          id: string
+          lat: number | null
+          lng: number | null
+          name: string
+          parking_info: string | null
+          phone: string | null
+          photo_url: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          accessibility_info?: string | null
+          address?: string | null
+          capacity?: number | null
+          coordinator_id: string
+          created_at?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name: string
+          parking_info?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          accessibility_info?: string | null
+          address?: string | null
+          capacity?: number | null
+          coordinator_id?: string
+          created_at?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name?: string
+          parking_info?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }
@@ -2391,6 +2700,7 @@ export type Database = {
       app_role: "admin" | "coordinator" | "staff" | "user"
       ban_scope: "user" | "event"
       consent_status: "pending" | "confirmed" | "unsubscribed"
+      custom_field_type: "text" | "dropdown" | "number" | "date" | "checkbox"
       email_provider_type:
         | "lovable"
         | "sendgrid"
@@ -2417,6 +2727,7 @@ export type Database = {
       slot_status: "available" | "reserved" | "paid" | "expired"
       slot_type: "banner" | "featured" | "sidebar"
       staff_role: "coordinator" | "staff"
+      submission_status: "pending" | "approved" | "rejected"
       waitlist_status: "waitlisted" | "promoted" | "declined"
     }
     CompositeTypes: {
@@ -2556,6 +2867,7 @@ export const Constants = {
       app_role: ["admin", "coordinator", "staff", "user"],
       ban_scope: ["user", "event"],
       consent_status: ["pending", "confirmed", "unsubscribed"],
+      custom_field_type: ["text", "dropdown", "number", "date", "checkbox"],
       email_provider_type: [
         "lovable",
         "sendgrid",
@@ -2584,6 +2896,7 @@ export const Constants = {
       slot_status: ["available", "reserved", "paid", "expired"],
       slot_type: ["banner", "featured", "sidebar"],
       staff_role: ["coordinator", "staff"],
+      submission_status: ["pending", "approved", "rejected"],
       waitlist_status: ["waitlisted", "promoted", "declined"],
     },
   },

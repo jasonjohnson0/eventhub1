@@ -136,6 +136,9 @@ function EventsPage() {
           EventHub
         </Link>
         <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="ghost" className="rounded-full">
+            <Link to="/submit-event">Submit an event</Link>
+          </Button>
           {signedIn ? (
             <Button asChild size="sm" className="rounded-full">
               <Link to="/dashboard">Dashboard</Link>

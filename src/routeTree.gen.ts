@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SubmitEventRouteImport } from './routes/submit-event'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -20,6 +21,7 @@ import { Route as MarketingConfirmRouteImport } from './routes/marketing.confirm
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as EventsIdRouteImport } from './routes/events.$id'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as AuthenticatedSubmissionsRouteImport } from './routes/_authenticated/submissions'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/map'
@@ -38,6 +40,11 @@ import { Route as AuthenticatedEventsIdCheckinMobileRouteImport } from './routes
 import { Route as AuthenticatedEventsIdCheckinRouteImport } from './routes/_authenticated/events.$id.checkin'
 import { Route as AuthenticatedEventsIdAnalyticsRouteImport } from './routes/_authenticated/events.$id.analytics'
 
+const SubmitEventRoute = SubmitEventRouteImport.update({
+  id: '/submit-event',
+  path: '/submit-event',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -92,6 +99,12 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/callback',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthenticatedSubmissionsRoute =
+  AuthenticatedSubmissionsRouteImport.update({
+    id: '/submissions',
+    path: '/submissions',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -189,12 +202,14 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/events': typeof EventsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/submit-event': typeof SubmitEventRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/map': typeof AuthenticatedMapRoute
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/submissions': typeof AuthenticatedSubmissionsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -218,11 +233,13 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/events': typeof EventsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/submit-event': typeof SubmitEventRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/map': typeof AuthenticatedMapRoute
   '/search': typeof AuthenticatedSearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/submissions': typeof AuthenticatedSubmissionsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -248,12 +265,14 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/events': typeof EventsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/submit-event': typeof SubmitEventRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/map': typeof AuthenticatedMapRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/submissions': typeof AuthenticatedSubmissionsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
@@ -279,12 +298,14 @@ export interface FileRouteTypes {
     | '/auth'
     | '/events'
     | '/onboarding'
+    | '/submit-event'
     | '/admin'
     | '/calendar'
     | '/dashboard'
     | '/map'
     | '/search'
     | '/settings'
+    | '/submissions'
     | '/auth/callback'
     | '/events/$id'
     | '/invite/$token'
@@ -308,11 +329,13 @@ export interface FileRouteTypes {
     | '/auth'
     | '/events'
     | '/onboarding'
+    | '/submit-event'
     | '/calendar'
     | '/dashboard'
     | '/map'
     | '/search'
     | '/settings'
+    | '/submissions'
     | '/auth/callback'
     | '/events/$id'
     | '/invite/$token'
@@ -337,12 +360,14 @@ export interface FileRouteTypes {
     | '/auth'
     | '/events'
     | '/onboarding'
+    | '/submit-event'
     | '/_authenticated/admin'
     | '/_authenticated/calendar'
     | '/_authenticated/dashboard'
     | '/_authenticated/map'
     | '/_authenticated/search'
     | '/_authenticated/settings'
+    | '/_authenticated/submissions'
     | '/auth/callback'
     | '/events/$id'
     | '/invite/$token'
@@ -368,6 +393,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   EventsRoute: typeof EventsRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  SubmitEventRoute: typeof SubmitEventRoute
   InviteTokenRoute: typeof InviteTokenRoute
   MarketingConfirmRoute: typeof MarketingConfirmRoute
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
@@ -377,6 +403,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/submit-event': {
+      id: '/submit-event'
+      path: '/submit-event'
+      fullPath: '/submit-event'
+      preLoaderRoute: typeof SubmitEventRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -453,6 +486,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/callback'
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/_authenticated/submissions': {
+      id: '/_authenticated/submissions'
+      path: '/submissions'
+      fullPath: '/submissions'
+      preLoaderRoute: typeof AuthenticatedSubmissionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
@@ -604,6 +644,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMapRoute: typeof AuthenticatedMapRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSubmissionsRoute: typeof AuthenticatedSubmissionsRoute
   AuthenticatedEventsIdAnalyticsRoute: typeof AuthenticatedEventsIdAnalyticsRoute
   AuthenticatedEventsIdCheckinRoute: typeof AuthenticatedEventsIdCheckinRoute
   AuthenticatedEventsIdCheckinMobileRoute: typeof AuthenticatedEventsIdCheckinMobileRoute
@@ -617,6 +658,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMapRoute: AuthenticatedMapRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSubmissionsRoute: AuthenticatedSubmissionsRoute,
   AuthenticatedEventsIdAnalyticsRoute: AuthenticatedEventsIdAnalyticsRoute,
   AuthenticatedEventsIdCheckinRoute: AuthenticatedEventsIdCheckinRoute,
   AuthenticatedEventsIdCheckinMobileRoute:
@@ -654,6 +696,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   EventsRoute: EventsRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  SubmitEventRoute: SubmitEventRoute,
   InviteTokenRoute: InviteTokenRoute,
   MarketingConfirmRoute: MarketingConfirmRoute,
   MarketingSubscribeRoute: MarketingSubscribeRoute,
