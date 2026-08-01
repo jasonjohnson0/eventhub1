@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SubmitEventRouteImport } from './routes/submit-event'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -43,6 +44,11 @@ import { Route as AuthenticatedEventsIdAnalyticsRouteImport } from './routes/_au
 const SubmitEventRoute = SubmitEventRouteImport.update({
   id: '/submit-event',
   path: '/submit-event',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -202,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/events': typeof EventsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/setup': typeof SetupRoute
   '/submit-event': typeof SubmitEventRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
@@ -233,6 +240,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/events': typeof EventsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/setup': typeof SetupRoute
   '/submit-event': typeof SubmitEventRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -265,6 +273,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/events': typeof EventsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/setup': typeof SetupRoute
   '/submit-event': typeof SubmitEventRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
@@ -298,6 +307,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/events'
     | '/onboarding'
+    | '/setup'
     | '/submit-event'
     | '/admin'
     | '/calendar'
@@ -329,6 +339,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/events'
     | '/onboarding'
+    | '/setup'
     | '/submit-event'
     | '/calendar'
     | '/dashboard'
@@ -360,6 +371,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/events'
     | '/onboarding'
+    | '/setup'
     | '/submit-event'
     | '/_authenticated/admin'
     | '/_authenticated/calendar'
@@ -393,6 +405,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   EventsRoute: typeof EventsRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  SetupRoute: typeof SetupRoute
   SubmitEventRoute: typeof SubmitEventRoute
   InviteTokenRoute: typeof InviteTokenRoute
   MarketingConfirmRoute: typeof MarketingConfirmRoute
@@ -408,6 +421,13 @@ declare module '@tanstack/react-router' {
       path: '/submit-event'
       fullPath: '/submit-event'
       preLoaderRoute: typeof SubmitEventRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -696,6 +716,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   EventsRoute: EventsRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  SetupRoute: SetupRoute,
   SubmitEventRoute: SubmitEventRoute,
   InviteTokenRoute: InviteTokenRoute,
   MarketingConfirmRoute: MarketingConfirmRoute,
