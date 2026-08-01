@@ -37,6 +37,7 @@ const main = [
   { title: "Calendar", url: "/calendar", icon: CalendarIcon },
   { title: "Search", url: "/search", icon: Search },
   { title: "Map", url: "/map", icon: MapIcon },
+  { title: "Submissions", url: "/submissions", icon: Inbox },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
