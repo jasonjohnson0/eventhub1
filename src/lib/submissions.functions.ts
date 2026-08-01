@@ -1,7 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { CATEGORIES, type SubmissionStatus } from "@/lib/submissions.shared";
+import type { SubmissionStatus } from "@/lib/submissions.shared";
+import {
+  listSchema,
+  notifySubmitter,
+  reviewSchema,
+  submitSchema,
+} from "@/lib/submissions.server";
 
 export type EventSubmission = {
   id: string;
@@ -24,18 +29,6 @@ export type EventSubmission = {
   notes: string | null;
   created_event_id: string | null;
 };
-
-const submitSchema = z.object({
-  submitted_by_email: z.string().trim().email().max(254),
-  contact_name: z.string().trim().max(120).optional().nullable(),
-  title: z.string().trim().min(3).max(160),
-  description: z.string().trim().max(4000).optional().nullable(),
-  location: z.string().trim().max(300).optional().nullable(),
-  category: z.enum(CATEGORIES).default("other"),
-  start_time: z.string().min(8).max(40),
-  end_time: z.string().min(8).max(40),
-  image_url: z.string().trim().max(1000).optional().nullable(),
-});
 
 /** Public — anyone can propose an event; lands in the coordinator queue. */
 export const submitEvent = createServerFn({ method: "POST" })
@@ -75,11 +68,7 @@ export const submitEvent = createServerFn({ method: "POST" })
 
 export const listSubmissions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z
-      .object({ status: z.enum(["pending", "approved", "rejected", "all"]).default("pending") })
-      .parse(d),
-  )
+  .inputValidator((d) => listSchema.parse(d))
   .handler(async ({ data, context }): Promise<EventSubmission[]> => {
     // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
     const sb = context.supabase as any;
@@ -104,25 +93,9 @@ export const listPendingSubmissions = createServerFn({ method: "GET" })
     return (data ?? []) as EventSubmission[];
   });
 
-async function notifySubmitter(to: string, subject: string, body: string) {
-  try {
-    const { sendPlatformEmail } = await import("@/lib/platform-mailer.server");
-    await sendPlatformEmail({
-      to,
-      subject,
-      html: `<!doctype html><html><body style="font-family:system-ui,Arial,sans-serif;padding:24px;max-width:600px;margin:auto"><p style="white-space:pre-line">${body}</p><hr style="border:none;border-top:1px solid #eee;margin:24px 0"/><p style="font-size:12px;color:#888">EventHub · Jackson County, FL</p></body></html>`,
-      text: body,
-    });
-  } catch {
-    // Email delivery is best-effort; review decisions still stand.
-  }
-}
-
 export const approveSubmission = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z.object({ id: z.string().uuid(), notes: z.string().max(1000).optional().nullable() }).parse(d),
-  )
+  .inputValidator((d) => reviewSchema.parse(d))
   .handler(async ({ data, context }) => {
     // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
     const sb = context.supabase as any;
@@ -174,9 +147,7 @@ export const approveSubmission = createServerFn({ method: "POST" })
 
 export const rejectSubmission = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
-    z.object({ id: z.string().uuid(), notes: z.string().max(1000).optional().nullable() }).parse(d),
-  )
+  .inputValidator((d) => reviewSchema.parse(d))
   .handler(async ({ data, context }) => {
     // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
     const sb = context.supabase as any;
