@@ -58,11 +58,11 @@ const SHOTS: { src: string; title: string; blurb: string; group: string; tall?: 
   { src: shot12, group: "Accounts", title: "Create account", blurb: "Self-serve signup that lands in the coordinator workspace." },
   { src: shot13, group: "Mobile", title: "Event page on mobile", blurb: "Fully responsive detail pages for on-the-go attendees.", tall: true },
   { src: shot14, group: "Mobile", title: "Submit from a phone", blurb: "The submission flow works from any device.", tall: true },
-  { src: shot15, group: "Marketing", title: "Newsletter opt-in", blurb: "Double opt-in subscriber capture built into the calendar." },
+  { src: shot15, group: "Accounts", title: "Newsletter opt-in", blurb: "Double opt-in subscriber capture built into the calendar." },
   { src: shot16, group: "Mobile", title: "Mobile discovery", blurb: "The full calendar, thumb-friendly.", tall: true },
 ];
 
-const GROUPS = ["Discovery", "Event page", "Submissions", "Accounts", "Mobile", "Marketing"] as const;
+const GROUPS = ["Discovery", "Event page", "Submissions", "Accounts", "Mobile"] as const;
 
 const FEATURES = [
   ["🎟️", "Paid ticketing", "Your own Stripe keys. Money lands in your account, not ours."],
