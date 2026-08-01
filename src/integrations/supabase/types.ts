@@ -262,6 +262,66 @@ export type Database = {
         }
         Relationships: []
       }
+      coordinator_profiles: {
+        Row: {
+          company_name: string | null
+          contact_email: string | null
+          coordinator_id: string
+          created_at: string
+          custom_domain: string | null
+          description: string | null
+          dns_records_acknowledged: boolean
+          email_provider: Database["public"]["Enums"]["email_provider_type"]
+          favicon_url: string | null
+          full_name: string | null
+          logo_url: string | null
+          primary_color: string
+          secondary_color: string
+          setup_completed_at: string | null
+          setup_step: number
+          slug: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_name?: string | null
+          contact_email?: string | null
+          coordinator_id: string
+          created_at?: string
+          custom_domain?: string | null
+          description?: string | null
+          dns_records_acknowledged?: boolean
+          email_provider?: Database["public"]["Enums"]["email_provider_type"]
+          favicon_url?: string | null
+          full_name?: string | null
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
+          setup_completed_at?: string | null
+          setup_step?: number
+          slug?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string | null
+          contact_email?: string | null
+          coordinator_id?: string
+          created_at?: string
+          custom_domain?: string | null
+          description?: string | null
+          dns_records_acknowledged?: boolean
+          email_provider?: Database["public"]["Enums"]["email_provider_type"]
+          favicon_url?: string | null
+          full_name?: string | null
+          logo_url?: string | null
+          primary_color?: string
+          secondary_color?: string
+          setup_completed_at?: string | null
+          setup_step?: number
+          slug?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_details: {
         Row: {
           created_at: string
@@ -1660,6 +1720,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_slug_available: {
+        Args: { _coordinator_id?: string; _slug: string }
         Returns: boolean
       }
       is_workspace_member: {
