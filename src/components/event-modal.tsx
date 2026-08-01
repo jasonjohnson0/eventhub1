@@ -8,6 +8,20 @@ import { toast } from "sonner";
 import { createEvent } from "@/lib/events.functions";
 import { createSeries } from "@/lib/series.functions";
 import { CATEGORIES, categoryLabel, type EventCategory } from "@/lib/categories";
+import { listVenues, type Venue } from "@/lib/venues.functions";
+import {
+  assignToEvent,
+  listOrganizers,
+  MAX_ORGANIZERS_PER_EVENT,
+  type Organizer,
+} from "@/lib/organizers.functions";
+import {
+  listCustomFields,
+  saveEventFieldValues,
+  type CustomField,
+} from "@/lib/custom-fields.functions";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -49,6 +63,12 @@ export function EventModal({
   const [virtualLink, setVirtualLink] = useState("");
   const [provider, setProvider] = useState<"zoom" | "google_meet" | "youtube" | "none">("none");
   const [loading, setLoading] = useState(false);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [venueId, setVenueId] = useState<string>("custom");
+  const [organizers, setOrganizers] = useState<Organizer[]>([]);
+  const [selectedOrganizers, setSelectedOrganizers] = useState<string[]>([]);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (open) {
@@ -58,6 +78,40 @@ export function EventModal({
       setEnd(toLocalInput(e));
     }
   }, [open, initialStart]);
+
+  useEffect(() => {
+    if (!open) return;
+    void (async () => {
+      const [v, o, f] = await Promise.allSettled([
+        listVenues(),
+        listOrganizers(),
+        listCustomFields(),
+      ]);
+      if (v.status === "fulfilled") setVenues(v.value);
+      if (o.status === "fulfilled") setOrganizers(o.value);
+      if (f.status === "fulfilled") setCustomFields(f.value);
+    })();
+  }, [open]);
+
+  function pickVenue(id: string) {
+    setVenueId(id);
+    const v = venues.find((x) => x.id === id);
+    if (!v) return;
+    setLocation(v.address ? `${v.name}, ${v.address}` : v.name);
+    setLat(v.lat != null ? String(v.lat) : "");
+    setLng(v.lng != null ? String(v.lng) : "");
+  }
+
+  function toggleOrganizer(id: string) {
+    setSelectedOrganizers((prev) => {
+      if (prev.includes(id)) return prev.filter((p) => p !== id);
+      if (prev.length >= MAX_ORGANIZERS_PER_EVENT) {
+        toast.error(`Up to ${MAX_ORGANIZERS_PER_EVENT} organizers per event`);
+        return prev;
+      }
+      return [...prev, id];
+    });
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -71,8 +125,14 @@ export function EventModal({
         return;
       }
       const tags = tagsText.split(",").map((t) => t.trim()).filter(Boolean);
+      const missing = customFields.filter((f) => f.is_required && !fieldValues[f.id]);
+      if (missing.length > 0) {
+        toast.error(`Required: ${missing.map((f) => f.field_name).join(", ")}`);
+        setLoading(false);
+        return;
+      }
       if (repeat === "none") {
-        await createEvent({
+        const created = await createEvent({
           data: {
             title,
             description: description || null,
@@ -88,6 +148,17 @@ export function EventModal({
             livestream_provider: format === "in_person" ? "none" : provider,
           },
         });
+        if (selectedOrganizers.length > 0) {
+          await assignToEvent({
+            data: { event_id: created.id, organizer_ids: selectedOrganizers },
+          });
+        }
+        const values = Object.entries(fieldValues)
+          .filter(([, v]) => v !== "")
+          .map(([field_id, value]) => ({ field_id, value }));
+        if (values.length > 0) {
+          await saveEventFieldValues({ data: { event_id: created.id, values } });
+        }
         toast.success("Event created");
       } else {
         const rrule =
@@ -129,6 +200,9 @@ export function EventModal({
       setFormat("in_person");
       setVirtualLink("");
       setProvider("none");
+      setVenueId("custom");
+      setSelectedOrganizers([]);
+      setFieldValues({});
       onCreated?.();
       onOpenChange(false);
     } catch (err) {
@@ -141,10 +215,11 @@ export function EventModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
+        {/* scrollable body keeps the extended form usable on laptops */}
         <DialogHeader>
           <DialogTitle>New event</DialogTitle>
         </DialogHeader>
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
           <div>
             <Label htmlFor="title">Title</Label>
             <Input id="title" required value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -153,6 +228,24 @@ export function EventModal({
             <Label htmlFor="desc">Description</Label>
             <Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
           </div>
+          {venues.length > 0 && (
+            <div>
+              <Label>Venue</Label>
+              <Select value={venueId} onValueChange={pickVenue}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pick a saved venue" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="custom">Custom location</SelectItem>
+                  {venues.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <Label htmlFor="loc">Location</Label>
             <Input id="loc" value={location} onChange={(e) => setLocation(e.target.value)} />
@@ -287,6 +380,83 @@ export function EventModal({
               </p>
             )}
           </div>
+          {organizers.length > 0 && (
+            <div className="rounded-md border p-3">
+              <Label className="mb-2 block">
+                Organizers & speakers{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  ({selectedOrganizers.length}/{MAX_ORGANIZERS_PER_EVENT})
+                </span>
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {organizers.map((o) => {
+                  const on = selectedOrganizers.includes(o.id);
+                  return (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => toggleOrganizer(o.id)}
+                      className="focus:outline-none"
+                    >
+                      <Badge variant={on ? "default" : "outline"} className="cursor-pointer">
+                        {o.name}
+                        {o.title ? ` · ${o.title}` : ""}
+                      </Badge>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {customFields.length > 0 && (
+            <div className="space-y-3 rounded-md border p-3">
+              <Label className="block">Additional details</Label>
+              {customFields.map((f) => (
+                <div key={f.id}>
+                  <Label htmlFor={`cf-${f.id}`} className="text-xs">
+                    {f.field_name}
+                    {f.is_required ? " *" : ""}
+                  </Label>
+                  {f.field_type === "dropdown" ? (
+                    <Select
+                      value={fieldValues[f.id] ?? ""}
+                      onValueChange={(v) => setFieldValues({ ...fieldValues, [f.id]: v })}
+                    >
+                      <SelectTrigger id={`cf-${f.id}`}>
+                        <SelectValue placeholder="Select…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {f.options.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : f.field_type === "checkbox" ? (
+                    <div className="pt-1">
+                      <Checkbox
+                        id={`cf-${f.id}`}
+                        checked={fieldValues[f.id] === "true"}
+                        onCheckedChange={(v) =>
+                          setFieldValues({ ...fieldValues, [f.id]: v === true ? "true" : "" })
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <Input
+                      id={`cf-${f.id}`}
+                      type={
+                        f.field_type === "number" ? "number" : f.field_type === "date" ? "date" : "text"
+                      }
+                      value={fieldValues[f.id] ?? ""}
+                      onChange={(e) => setFieldValues({ ...fieldValues, [f.id]: e.target.value })}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
