@@ -45,7 +45,7 @@ export const sendEventInvitations = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
-    await assertCoordinatorOrAdmin(context.supabase, context.userId, data.event_id);
+    const ev = await assertCoordinatorOrAdmin(context.supabase, context.userId, data.event_id);
     const rows = Array.from(new Set(data.emails.map((e) => e.toLowerCase()))).map((email) => ({
       event_id: data.event_id,
       sent_by: context.userId,
@@ -57,7 +57,33 @@ export const sendEventInvitations = createServerFn({ method: "POST" })
       .upsert(rows, { onConflict: "event_id,recipient_email", ignoreDuplicates: false })
       .select("id, recipient_email, token");
     if (error) throw new Error(error.message);
-    return { queued: inserted?.length ?? 0, invitations: inserted ?? [] };
+
+    // Deliver through the provider configured in /admin/setup.
+    const { sendPlatformEmails } = await import("@/lib/platform-mailer.server");
+    const { invitationTemplate } = await import("@/lib/email-templates");
+    const base = process.env["PUBLIC_SITE_URL"] ?? "https://sparkle-calendar-co.lovable.app";
+    const messages = (inserted ?? []).map((inv) => {
+      const tpl = invitationTemplate({
+        event: {
+          id: ev.id,
+          title: ev.title,
+          start_time: ev.start_time,
+          location: ev.location ?? null,
+        },
+        invitationUrl: `${base}/invite/${inv.token}`,
+        customMessage: data.custom_message ?? null,
+      });
+      return { to: inv.recipient_email, subject: tpl.subject, html: tpl.html, text: tpl.text };
+    });
+    const delivery = await sendPlatformEmails(messages);
+    return {
+      queued: inserted?.length ?? 0,
+      invitations: inserted ?? [],
+      sent: delivery.sent,
+      failed: delivery.failed,
+      provider: delivery.provider,
+      errors: delivery.errors,
+    };
   });
 
 export const listEventInvitations = createServerFn({ method: "GET" })
