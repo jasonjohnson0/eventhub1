@@ -137,6 +137,9 @@ function EventsPage() {
         </Link>
         <div className="flex items-center gap-2">
           <Button asChild size="sm" variant="ghost" className="rounded-full">
+            <Link to="/tour">Tour</Link>
+          </Button>
+          <Button asChild size="sm" variant="ghost" className="rounded-full">
             <Link to="/submit-event">Submit an event</Link>
           </Button>
           {signedIn ? (
@@ -218,7 +221,10 @@ function EventsPage() {
       </main>
 
       <footer className="border-t border-slate-100 py-8 text-center text-xs text-slate-400">
-        Made with ❤️ by EventHub · Join the community
+        Made with ❤️ by EventHub ·{" "}
+        <Link to="/tour" className="underline hover:text-slate-600">
+          Built with EventHub — see the tour
+        </Link>
       </footer>
     </div>
   );

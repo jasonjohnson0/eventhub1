@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TourRouteImport } from './routes/tour'
 import { Route as SubmitEventRouteImport } from './routes/submit-event'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -45,6 +46,11 @@ import { Route as AuthenticatedCoordinatorSettingsVenuesRouteImport } from './ro
 import { Route as AuthenticatedCoordinatorSettingsOrganizersRouteImport } from './routes/_authenticated/coordinator.settings.organizers'
 import { Route as AuthenticatedCoordinatorSettingsCustomFieldsRouteImport } from './routes/_authenticated/coordinator.settings.custom-fields'
 
+const TourRoute = TourRouteImport.update({
+  id: '/tour',
+  path: '/tour',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SubmitEventRoute = SubmitEventRouteImport.update({
   id: '/submit-event',
   path: '/submit-event',
@@ -238,6 +244,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/setup': typeof SetupRoute
   '/submit-event': typeof SubmitEventRoute
+  '/tour': typeof TourRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -274,6 +281,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/setup': typeof SetupRoute
   '/submit-event': typeof SubmitEventRoute
+  '/tour': typeof TourRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/map': typeof AuthenticatedMapRoute
@@ -311,6 +319,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/setup': typeof SetupRoute
   '/submit-event': typeof SubmitEventRoute
+  '/tour': typeof TourRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -349,6 +358,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/setup'
     | '/submit-event'
+    | '/tour'
     | '/admin'
     | '/calendar'
     | '/dashboard'
@@ -385,6 +395,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/setup'
     | '/submit-event'
+    | '/tour'
     | '/calendar'
     | '/dashboard'
     | '/map'
@@ -421,6 +432,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/setup'
     | '/submit-event'
+    | '/tour'
     | '/_authenticated/admin'
     | '/_authenticated/calendar'
     | '/_authenticated/dashboard'
@@ -459,6 +471,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   SetupRoute: typeof SetupRoute
   SubmitEventRoute: typeof SubmitEventRoute
+  TourRoute: typeof TourRoute
   InviteTokenRoute: typeof InviteTokenRoute
   MarketingConfirmRoute: typeof MarketingConfirmRoute
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
@@ -468,6 +481,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tour': {
+      id: '/tour'
+      path: '/tour'
+      fullPath: '/tour'
+      preLoaderRoute: typeof TourRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/submit-event': {
       id: '/submit-event'
       path: '/submit-event'
@@ -810,6 +830,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   SetupRoute: SetupRoute,
   SubmitEventRoute: SubmitEventRoute,
+  TourRoute: TourRoute,
   InviteTokenRoute: InviteTokenRoute,
   MarketingConfirmRoute: MarketingConfirmRoute,
   MarketingSubscribeRoute: MarketingSubscribeRoute,
@@ -819,13 +840,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
