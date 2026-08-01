@@ -827,7 +827,10 @@ export type Database = {
           stripe_connect_account_id: string | null
           stripe_connected: boolean
           stripe_connected_at: string | null
+          stripe_publishable_key: string | null
+          stripe_secret_key: string | null
           updated_at: string
+          use_custom_stripe: boolean
         }
         Insert: {
           configured_at?: string | null
@@ -842,7 +845,10 @@ export type Database = {
           stripe_connect_account_id?: string | null
           stripe_connected?: boolean
           stripe_connected_at?: string | null
+          stripe_publishable_key?: string | null
+          stripe_secret_key?: string | null
           updated_at?: string
+          use_custom_stripe?: boolean
         }
         Update: {
           configured_at?: string | null
@@ -857,7 +863,10 @@ export type Database = {
           stripe_connect_account_id?: string | null
           stripe_connected?: boolean
           stripe_connected_at?: string | null
+          stripe_publishable_key?: string | null
+          stripe_secret_key?: string | null
           updated_at?: string
+          use_custom_stripe?: boolean
         }
         Relationships: []
       }
