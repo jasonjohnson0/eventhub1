@@ -11,6 +11,9 @@ import {
   Inbox,
   Search,
   Map as MapIcon,
+  MapPin,
+  UserSquare2,
+  ListPlus,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -40,6 +43,12 @@ const main = [
   { title: "Map", url: "/map", icon: MapIcon },
   { title: "Submissions", url: "/submissions", icon: Inbox },
   { title: "Settings", url: "/settings", icon: Settings },
+];
+
+const coordinator = [
+  { title: "Venues", url: "/coordinator/settings/venues", icon: MapPin },
+  { title: "Organizers", url: "/coordinator/settings/organizers", icon: UserSquare2 },
+  { title: "Custom fields", url: "/coordinator/settings/custom-fields", icon: ListPlus },
 ];
 
 const admin = [
@@ -115,6 +124,24 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
           <SidebarGroupContent>
             <SidebarMenu>
               {main.map((item) => (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                    <Link to={item.url} className="flex items-center gap-2">
+                      <item.icon className="h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Coordinator</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {coordinator.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <Link to={item.url} className="flex items-center gap-2">
