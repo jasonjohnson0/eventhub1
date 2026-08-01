@@ -203,6 +203,74 @@ export const testEmailConnection = createServerFn({ method: "POST" })
 
 /* ============================== STRIPE OAUTH ============================== */
 
+/* ---------------------- CUSTOM STRIPE KEYS (optional) ---------------------- */
+
+const stripeKeysSchema = z.object({
+  secret_key: z.string().min(10).max(500).optional().nullable(),
+  publishable_key: z.string().min(6).max(500),
+});
+
+// Buyers may override the platform's built-in Stripe account with their own keys.
+// Secret key is encrypted at rest; publishable key is safe in plaintext.
+export const saveCustomStripeKeys = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => stripeKeysSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { encryptSecret } = await import("@/lib/platform-config.server");
+    // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
+    const sb = context.supabase as any;
+    const { data: existing } = await sb
+      .from("platform_config")
+      .select("id, stripe_secret_key")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (!existing) throw new Error("Platform config missing");
+    const secret = data.secret_key
+      ? encryptSecret(data.secret_key)
+      : existing.stripe_secret_key;
+    if (!secret) throw new Error("Secret key is required");
+    const { error } = await sb
+      .from("platform_config")
+      .update({
+        use_custom_stripe: true,
+        stripe_secret_key: secret,
+        stripe_publishable_key: data.publishable_key,
+        stripe_connected: true,
+        stripe_connected_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// Revert to the platform's built-in Stripe account.
+export const clearCustomStripeKeys = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
+    const sb = context.supabase as any;
+    const { data: existing } = await sb
+      .from("platform_config")
+      .select("id")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (!existing) throw new Error("Platform config missing");
+    const { error } = await sb
+      .from("platform_config")
+      .update({
+        use_custom_stripe: false,
+        stripe_secret_key: null,
+        stripe_publishable_key: null,
+      })
+      .eq("id", existing.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 // Exchange the authorization code returned by Stripe Connect for a connected
 // account id. Requires STRIPE_SECRET_KEY (platform account) and
 // STRIPE_CONNECT_CLIENT_ID. Fails cleanly with a message the callback route
