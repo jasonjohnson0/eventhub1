@@ -8,6 +8,20 @@ import { toast } from "sonner";
 import { createEvent } from "@/lib/events.functions";
 import { createSeries } from "@/lib/series.functions";
 import { CATEGORIES, categoryLabel, type EventCategory } from "@/lib/categories";
+import { listVenues, type Venue } from "@/lib/venues.functions";
+import {
+  assignToEvent,
+  listOrganizers,
+  MAX_ORGANIZERS_PER_EVENT,
+  type Organizer,
+} from "@/lib/organizers.functions";
+import {
+  listCustomFields,
+  saveEventFieldValues,
+  type CustomField,
+} from "@/lib/custom-fields.functions";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -49,6 +63,12 @@ export function EventModal({
   const [virtualLink, setVirtualLink] = useState("");
   const [provider, setProvider] = useState<"zoom" | "google_meet" | "youtube" | "none">("none");
   const [loading, setLoading] = useState(false);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [venueId, setVenueId] = useState<string>("custom");
+  const [organizers, setOrganizers] = useState<Organizer[]>([]);
+  const [selectedOrganizers, setSelectedOrganizers] = useState<string[]>([]);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (open) {
@@ -58,6 +78,40 @@ export function EventModal({
       setEnd(toLocalInput(e));
     }
   }, [open, initialStart]);
+
+  useEffect(() => {
+    if (!open) return;
+    void (async () => {
+      const [v, o, f] = await Promise.allSettled([
+        listVenues(),
+        listOrganizers(),
+        listCustomFields(),
+      ]);
+      if (v.status === "fulfilled") setVenues(v.value);
+      if (o.status === "fulfilled") setOrganizers(o.value);
+      if (f.status === "fulfilled") setCustomFields(f.value);
+    })();
+  }, [open]);
+
+  function pickVenue(id: string) {
+    setVenueId(id);
+    const v = venues.find((x) => x.id === id);
+    if (!v) return;
+    setLocation(v.address ? `${v.name}, ${v.address}` : v.name);
+    setLat(v.lat != null ? String(v.lat) : "");
+    setLng(v.lng != null ? String(v.lng) : "");
+  }
+
+  function toggleOrganizer(id: string) {
+    setSelectedOrganizers((prev) => {
+      if (prev.includes(id)) return prev.filter((p) => p !== id);
+      if (prev.length >= MAX_ORGANIZERS_PER_EVENT) {
+        toast.error(`Up to ${MAX_ORGANIZERS_PER_EVENT} organizers per event`);
+        return prev;
+      }
+      return [...prev, id];
+    });
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -71,8 +125,14 @@ export function EventModal({
         return;
       }
       const tags = tagsText.split(",").map((t) => t.trim()).filter(Boolean);
+      const missing = customFields.filter((f) => f.is_required && !fieldValues[f.id]);
+      if (missing.length > 0) {
+        toast.error(`Required: ${missing.map((f) => f.field_name).join(", ")}`);
+        setLoading(false);
+        return;
+      }
       if (repeat === "none") {
-        await createEvent({
+        const created = await createEvent({
           data: {
             title,
             description: description || null,
@@ -88,6 +148,17 @@ export function EventModal({
             livestream_provider: format === "in_person" ? "none" : provider,
           },
         });
+        if (selectedOrganizers.length > 0) {
+          await assignToEvent({
+            data: { event_id: created.id, organizer_ids: selectedOrganizers },
+          });
+        }
+        const values = Object.entries(fieldValues)
+          .filter(([, v]) => v !== "")
+          .map(([field_id, value]) => ({ field_id, value }));
+        if (values.length > 0) {
+          await saveEventFieldValues({ data: { event_id: created.id, values } });
+        }
         toast.success("Event created");
       } else {
         const rrule =
@@ -129,6 +200,9 @@ export function EventModal({
       setFormat("in_person");
       setVirtualLink("");
       setProvider("none");
+      setVenueId("custom");
+      setSelectedOrganizers([]);
+      setFieldValues({});
       onCreated?.();
       onOpenChange(false);
     } catch (err) {
