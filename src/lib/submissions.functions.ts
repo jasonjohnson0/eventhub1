@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-export type SubmissionStatus = "pending" | "approved" | "rejected";
+import { CATEGORIES, type SubmissionStatus } from "@/lib/submissions.shared";
 
 export type EventSubmission = {
   id: string;
@@ -25,16 +24,6 @@ export type EventSubmission = {
   notes: string | null;
   created_event_id: string | null;
 };
-
-export const CATEGORIES = [
-  "sports",
-  "networking",
-  "education",
-  "social",
-  "fundraiser",
-  "workshop",
-  "other",
-] as const;
 
 const submitSchema = z.object({
   submitted_by_email: z.string().trim().email().max(254),
