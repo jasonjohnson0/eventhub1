@@ -215,10 +215,11 @@ export function EventModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
+        {/* scrollable body keeps the extended form usable on laptops */}
         <DialogHeader>
           <DialogTitle>New event</DialogTitle>
         </DialogHeader>
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
           <div>
             <Label htmlFor="title">Title</Label>
             <Input id="title" required value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -227,6 +228,24 @@ export function EventModal({
             <Label htmlFor="desc">Description</Label>
             <Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
           </div>
+          {venues.length > 0 && (
+            <div>
+              <Label>Venue</Label>
+              <Select value={venueId} onValueChange={pickVenue}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pick a saved venue" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="custom">Custom location</SelectItem>
+                  {venues.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <Label htmlFor="loc">Location</Label>
             <Input id="loc" value={location} onChange={(e) => setLocation(e.target.value)} />
