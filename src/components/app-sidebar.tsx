@@ -45,17 +45,13 @@ const main = [
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
-const admin = [
-  { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true },
-];
-
 const coordinator = [
   { title: "Venues", url: "/coordinator/settings/venues", icon: MapPin },
   { title: "Organizers", url: "/coordinator/settings/organizers", icon: UserSquare2 },
   { title: "Custom fields", url: "/coordinator/settings/custom-fields", icon: ListPlus },
 ];
 
-const adminNav = [
+const admin = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true },
   { title: "Moderation", url: "/admin/moderation", icon: Shield },
   { title: "Sponsorship", url: "/admin/sponsorship", icon: Megaphone },
@@ -128,6 +124,24 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
           <SidebarGroupContent>
             <SidebarMenu>
               {main.map((item) => (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                    <Link to={item.url} className="flex items-center gap-2">
+                      <item.icon className="h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Coordinator</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {coordinator.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <Link to={item.url} className="flex items-center gap-2">
