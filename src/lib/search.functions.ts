@@ -32,7 +32,10 @@ export const searchEvents = createServerFn({ method: "POST" })
     // Distance search path: use RPC then filter in-memory
     if (data.latitude != null && data.longitude != null && data.radiusMiles) {
       const meters = data.radiusMiles * 1609.34;
-      const { data: rows, error } = await context.supabase.rpc("search_events_nearby", {
+      // Caller is already authenticated by middleware; the RPC only returns approved
+      // events, so it runs server-side and is not exposed to client roles.
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: rows, error } = await supabaseAdmin.rpc("search_events_nearby", {
         _lat: data.latitude,
         _lng: data.longitude,
         _radius_meters: meters,
