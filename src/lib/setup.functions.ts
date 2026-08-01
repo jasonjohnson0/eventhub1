@@ -11,6 +11,14 @@ export type PlatformConfigView = {
   stripe_connected: boolean;
   stripe_connect_account_id: string | null;
   stripe_connected_at: string | null;
+  /** Platform (built-in) Stripe keys present in the environment. */
+  platform_stripe_ready: boolean;
+  /** Buyer has supplied their own Stripe keys. */
+  use_custom_stripe: boolean;
+  custom_stripe_secret_masked: string | null;
+  custom_stripe_publishable: string | null;
+  /** True when payments can run at all (custom keys OR platform keys). */
+  stripe_ready: boolean;
   email_provider: EmailProviderName;
   email_api_key_masked: string | null;
   email_from_name: string | null;
@@ -30,16 +38,9 @@ async function assertAdmin(supabase: import("@supabase/supabase-js").SupabaseCli
 }
 
 function buildStripeOAuthUrl(): { url: string | null; available: boolean } {
-  const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;
-  if (!clientId) return { url: null, available: false };
-  const base = process.env.PUBLIC_APP_URL || "https://sparkle-calendar-co.lovable.app";
-  const redirect = `${base.replace(/\/+$/, "")}/auth/stripe-callback`;
-  const url = new URL("https://connect.stripe.com/oauth/authorize");
-  url.searchParams.set("response_type", "code");
-  url.searchParams.set("client_id", clientId);
-  url.searchParams.set("scope", "read_write");
-  url.searchParams.set("redirect_uri", redirect);
-  return { url: url.toString(), available: true };
+  // Stripe Connect OAuth is no longer used — payments run on the platform's
+  // own Stripe keys, or on buyer-supplied keys stored encrypted.
+  return { url: null, available: false };
 }
 
 /* ============================== READ ============================== */
@@ -68,11 +69,26 @@ export const getPlatformConfig = createServerFn({ method: "GET" })
       }
     }
     const oauth = buildStripeOAuthUrl();
+    const platformReady = Boolean(process.env.STRIPE_SECRET_KEY);
+    let customSecretMasked: string | null = null;
+    if (row.stripe_secret_key) {
+      try {
+        customSecretMasked = maskApiKey(decryptSecret(row.stripe_secret_key));
+      } catch {
+        customSecretMasked = "••••";
+      }
+    }
+    const useCustom = !!row.use_custom_stripe && !!row.stripe_secret_key;
     return {
       id: row.id,
       stripe_connected: !!row.stripe_connected,
       stripe_connect_account_id: row.stripe_connect_account_id,
       stripe_connected_at: row.stripe_connected_at,
+      platform_stripe_ready: platformReady,
+      use_custom_stripe: useCustom,
+      custom_stripe_secret_masked: customSecretMasked,
+      custom_stripe_publishable: row.stripe_publishable_key ?? null,
+      stripe_ready: useCustom || platformReady,
       email_provider: row.email_provider,
       email_api_key_masked: masked,
       email_from_name: row.email_from_name,
@@ -186,6 +202,74 @@ export const testEmailConnection = createServerFn({ method: "POST" })
   });
 
 /* ============================== STRIPE OAUTH ============================== */
+
+/* ---------------------- CUSTOM STRIPE KEYS (optional) ---------------------- */
+
+const stripeKeysSchema = z.object({
+  secret_key: z.string().min(10).max(500).optional().nullable(),
+  publishable_key: z.string().min(6).max(500),
+});
+
+// Buyers may override the platform's built-in Stripe account with their own keys.
+// Secret key is encrypted at rest; publishable key is safe in plaintext.
+export const saveCustomStripeKeys = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => stripeKeysSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { encryptSecret } = await import("@/lib/platform-config.server");
+    // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
+    const sb = context.supabase as any;
+    const { data: existing } = await sb
+      .from("platform_config")
+      .select("id, stripe_secret_key")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (!existing) throw new Error("Platform config missing");
+    const secret = data.secret_key
+      ? encryptSecret(data.secret_key)
+      : existing.stripe_secret_key;
+    if (!secret) throw new Error("Secret key is required");
+    const { error } = await sb
+      .from("platform_config")
+      .update({
+        use_custom_stripe: true,
+        stripe_secret_key: secret,
+        stripe_publishable_key: data.publishable_key,
+        stripe_connected: true,
+        stripe_connected_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// Revert to the platform's built-in Stripe account.
+export const clearCustomStripeKeys = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
+    const sb = context.supabase as any;
+    const { data: existing } = await sb
+      .from("platform_config")
+      .select("id")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (!existing) throw new Error("Platform config missing");
+    const { error } = await sb
+      .from("platform_config")
+      .update({
+        use_custom_stripe: false,
+        stripe_secret_key: null,
+        stripe_publishable_key: null,
+      })
+      .eq("id", existing.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
 
 // Exchange the authorization code returned by Stripe Connect for a connected
 // account id. Requires STRIPE_SECRET_KEY (platform account) and

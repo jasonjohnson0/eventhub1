@@ -14,7 +14,8 @@ import {
   getPlatformConfig,
   savePlatformConfig,
   testEmailConnection,
-  disconnectStripe,
+  saveCustomStripeKeys,
+  clearCustomStripeKeys,
   type PlatformConfigView,
   type EmailProviderName,
 } from "@/lib/setup.functions";
@@ -46,6 +47,10 @@ function SetupPage() {
   const [fromName, setFromName] = useState("");
   const [fromAddress, setFromAddress] = useState("");
   const [mailgunDomain, setMailgunDomain] = useState("");
+  const [showStripeForm, setShowStripeForm] = useState(false);
+  const [stripeSecret, setStripeSecret] = useState("");
+  const [stripePublishable, setStripePublishable] = useState("");
+  const [savingStripe, setSavingStripe] = useState(false);
 
   const refresh = async () => {
     setLoading(true);
@@ -56,6 +61,7 @@ function SetupPage() {
       setFromName(c.email_from_name ?? "");
       setFromAddress(c.email_from_address ?? "");
       setMailgunDomain((c.email_extra?.mailgun_domain as string) ?? "");
+      setStripePublishable(c.custom_stripe_publishable ?? "");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to load config");
     } finally {
@@ -132,26 +138,41 @@ function SetupPage() {
     }
   };
 
-  const connectStripe = () => {
-    if (!config?.stripe_oauth_url) {
-      toast.error("Stripe OAuth not configured on the server");
-      return;
+  const handleSaveStripe = async () => {
+    if (!stripePublishable) return toast.error("Publishable key required");
+    if (!stripeSecret && !config?.custom_stripe_secret_masked) {
+      return toast.error("Secret key required");
     }
-    window.location.href = config.stripe_oauth_url;
+    setSavingStripe(true);
+    try {
+      await saveCustomStripeKeys({
+        data: { secret_key: stripeSecret || null, publishable_key: stripePublishable },
+      });
+      toast.success("Custom Stripe keys saved");
+      setStripeSecret("");
+      setShowStripeForm(false);
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setSavingStripe(false);
+    }
   };
 
-  const handleDisconnect = async () => {
+  const handleUseDefaultStripe = async () => {
     try {
-      await disconnectStripe();
-      toast.success("Stripe disconnected");
-      refresh();
+      await clearCustomStripeKeys();
+      toast.success("Reverted to the built-in Stripe account");
+      setStripeSecret("");
+      setShowStripeForm(false);
+      await refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
     }
   };
 
   const bothReady = useMemo(
-    () => !!config?.stripe_connected && !!config?.email_configured,
+    () => !!config?.stripe_ready && !!config?.email_configured,
     [config],
   );
 
@@ -172,45 +193,80 @@ function SetupPage() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               Accept Payments
-              {config?.stripe_connected ? (
-                <Badge variant="default">✅ Connected</Badge>
+              {config?.stripe_ready ? (
+                <Badge variant="default">✅ Stripe is ready</Badge>
               ) : (
-                <Badge variant="secondary">❌ Not connected</Badge>
+                <Badge variant="secondary">❌ Not configured</Badge>
               )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Connect your Stripe account to accept ticket payments and sponsorship revenue.
-              Each buyer brings their own Stripe account.
-            </p>
-            {config?.stripe_connected ? (
-              <div className="space-y-2">
-                <p className="text-sm">
-                  Account: <code className="rounded bg-muted px-1">{config.stripe_connect_account_id}</code>
-                </p>
-                <Button variant="outline" onClick={handleDisconnect}>Disconnect</Button>
+            {config?.use_custom_stripe ? (
+              <p className="text-sm text-muted-foreground">
+                Payments run on <strong>your own Stripe account</strong>. Secret key:{" "}
+                <code className="rounded bg-muted px-1">{config.custom_stripe_secret_masked}</code>
+              </p>
+            ) : config?.platform_stripe_ready ? (
+              <p className="text-sm text-muted-foreground">
+                Payments are already live on the built-in Stripe account — nothing to set up.
+                Ticket sales and sponsorship revenue work out of the box.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                The built-in Stripe keys aren't available in this environment. Add{" "}
+                <code>STRIPE_SECRET_KEY</code> in Project Settings → Secrets, or enter your own
+                keys below.
+              </p>
+            )}
+
+            {!showStripeForm ? (
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => setShowStripeForm(true)}>
+                  Use different Stripe keys
+                </Button>
+                {config?.use_custom_stripe && (
+                  <Button variant="ghost" onClick={handleUseDefaultStripe}>
+                    Revert to built-in Stripe
+                  </Button>
+                )}
               </div>
             ) : (
-              <div>
-                <Button
-                  onClick={connectStripe}
-                  disabled={!config?.stripe_oauth_available}
-                  title={
-                    config?.stripe_oauth_available
-                      ? "Redirects to Stripe"
-                      : "Stripe OAuth credentials not configured. Add STRIPE_CONNECT_CLIENT_ID and STRIPE_SECRET_KEY in Project Settings → Secrets."
-                  }
-                >
-                  Connect Stripe Account
-                </Button>
-                {!config?.stripe_oauth_available && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Stripe OAuth credentials not configured. Add{" "}
-                    <code>STRIPE_CONNECT_CLIENT_ID</code> and <code>STRIPE_SECRET_KEY</code>{" "}
-                    in Project Settings → Secrets, then reload.
-                  </p>
-                )}
+              <div className="space-y-3 rounded-md border p-3">
+                <div>
+                  <Label htmlFor="sk">Stripe Secret Key</Label>
+                  <Input
+                    id="sk"
+                    type="password"
+                    placeholder={config?.custom_stripe_secret_masked ?? "sk_live_…"}
+                    value={stripeSecret}
+                    onChange={(e) => setStripeSecret(e.target.value)}
+                  />
+                  {config?.custom_stripe_secret_masked && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Leave blank to keep the saved key.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="pk">Stripe Publishable Key</Label>
+                  <Input
+                    id="pk"
+                    placeholder="pk_live_…"
+                    value={stripePublishable}
+                    onChange={(e) => setStripePublishable(e.target.value)}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Your secret key is encrypted before it's stored.
+                </p>
+                <div className="flex gap-2">
+                  <Button onClick={handleSaveStripe} disabled={savingStripe}>
+                    {savingStripe ? "Saving…" : "Save Stripe keys"}
+                  </Button>
+                  <Button variant="ghost" onClick={() => setShowStripeForm(false)}>
+                    Cancel
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
@@ -306,7 +362,12 @@ function SetupPage() {
           <CardTitle>Status</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <div>Stripe: {config?.stripe_connected ? "✅ Connected" : "❌ Not connected"}</div>
+          <div>
+            Stripe:{" "}
+            {config?.stripe_ready
+              ? `✅ Ready (${config.use_custom_stripe ? "your keys" : "built-in account"})`
+              : "❌ Not configured"}
+          </div>
           <div>
             Email:{" "}
             {config?.email_configured

@@ -118,14 +118,16 @@ export const purchaseTicket = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: cfg } = await (supabaseAdmin as unknown as typeof sb)
       .from("platform_config")
-      .select("stripe_connect_account_id, stripe_connected")
+      .select("use_custom_stripe, stripe_secret_key")
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
+    // Payments run on buyer-supplied keys when present, otherwise on the
+    // platform's built-in Stripe account (STRIPE_SECRET_KEY).
     const hasStripe =
-      Boolean(cfg?.stripe_connected && cfg?.stripe_connect_account_id) &&
+      Boolean(cfg?.use_custom_stripe && cfg?.stripe_secret_key) ||
       Boolean(process.env.STRIPE_SECRET_KEY);
-    if (amount > 0 && !cfg?.stripe_connect_account_id) {
+    if (amount > 0 && !hasStripe) {
       throw new Error("Stripe not configured. Please complete setup first.");
     }
     const { data: purchase, error } = await sb
