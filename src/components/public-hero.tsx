@@ -3,6 +3,7 @@ import { Search, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import confetti from "canvas-confetti";
 import { CATEGORIES, categoryLabel } from "@/lib/categories";
+import thumbnail from "@/assets/gumroad-thumbnail.jpg";
 
 type Props = {
   query: string;
@@ -77,9 +78,16 @@ export function PublicHero({ query, onQuery, category, onCategory }: Props) {
 
         <Link
           to="/tour"
-          className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 px-5 py-2 text-sm font-bold text-white shadow-lg transition-transform hover:-translate-y-0.5"
+          className="mt-6 inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 py-1.5 pl-1.5 pr-5 text-sm font-bold text-white shadow-lg transition-transform hover:-translate-y-0.5"
         >
-          💸 Running your own calendar? Keep 100% of the revenue →
+          <img
+            src={thumbnail}
+            alt="EventHub — keep 100% of your event revenue"
+            width={40}
+            height={40}
+            className="h-10 w-10 rounded-full object-cover ring-2 ring-white/70"
+          />
+          Running your own calendar? Keep 100% of the revenue →
         </Link>
 
         {/* Search */}

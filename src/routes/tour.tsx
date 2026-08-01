@@ -4,10 +4,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PartyPopper, Check, X, ArrowRight } from "lucide-react";
 import thumbnail from "@/assets/gumroad-thumbnail.jpg";
-import shotEvents from "@/assets/tour/events.jpg";
-import shotDetail from "@/assets/tour/detail.jpg";
-import shotSubmit from "@/assets/tour/submit.jpg";
-import shotAuth from "@/assets/tour/auth.jpg";
+import shot01 from "@/assets/tour/01-hero.jpg";
+import shot02 from "@/assets/tour/02-grid.jpg";
+import shot03 from "@/assets/tour/03-category.jpg";
+import shot04 from "@/assets/tour/04-search.jpg";
+import shot05 from "@/assets/tour/05-datefilter.jpg";
+import shot06 from "@/assets/tour/06-detail.jpg";
+import shot07 from "@/assets/tour/07-detail-rsvp.jpg";
+import shot08 from "@/assets/tour/08-detail-more.jpg";
+import shot09 from "@/assets/tour/09-submit.jpg";
+import shot10 from "@/assets/tour/10-submit-form.jpg";
+import shot11 from "@/assets/tour/11-signin.jpg";
+import shot12 from "@/assets/tour/12-signup.jpg";
+import shot13 from "@/assets/tour/13-mobile-detail.jpg";
+import shot14 from "@/assets/tour/14-mobile-submit.jpg";
+import shot15 from "@/assets/tour/15-subscribe.jpg";
+import shot16 from "@/assets/tour/16-mobile.jpg";
 
 export const Route = createFileRoute("/tour")({
   head: () => ({
@@ -31,28 +43,26 @@ export const Route = createFileRoute("/tour")({
   component: TourPage,
 });
 
-const SHOTS = [
-  {
-    src: shotEvents,
-    title: "Public discovery calendar",
-    blurb: "A fun, fast, no-login event feed with search, category pills and date filters.",
-  },
-  {
-    src: shotDetail,
-    title: "Event detail & RSVP",
-    blurb: "Cover art, ticket tiers, capacity, virtual links and sponsor slots on every event page.",
-  },
-  {
-    src: shotSubmit,
-    title: "Community submissions",
-    blurb: "Anyone can submit an event; coordinators approve or reject from a review queue.",
-  },
-  {
-    src: shotAuth,
-    title: "Accounts & roles",
-    blurb: "Coordinators, staff and admins — each with scoped access to their own workspace.",
-  },
+const SHOTS: { src: string; title: string; blurb: string; group: string; tall?: boolean }[] = [
+  { src: shot01, group: "Discovery", title: "Public calendar hero", blurb: "Confetti, category pills and instant search — no login wall." },
+  { src: shot02, group: "Discovery", title: "Event grid", blurb: "Colorful cards with date, venue and going count." },
+  { src: shot03, group: "Discovery", title: "Full listing", blurb: "Every approved event in the region on one scrollable page." },
+  { src: shot04, group: "Discovery", title: "Keyword search", blurb: "Type-ahead filtering across titles, venues and descriptions." },
+  { src: shot05, group: "Discovery", title: "Date filters", blurb: "This week / this month scoping in a single tap." },
+  { src: shot06, group: "Event page", title: "Event detail", blurb: "Cover art, time, venue, hybrid join link and share row." },
+  { src: shot07, group: "Event page", title: "RSVP & capacity", blurb: "Save your spot, capacity limits and automatic waitlists." },
+  { src: shot08, group: "Event page", title: "Sponsor slots", blurb: "Sellable ad positions with live pricing on every event." },
+  { src: shot09, group: "Submissions", title: "Community submission", blurb: "Anyone can propose an event — no account required." },
+  { src: shot10, group: "Submissions", title: "Submission form", blurb: "Date, venue, category and image, straight into the review queue." },
+  { src: shot11, group: "Accounts", title: "Sign in", blurb: "Google, Apple or email for coordinators, staff and admins." },
+  { src: shot12, group: "Accounts", title: "Create account", blurb: "Self-serve signup that lands in the coordinator workspace." },
+  { src: shot13, group: "Mobile", title: "Event page on mobile", blurb: "Fully responsive detail pages for on-the-go attendees.", tall: true },
+  { src: shot14, group: "Mobile", title: "Submit from a phone", blurb: "The submission flow works from any device.", tall: true },
+  { src: shot15, group: "Accounts", title: "Newsletter opt-in", blurb: "Double opt-in subscriber capture built into the calendar." },
+  { src: shot16, group: "Mobile", title: "Mobile discovery", blurb: "The full calendar, thumb-friendly.", tall: true },
 ];
+
+const GROUPS = ["Discovery", "Event page", "Submissions", "Accounts", "Mobile"] as const;
 
 const FEATURES = [
   ["🎟️", "Paid ticketing", "Your own Stripe keys. Money lands in your account, not ours."],
@@ -165,28 +175,39 @@ function TourPage() {
 
       {/* Screenshot tour */}
       <section className="mx-auto max-w-6xl px-6 py-20">
-        <h2 className="text-center text-3xl font-black text-slate-900">Take the tour 📸</h2>
+        <h2 className="text-center text-3xl font-black text-slate-900">Take the tour</h2>
         <p className="mx-auto mt-3 max-w-xl text-center text-slate-600">
-          Every screenshot below is captured from this live deployment — not a mockup.
+          All 16 screenshots below are captured from this live deployment — not mockups.
         </p>
-        <div className="mt-12 grid gap-10 md:grid-cols-2">
-          {SHOTS.map((s) => (
-            <figure key={s.title} className="group overflow-hidden rounded-3xl border border-slate-200 shadow-sm transition-shadow hover:shadow-xl">
-              <img
-                src={s.src}
-                alt={s.title}
-                width={1280}
-                height={720}
-                loading="lazy"
-                className="w-full transition-transform duration-500 group-hover:scale-[1.02]"
-              />
-              <figcaption className="border-t border-slate-100 bg-white p-5">
-                <h3 className="font-bold text-slate-900">{s.title}</h3>
-                <p className="mt-1 text-sm text-slate-500">{s.blurb}</p>
-              </figcaption>
-            </figure>
-          ))}
-        </div>
+        {GROUPS.map((g) => {
+          const items = SHOTS.filter((s) => s.group === g);
+          return (
+            <div key={g} className="mt-14">
+              <h3 className="mb-6 text-xs font-bold uppercase tracking-[0.2em] text-fuchsia-600">{g}</h3>
+              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                {items.map((s) => (
+                  <figure
+                    key={s.title}
+                    className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-xl"
+                  >
+                    <div className={`overflow-hidden bg-slate-50 ${s.tall ? "flex justify-center" : ""}`}>
+                      <img
+                        src={s.src}
+                        alt={s.title}
+                        loading="lazy"
+                        className={`transition-transform duration-500 group-hover:scale-[1.03] ${s.tall ? "h-64 w-auto object-cover object-top" : "w-full"}`}
+                      />
+                    </div>
+                    <figcaption className="border-t border-slate-100 p-4">
+                      <h4 className="text-sm font-bold text-slate-900">{s.title}</h4>
+                      <p className="mt-1 text-xs text-slate-500">{s.blurb}</p>
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </section>
 
       {/* Features */}
