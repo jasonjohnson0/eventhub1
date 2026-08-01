@@ -11,6 +11,9 @@ import {
   Inbox,
   Search,
   Map as MapIcon,
+  MapPin,
+  UserSquare2,
+  ListPlus,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -43,6 +46,16 @@ const main = [
 ];
 
 const admin = [
+  { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true },
+];
+
+const coordinator = [
+  { title: "Venues", url: "/coordinator/settings/venues", icon: MapPin },
+  { title: "Organizers", url: "/coordinator/settings/organizers", icon: UserSquare2 },
+  { title: "Custom fields", url: "/coordinator/settings/custom-fields", icon: ListPlus },
+];
+
+const adminNav = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true },
   { title: "Moderation", url: "/admin/moderation", icon: Shield },
   { title: "Sponsorship", url: "/admin/sponsorship", icon: Megaphone },
