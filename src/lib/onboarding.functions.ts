@@ -107,8 +107,10 @@ export const checkSlugAvailable = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ slug: z.string().trim().min(3).max(40) }).parse(d))
   .handler(async ({ data, context }) => {
+    // Slug availability is a server-side lookup; the RPC is no longer callable by clients.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
-    const sb = context.supabase as any;
+    const sb = supabaseAdmin as any;
     const { data: ok, error } = await sb.rpc("is_slug_available", {
       _slug: data.slug,
       _coordinator_id: context.userId,
