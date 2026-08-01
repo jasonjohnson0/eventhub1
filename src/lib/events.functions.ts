@@ -14,14 +14,25 @@ export const listMyEvents = createServerFn({ method: "GET" })
       .eq("staff_user_id", context.userId)
       .not("accepted_at", "is", null);
     const coordinatorIds = [context.userId, ...(staff ?? []).map((s) => s.coordinator_id)];
-    const { data, error } = await context.supabase
-      .from("events")
-      .select("id, title, description, location, start_time, end_time, status, coordinator_id, category, tags, series_id")
-      .in("coordinator_id", coordinatorIds)
-      .neq("status", "removed")
-      .order("start_time", { ascending: true });
-    if (error) throw new Error(error.message);
-    return data ?? [];
+    const columns =
+      "id, title, description, location, start_time, end_time, status, coordinator_id, category, tags, series_id";
+    // Own/workspace events (any status except removed) plus every approved event on the
+    // platform, so the calendar is never empty for viewers who don't own the events.
+    const [owned, approved] = await Promise.all([
+      context.supabase
+        .from("events")
+        .select(columns)
+        .in("coordinator_id", coordinatorIds)
+        .neq("status", "removed"),
+      context.supabase.from("events").select(columns).eq("status", "approved"),
+    ]);
+    if (owned.error) throw new Error(owned.error.message);
+    if (approved.error) throw new Error(approved.error.message);
+    const byId = new Map<string, (typeof owned.data)[number]>();
+    for (const row of [...(owned.data ?? []), ...(approved.data ?? [])]) byId.set(row.id, row);
+    return [...byId.values()].sort(
+      (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
+    );
   });
 
 export const createEvent = createServerFn({ method: "POST" })
