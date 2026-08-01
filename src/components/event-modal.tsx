@@ -380,6 +380,83 @@ export function EventModal({
               </p>
             )}
           </div>
+          {organizers.length > 0 && (
+            <div className="rounded-md border p-3">
+              <Label className="mb-2 block">
+                Organizers & speakers{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  ({selectedOrganizers.length}/{MAX_ORGANIZERS_PER_EVENT})
+                </span>
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {organizers.map((o) => {
+                  const on = selectedOrganizers.includes(o.id);
+                  return (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => toggleOrganizer(o.id)}
+                      className="focus:outline-none"
+                    >
+                      <Badge variant={on ? "default" : "outline"} className="cursor-pointer">
+                        {o.name}
+                        {o.title ? ` · ${o.title}` : ""}
+                      </Badge>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {customFields.length > 0 && (
+            <div className="space-y-3 rounded-md border p-3">
+              <Label className="block">Additional details</Label>
+              {customFields.map((f) => (
+                <div key={f.id}>
+                  <Label htmlFor={`cf-${f.id}`} className="text-xs">
+                    {f.field_name}
+                    {f.is_required ? " *" : ""}
+                  </Label>
+                  {f.field_type === "dropdown" ? (
+                    <Select
+                      value={fieldValues[f.id] ?? ""}
+                      onValueChange={(v) => setFieldValues({ ...fieldValues, [f.id]: v })}
+                    >
+                      <SelectTrigger id={`cf-${f.id}`}>
+                        <SelectValue placeholder="Select…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {f.options.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : f.field_type === "checkbox" ? (
+                    <div className="pt-1">
+                      <Checkbox
+                        id={`cf-${f.id}`}
+                        checked={fieldValues[f.id] === "true"}
+                        onCheckedChange={(v) =>
+                          setFieldValues({ ...fieldValues, [f.id]: v === true ? "true" : "" })
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <Input
+                      id={`cf-${f.id}`}
+                      type={
+                        f.field_type === "number" ? "number" : f.field_type === "date" ? "date" : "text"
+                      }
+                      value={fieldValues[f.id] ?? ""}
+                      onChange={(e) => setFieldValues({ ...fieldValues, [f.id]: e.target.value })}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
