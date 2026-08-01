@@ -8,6 +8,7 @@ import {
   Users,
   ScrollText,
   Settings,
+  Inbox,
   Search,
   Map as MapIcon,
 } from "lucide-react";
