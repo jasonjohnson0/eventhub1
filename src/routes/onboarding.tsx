@@ -290,7 +290,6 @@ function OnboardingWizard() {
   }
 
   if (done) {
-    const publicUrl = slug ? `/events?coordinator=${slug}` : "/events";
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
         <Card className="w-full max-w-lg text-center">
@@ -302,7 +301,7 @@ function OnboardingWizard() {
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
               <Button onClick={() => navigate({ to: "/dashboard" })}>Go to dashboard</Button>
-              <Button variant="outline" onClick={() => navigate({ to: publicUrl })}>
+              <Button variant="outline" onClick={() => navigate({ to: "/events" })}>
                 View public calendar
               </Button>
             </div>
