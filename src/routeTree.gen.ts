@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SubmitEventRouteImport } from './routes/submit-event'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -38,6 +39,11 @@ import { Route as AuthenticatedEventsIdCheckinMobileRouteImport } from './routes
 import { Route as AuthenticatedEventsIdCheckinRouteImport } from './routes/_authenticated/events.$id.checkin'
 import { Route as AuthenticatedEventsIdAnalyticsRouteImport } from './routes/_authenticated/events.$id.analytics'
 
+const SubmitEventRoute = SubmitEventRouteImport.update({
+  id: '/submit-event',
+  path: '/submit-event',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/events': typeof EventsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/submit-event': typeof SubmitEventRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/events': typeof EventsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/submit-event': typeof SubmitEventRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/map': typeof AuthenticatedMapRoute
@@ -248,6 +256,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/events': typeof EventsRouteWithChildren
   '/onboarding': typeof OnboardingRoute
+  '/submit-event': typeof SubmitEventRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -279,6 +288,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/events'
     | '/onboarding'
+    | '/submit-event'
     | '/admin'
     | '/calendar'
     | '/dashboard'
@@ -308,6 +318,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/events'
     | '/onboarding'
+    | '/submit-event'
     | '/calendar'
     | '/dashboard'
     | '/map'
@@ -337,6 +348,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/events'
     | '/onboarding'
+    | '/submit-event'
     | '/_authenticated/admin'
     | '/_authenticated/calendar'
     | '/_authenticated/dashboard'
@@ -368,6 +380,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   EventsRoute: typeof EventsRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
+  SubmitEventRoute: typeof SubmitEventRoute
   InviteTokenRoute: typeof InviteTokenRoute
   MarketingConfirmRoute: typeof MarketingConfirmRoute
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
@@ -377,6 +390,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/submit-event': {
+      id: '/submit-event'
+      path: '/submit-event'
+      fullPath: '/submit-event'
+      preLoaderRoute: typeof SubmitEventRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding': {
       id: '/onboarding'
       path: '/onboarding'
@@ -654,6 +674,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   EventsRoute: EventsRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
+  SubmitEventRoute: SubmitEventRoute,
   InviteTokenRoute: InviteTokenRoute,
   MarketingConfirmRoute: MarketingConfirmRoute,
   MarketingSubscribeRoute: MarketingSubscribeRoute,
