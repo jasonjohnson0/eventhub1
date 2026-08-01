@@ -15,7 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { submitEvent, CATEGORIES } from "@/lib/submissions.functions";
+import { submitEvent } from "@/lib/submissions.functions";
+import { CATEGORIES, type SubmissionCategory } from "@/lib/submissions.shared";
 
 export const Route = createFileRoute("/submit-event")({
   component: SubmitEventPage,
@@ -45,7 +46,7 @@ function SubmitEventPage() {
     title: "",
     description: "",
     location: "",
-    category: "other" as (typeof CATEGORIES)[number],
+    category: "other" as SubmissionCategory,
     date: "",
     start: "",
     end: "",
@@ -196,7 +197,7 @@ function SubmitEventPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map((c) => (
+                    {CATEGORIES.map((c: SubmissionCategory) => (
                       <SelectItem key={c} value={c}>
                         {c}
                       </SelectItem>
