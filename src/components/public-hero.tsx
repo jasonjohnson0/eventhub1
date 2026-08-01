@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Search, Sparkles } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import confetti from "canvas-confetti";
 import { CATEGORIES, categoryLabel } from "@/lib/categories";
 
@@ -73,6 +74,13 @@ export function PublicHero({ query, onQuery, category, onCategory }: Props) {
         <p className="mx-auto mt-5 max-w-xl text-lg text-slate-700">
           Browse the community calendar. Find your next adventure — no account needed.
         </p>
+
+        <Link
+          to="/tour"
+          className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 px-5 py-2 text-sm font-bold text-white shadow-lg transition-transform hover:-translate-y-0.5"
+        >
+          💸 Running your own calendar? Keep 100% of the revenue →
+        </Link>
 
         {/* Search */}
         <div className="mx-auto mt-10 max-w-2xl">
