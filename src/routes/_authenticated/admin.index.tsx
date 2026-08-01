@@ -19,7 +19,7 @@ function OverviewPage() {
   useEffect(() => {
     adminOverview().then(setData).catch(() => setData(null));
     getPlatformConfig()
-      .then((c) => setNeedsSetup(!(c.stripe_connected && c.email_configured)))
+      .then((c) => setNeedsSetup(!(c.stripe_ready && c.email_configured)))
       .catch(() => setNeedsSetup(true));
   }, []);
   if (!data) return <p className="text-sm text-muted-foreground">Loading overview…</p>;
