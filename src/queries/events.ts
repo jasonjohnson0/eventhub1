@@ -11,6 +11,8 @@ export type CalendarEvent = {
   image_url: string | null;
   going_count: number;
   organizers: string[];
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export type EventFilters = {
@@ -26,6 +28,40 @@ export type EventFilters = {
   organizer?: string | null;
   limit?: number;
 };
+
+/* ---------- geo helpers ---------- */
+export const RADIUS_OPTIONS = [5, 10, 25, 50] as const;
+
+export function distanceMiles(
+  aLat: number,
+  aLng: number,
+  bLat: number,
+  bLng: number,
+): number {
+  const R = 3958.8;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+export type GeocodeResult = { label: string; latitude: number; longitude: number };
+
+/** Geocode a free-form address or ZIP code (OpenStreetMap Nominatim). */
+export async function geocodeAddress(input: string): Promise<GeocodeResult | null> {
+  const q = input.trim();
+  if (!q) return null;
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=${encodeURIComponent(q)}`;
+  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!res.ok) return null;
+  const rows = (await res.json()) as { lat: string; lon: string; display_name: string }[];
+  const hit = rows[0];
+  if (!hit) return null;
+  return { label: hit.display_name, latitude: Number(hit.lat), longitude: Number(hit.lon) };
+}
 
 const sel = (s: string): string => s;
 
