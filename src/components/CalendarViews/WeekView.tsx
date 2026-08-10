@@ -56,7 +56,10 @@ export function WeekView({ cursor, events }: { cursor: Date; events: CalendarEve
             {days.map((d) => {
               const items = byCell.get(`${d.toDateString()}|${h}`) ?? [];
               return (
-                <div key={d.toISOString() + h} className="min-h-12 space-y-1 border-r border-slate-100 p-1 last:border-0">
+                <div
+                  key={d.toISOString() + h}
+                  className="min-h-12 min-w-0 space-y-1 overflow-hidden border-r border-slate-100 p-1 last:border-0"
+                >
                   {items.map((e) => (
                     <EventChip key={e.id} event={e} compact />
                   ))}
