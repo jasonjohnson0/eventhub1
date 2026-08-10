@@ -10,7 +10,12 @@ import { CalendarDays, ChevronLeft, ChevronRight, PartyPopper } from "lucide-rea
 import { fetchEvents, addDays, startOfWeek, distanceMiles, type CalendarEvent } from "@/queries/events";
 import { GeoFilter, type GeoState } from "@/components/geo-filter";
 import { MonthView } from "@/components/CalendarViews/MonthView";
-import { WeekView } from "@/components/CalendarViews/WeekView";
+import { WeekView } from "@/views/WeekView";
+import { PhotoView } from "@/views/PhotoView";
+import { SummaryView } from "@/views/SummaryView";
+import { EventsCountdownWidget } from "@/components/widgets/EventsCountdownWidget";
+import { WeekEventsWidget } from "@/components/widgets/WeekEventsWidget";
+import { FeaturedVenueWidget } from "@/components/widgets/FeaturedVenueWidget";
 import { DayView } from "@/components/CalendarViews/DayView";
 import { ListView } from "@/components/CalendarViews/ListView";
 import { AgendaView } from "@/components/CalendarViews/AgendaView";
@@ -49,7 +54,7 @@ function EventsRouteComponent() {
   return <EventsPage />;
 }
 
-const VIEWS = ["grid", "month", "week", "day", "list", "map", "agenda"] as const;
+const VIEWS = ["grid", "month", "week", "day", "list", "photo", "summary", "map", "agenda"] as const;
 type ViewKey = (typeof VIEWS)[number];
 const VIEW_LABELS: Record<ViewKey, string> = {
   grid: "Grid",
@@ -57,6 +62,8 @@ const VIEW_LABELS: Record<ViewKey, string> = {
   week: "Week",
   day: "Day",
   list: "List",
+  photo: "Photos",
+  summary: "Summary",
   map: "Map",
   agenda: "My agenda",
 };
