@@ -175,16 +175,56 @@ function EventsPage() {
       <PublicHero query={query} onQuery={setQuery} category={category} onCategory={setCategory} />
 
       <main className="mx-auto max-w-7xl px-6 py-14">
+        {/* View switcher */}
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap gap-1 rounded-full bg-slate-100 p-1 text-sm font-semibold">
+            {VIEWS.map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`rounded-full px-4 py-1.5 transition-all ${
+                  view === v ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                {VIEW_LABELS[v]}
+              </button>
+            ))}
+          </div>
+          {periodTitle && (
+            <div className="ml-auto flex items-center gap-2">
+              <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => step(-1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="min-w-48 text-center text-sm font-bold text-slate-800">{periodTitle}</span>
+              <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => step(1)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setCursor(new Date())}>
+                Today
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* Date range chips */}
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
-              {range === "week" ? "This week" : range === "month" ? "Upcoming this month" : "Events in your area"}
+              {view === "agenda"
+                ? "My events"
+                : range === "week"
+                  ? "This week"
+                  : range === "month"
+                    ? "Upcoming this month"
+                    : "Events in your area"}
             </h2>
-            <p className="text-sm text-slate-500">
-              {filtered.length} {filtered.length === 1 ? "event" : "events"} · Join the community 🎊
-            </p>
+            {view !== "agenda" && (
+              <p className="text-sm text-slate-500">
+                {filtered.length} {filtered.length === 1 ? "event" : "events"} · Join the community 🎊
+              </p>
+            )}
           </div>
+          {(view === "grid" || view === "list") && (
           <div className="flex gap-1 rounded-full bg-slate-100 p-1 text-sm font-medium">
             {(["all", "week", "month"] as const).map((r) => (
               <button
@@ -198,14 +238,25 @@ function EventsPage() {
               </button>
             ))}
           </div>
+          )}
         </div>
 
-        {loading ? (
+        {view === "agenda" ? (
+          <AgendaView signedIn={signedIn} />
+        ) : loading ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="h-80 animate-pulse rounded-3xl bg-slate-100" />
             ))}
           </div>
+        ) : view === "month" ? (
+          <MonthView cursor={cursor} events={filtered} />
+        ) : view === "week" ? (
+          <WeekView cursor={cursor} events={filtered} />
+        ) : view === "day" ? (
+          <DayView cursor={cursor} events={filtered} />
+        ) : view === "list" ? (
+          <ListView events={filtered} />
         ) : filtered.length === 0 ? (
           <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 p-14 text-center">
             <div className="text-6xl">🕵️‍♀️</div>
