@@ -6,12 +6,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PublicHero } from "@/components/public-hero";
 import { EventCardPublic, type PublicEvent } from "@/components/event-card-public";
-import { CalendarDays, PartyPopper } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, PartyPopper } from "lucide-react";
+import { fetchEvents, addDays, startOfWeek, type CalendarEvent } from "@/queries/events";
+import { MonthView } from "@/components/CalendarViews/MonthView";
+import { WeekView } from "@/components/CalendarViews/WeekView";
+import { DayView } from "@/components/CalendarViews/DayView";
+import { ListView } from "@/components/CalendarViews/ListView";
+import { AgendaView } from "@/components/CalendarViews/AgendaView";
 
 const searchSchema = z.object({
   category: fallback(z.string(), "").default(""),
   q: fallback(z.string(), "").default(""),
   range: fallback(z.string(), "all").default("all"),
+  view: fallback(z.string(), "grid").default("grid"),
 });
 
 export const Route = createFileRoute("/events")({
@@ -34,17 +41,32 @@ function EventsRouteComponent() {
   return <EventsPage />;
 }
 
+const VIEWS = ["grid", "month", "week", "day", "list", "agenda"] as const;
+type ViewKey = (typeof VIEWS)[number];
+const VIEW_LABELS: Record<ViewKey, string> = {
+  grid: "Grid",
+  month: "Month",
+  week: "Week",
+  day: "Day",
+  list: "List",
+  agenda: "My agenda",
+};
+
 function EventsPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/events" });
   const [signedIn, setSignedIn] = useState(false);
-  const [events, setEvents] = useState<PublicEvent[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cursor, setCursor] = useState<Date>(() => new Date());
 
   const query = search.q;
   const category = search.category ? search.category : null;
   const range: "all" | "week" | "month" =
     search.range === "week" || search.range === "month" ? search.range : "all";
+  const view: ViewKey = (VIEWS as readonly string[]).includes(search.view)
+    ? (search.view as ViewKey)
+    : "grid";
 
   const setQuery = (q: string) =>
     navigate({ search: (prev: Record<string, string>) => ({ ...prev, q }), replace: true });
@@ -52,6 +74,8 @@ function EventsPage() {
     navigate({ search: (prev: Record<string, string>) => ({ ...prev, category: c ?? "" }), replace: true });
   const setRange = (r: "all" | "week" | "month") =>
     navigate({ search: (prev: Record<string, string>) => ({ ...prev, range: r }), replace: true });
+  const setView = (v: ViewKey) =>
+    navigate({ search: (prev: Record<string, string>) => ({ ...prev, view: v }), replace: true });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
@@ -63,42 +87,11 @@ function EventsPage() {
     let cancelled = false;
     async function load() {
       setLoading(true);
-      const nowIso = new Date().toISOString();
-      const { data: rows } = await supabase
-        .from("events")
-        .select("id, title, description, location, start_time, category")
-        .eq("status", "approved")
-        .gte("end_time", nowIso)
-        .order("start_time", { ascending: true })
-        .limit(200);
-      const ids = (rows ?? []).map((r) => r.id);
-      const [detailsRes, rsvpRes] = await Promise.all([
-        ids.length
-          ? supabase.from("event_details").select("event_id, landscape_image_url, portrait_image_url").in("event_id", ids)
-          : Promise.resolve({ data: [] as { event_id: string; landscape_image_url: string | null; portrait_image_url: string | null }[] }),
-        ids.length
-          ? supabase.from("event_rsvps").select("event_id").in("event_id", ids).eq("status", "going")
-          : Promise.resolve({ data: [] as { event_id: string }[] }),
-      ]);
-      const imgMap = new Map<string, string | null>();
-      for (const d of detailsRes.data ?? []) {
-        imgMap.set(d.event_id, d.landscape_image_url ?? d.portrait_image_url ?? null);
-      }
-      const countMap = new Map<string, number>();
-      for (const r of rsvpRes.data ?? []) countMap.set(r.event_id, (countMap.get(r.event_id) ?? 0) + 1);
-      const mapped: PublicEvent[] = (rows ?? []).map((r) => ({
-        id: r.id,
-        title: r.title,
-        description: r.description,
-        location: r.location,
-        start_time: r.start_time,
-        category: r.category,
-        image_url: imgMap.get(r.id) ?? null,
-        going_count: countMap.get(r.id) ?? 0,
-      }));
-      if (!cancelled) {
-        setEvents(mapped);
-        setLoading(false);
+      try {
+        const rows = await fetchEvents({ limit: 400 });
+        if (!cancelled) setEvents(rows);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
     load();
@@ -112,20 +105,45 @@ function EventsPage() {
     const now = Date.now();
     const weekMs = 7 * 24 * 60 * 60 * 1000;
     const monthMs = 30 * 24 * 60 * 60 * 1000;
+    const upcomingOnly = view === "grid";
     return events.filter((e) => {
+      if (upcomingOnly && new Date(e.end_time).getTime() < now) return false;
       if (category && e.category !== category) return false;
       if (q) {
         const hay = `${e.title} ${e.description ?? ""} ${e.location ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
-      if (range !== "all") {
+      if (range !== "all" && (view === "grid" || view === "list")) {
         const t = new Date(e.start_time).getTime();
         const limit = range === "week" ? weekMs : monthMs;
         if (t - now > limit) return false;
       }
       return true;
     });
-  }, [events, query, category, range]);
+  }, [events, query, category, range, view]);
+
+  const periodTitle = useMemo(() => {
+    if (view === "month") return cursor.toLocaleString(undefined, { month: "long", year: "numeric" });
+    if (view === "week") {
+      const s = startOfWeek(cursor);
+      const e = addDays(s, 6);
+      return `${s.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${e.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}`;
+    }
+    if (view === "day")
+      return cursor.toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+    return null;
+  }, [view, cursor]);
+
+  function step(delta: number) {
+    if (view === "month") setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1));
+    else if (view === "week") setCursor(addDays(cursor, 7 * delta));
+    else setCursor(addDays(cursor, delta));
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-amber-50/40 to-white">
