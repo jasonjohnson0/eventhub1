@@ -107,7 +107,7 @@ function PublicEventDetail() {
         supabase.from("event_details").select("landscape_image_url, portrait_image_url").eq("event_id", id).maybeSingle(),
         supabase.from("event_photos").select("id, photo_url, caption").eq("event_id", id).order("created_at", { ascending: false }),
         supabase.from("event_rsvps").select("event_id", { count: "exact", head: true }).eq("event_id", id).eq("status", "going"),
-        supabase.from("profiles").select("display_name").eq("id", ev.coordinator_id).maybeSingle(),
+        supabase.from("public_profiles").select("display_name").eq("id", ev.coordinator_id).maybeSingle(),
         supabase.from("event_tickets").select("id, name, description, price_cents, quantity_available, quantity_sold, early_bird, early_bird_price_cents").eq("event_id", id).order("price_cents"),
         supabase.from("sponsored_slots").select("id, position, slot_type, status, cost_cents").eq("event_id", id).order("position"),
       ]);
