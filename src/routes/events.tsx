@@ -229,6 +229,15 @@ function EventsPage() {
       <main className="mx-auto max-w-7xl px-6 py-14">
         <GeoFilter geo={geo} onChange={setGeo} matchCount={geo.lat != null ? mappable.length : null} />
 
+        {/* Widgets */}
+        {!loading && filtered.length > 0 && (
+          <div className="mb-8 grid gap-4 md:grid-cols-3">
+            <EventsCountdownWidget events={filtered} />
+            <WeekEventsWidget events={filtered} />
+            <FeaturedVenueWidget events={filtered} />
+          </div>
+        )}
+
         {/* View switcher */}
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap gap-1 rounded-full bg-slate-100 p-1 text-sm font-semibold">
