@@ -1923,7 +1923,7 @@ export type Database = {
             Returns: string
           }
       check_in_ticket: {
-        Args: { _qr_token: string }
+        Args: { _actor_id: string; _qr_token: string }
         Returns: {
           check_in_count: number
           event_id: string
