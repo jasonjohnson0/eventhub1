@@ -1739,6 +1739,60 @@ export type Database = {
         }
         Relationships: []
       }
+      public_coordinator_profiles: {
+        Row: {
+          company_name: string | null
+          coordinator_id: string | null
+          currency: string | null
+          custom_domain: string | null
+          description: string | null
+          favicon_url: string | null
+          full_name: string | null
+          language: string | null
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          setup_completed_at: string | null
+          slug: string | null
+          timezone: string | null
+          website: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          coordinator_id?: string | null
+          currency?: string | null
+          custom_domain?: string | null
+          description?: string | null
+          favicon_url?: string | null
+          full_name?: string | null
+          language?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          setup_completed_at?: string | null
+          slug?: string | null
+          timezone?: string | null
+          website?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          coordinator_id?: string | null
+          currency?: string | null
+          custom_domain?: string | null
+          description?: string | null
+          favicon_url?: string | null
+          full_name?: string | null
+          language?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          setup_completed_at?: string | null
+          slug?: string | null
+          timezone?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _postgis_deprecate: {
