@@ -80,13 +80,13 @@ function EventsPage() {
     : "grid";
 
   const setQuery = (q: string) =>
-    navigate({ search: (prev: Record<string, string>) => ({ ...prev, q }), replace: true });
+    navigate({ to: ".", search: (prev) => ({ ...prev, q }), replace: true });
   const setCategory = (c: string | null) =>
-    navigate({ search: (prev: Record<string, string>) => ({ ...prev, category: c ?? "" }), replace: true });
+    navigate({ to: ".", search: (prev) => ({ ...prev, category: c ?? "" }), replace: true });
   const setRange = (r: "all" | "week" | "month") =>
-    navigate({ search: (prev: Record<string, string>) => ({ ...prev, range: r }), replace: true });
+    navigate({ to: ".", search: (prev) => ({ ...prev, range: r }), replace: true });
   const setView = (v: ViewKey) =>
-    navigate({ search: (prev: Record<string, string>) => ({ ...prev, view: v }), replace: true });
+    navigate({ to: ".", search: (prev) => ({ ...prev, view: v }), replace: true });
 
   const geo: GeoState = {
     near: search.near,
@@ -96,7 +96,8 @@ function EventsPage() {
   };
   const setGeo = (next: Partial<GeoState>) =>
     navigate({
-      search: (prev: Record<string, unknown>) => ({
+      to: ".",
+      search: (prev) => ({
         ...prev,
         near: next.near ?? geo.near,
         lat: next.lat !== undefined ? (next.lat ?? 0) : (geo.lat ?? 0),
