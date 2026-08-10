@@ -96,14 +96,14 @@ function EventsPage() {
   };
   const setGeo = (next: Partial<GeoState>) =>
     navigate({
-      to: ".",
-      search: (prev) => ({
-        ...prev,
+      to: "/events",
+      search: {
+        ...search,
         near: next.near ?? geo.near,
         lat: next.lat !== undefined ? (next.lat ?? 0) : (geo.lat ?? 0),
         lng: next.lng !== undefined ? (next.lng ?? 0) : (geo.lng ?? 0),
         radius: next.radius ?? geo.radius,
-      }),
+      },
       replace: true,
     });
 
