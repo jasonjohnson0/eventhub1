@@ -44,7 +44,7 @@ export async function fetchEvents(filters: EventFilters = {}): Promise<CalendarE
 
   if (filters.from) q = q.gte("end_time", filters.from);
   if (filters.to) q = q.lte("start_time", filters.to);
-  if (filters.category) q = q.eq("category", filters.category);
+  if (filters.category) q = q.eq("category", filters.category as never);
   if (filters.location) q = q.ilike("location", `%${filters.location.replace(/[%,]/g, "")}%`);
 
   type Row = {
