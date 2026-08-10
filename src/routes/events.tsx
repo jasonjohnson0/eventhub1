@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,18 +7,26 @@ import { Button } from "@/components/ui/button";
 import { PublicHero } from "@/components/public-hero";
 import { EventCardPublic } from "@/components/event-card-public";
 import { CalendarDays, ChevronLeft, ChevronRight, PartyPopper } from "lucide-react";
-import { fetchEvents, addDays, startOfWeek, type CalendarEvent } from "@/queries/events";
+import { fetchEvents, addDays, startOfWeek, distanceMiles, type CalendarEvent } from "@/queries/events";
+import { GeoFilter, type GeoState } from "@/components/geo-filter";
 import { MonthView } from "@/components/CalendarViews/MonthView";
 import { WeekView } from "@/components/CalendarViews/WeekView";
 import { DayView } from "@/components/CalendarViews/DayView";
 import { ListView } from "@/components/CalendarViews/ListView";
 import { AgendaView } from "@/components/CalendarViews/AgendaView";
 
+// Client-only: leaflet touches `window` at module load.
+const MapCanvas = lazy(() => import("@/components/map-canvas"));
+
 const searchSchema = z.object({
   category: fallback(z.string(), "").default(""),
   q: fallback(z.string(), "").default(""),
   range: fallback(z.string(), "all").default("all"),
   view: fallback(z.string(), "grid").default("grid"),
+  near: fallback(z.string(), "").default(""),
+  lat: fallback(z.number(), 0).default(0),
+  lng: fallback(z.number(), 0).default(0),
+  radius: fallback(z.number(), 25).default(25),
 });
 
 export const Route = createFileRoute("/events")({
@@ -41,7 +49,7 @@ function EventsRouteComponent() {
   return <EventsPage />;
 }
 
-const VIEWS = ["grid", "month", "week", "day", "list", "agenda"] as const;
+const VIEWS = ["grid", "month", "week", "day", "list", "map", "agenda"] as const;
 type ViewKey = (typeof VIEWS)[number];
 const VIEW_LABELS: Record<ViewKey, string> = {
   grid: "Grid",
@@ -49,6 +57,7 @@ const VIEW_LABELS: Record<ViewKey, string> = {
   week: "Week",
   day: "Day",
   list: "List",
+  map: "Map",
   agenda: "My agenda",
 };
 
@@ -59,6 +68,8 @@ function EventsPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [cursor, setCursor] = useState<Date>(() => new Date());
+  const [mapReady, setMapReady] = useState(false);
+  useEffect(() => setMapReady(true), []);
 
   const query = search.q;
   const category = search.category ? search.category : null;
@@ -76,6 +87,24 @@ function EventsPage() {
     navigate({ search: (prev: Record<string, string>) => ({ ...prev, range: r }), replace: true });
   const setView = (v: ViewKey) =>
     navigate({ search: (prev: Record<string, string>) => ({ ...prev, view: v }), replace: true });
+
+  const geo: GeoState = {
+    near: search.near,
+    lat: search.lat || null,
+    lng: search.lng || null,
+    radius: [5, 10, 25, 50].includes(search.radius) ? search.radius : 25,
+  };
+  const setGeo = (next: Partial<GeoState>) =>
+    navigate({
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        near: next.near ?? geo.near,
+        lat: next.lat !== undefined ? (next.lat ?? 0) : (geo.lat ?? 0),
+        lng: next.lng !== undefined ? (next.lng ?? 0) : (geo.lng ?? 0),
+        radius: next.radius ?? geo.radius,
+      }),
+      replace: true,
+    });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
@@ -109,6 +138,10 @@ function EventsPage() {
     return events.filter((e) => {
       if (upcomingOnly && new Date(e.end_time).getTime() < now) return false;
       if (category && e.category !== category) return false;
+      if (geo.lat != null && geo.lng != null) {
+        if (e.latitude == null || e.longitude == null) return false;
+        if (distanceMiles(geo.lat, geo.lng, e.latitude, e.longitude) > geo.radius) return false;
+      }
       if (q) {
         const hay = `${e.title} ${e.description ?? ""} ${e.location ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -120,7 +153,18 @@ function EventsPage() {
       }
       return true;
     });
-  }, [events, query, category, range, view]);
+  }, [events, query, category, range, view, geo.lat, geo.lng, geo.radius]);
+
+  const mappable = useMemo(
+    () => filtered.filter((e) => e.latitude != null && e.longitude != null),
+    [filtered],
+  );
+  const mapCenter: [number, number] =
+    geo.lat != null && geo.lng != null
+      ? [geo.lat, geo.lng]
+      : mappable[0]
+        ? [mappable[0].latitude as number, mappable[0].longitude as number]
+        : [30.3322, -81.6557];
 
   const periodTitle = useMemo(() => {
     if (view === "month") return cursor.toLocaleString(undefined, { month: "long", year: "numeric" });
@@ -175,6 +219,8 @@ function EventsPage() {
       <PublicHero query={query} onQuery={setQuery} category={category} onCategory={setCategory} />
 
       <main className="mx-auto max-w-7xl px-6 py-14">
+        <GeoFilter geo={geo} onChange={setGeo} matchCount={geo.lat != null ? mappable.length : null} />
+
         {/* View switcher */}
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap gap-1 rounded-full bg-slate-100 p-1 text-sm font-semibold">
@@ -257,6 +303,28 @@ function EventsPage() {
           <DayView cursor={cursor} events={filtered} />
         ) : view === "list" ? (
           <ListView events={filtered} />
+        ) : view === "map" ? (
+          <div className="h-[70vh] overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+            {mapReady ? (
+              <Suspense fallback={<div className="p-6 text-sm text-slate-500">Loading map…</div>}>
+                <MapCanvas
+                  center={mapCenter}
+                  radiusMiles={geo.lat != null ? geo.radius : null}
+                  events={mappable.map((e) => ({
+                    id: e.id,
+                    title: e.title,
+                    category: e.category ?? "other",
+                    location: e.location,
+                    start_time: e.start_time,
+                    latitude: e.latitude as number,
+                    longitude: e.longitude as number,
+                  }))}
+                />
+              </Suspense>
+            ) : (
+              <div className="p-6 text-sm text-slate-500">Loading map…</div>
+            )}
+          </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 p-14 text-center">
             <div className="text-6xl">🕵️‍♀️</div>

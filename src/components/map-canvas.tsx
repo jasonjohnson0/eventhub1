@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Link } from "@tanstack/react-router";
@@ -15,11 +15,11 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-function Recenter({ lat, lng }: { lat: number; lng: number }) {
+function Recenter({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
   const map = useMap();
   useEffect(() => {
-    map.setView([lat, lng], 12);
-  }, [lat, lng, map]);
+    map.setView([lat, lng], zoom);
+  }, [lat, lng, zoom, map]);
   return null;
 }
 
@@ -36,17 +36,27 @@ export type MapEvent = {
 export default function MapCanvas({
   center,
   events,
+  radiusMiles,
 }: {
   center: [number, number];
   events: MapEvent[];
+  radiusMiles?: number | null;
 }) {
+  const zoom = radiusMiles ? (radiusMiles <= 5 ? 12 : radiusMiles <= 10 ? 11 : radiusMiles <= 25 ? 10 : 9) : 12;
   return (
     <MapContainer center={center} zoom={11} className="h-full w-full">
-      <Recenter lat={center[0]} lng={center[1]} />
+      <Recenter lat={center[0]} lng={center[1]} zoom={zoom} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      {radiusMiles ? (
+        <Circle
+          center={center}
+          radius={radiusMiles * 1609.34}
+          pathOptions={{ color: "#d946ef", fillColor: "#f0abfc", fillOpacity: 0.12, weight: 2 }}
+        />
+      ) : null}
       {events.map((ev) => (
         <Marker key={ev.id} position={[ev.latitude, ev.longitude]}>
           <Popup>
