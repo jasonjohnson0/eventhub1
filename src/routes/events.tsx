@@ -306,11 +306,15 @@ function EventsPage() {
         ) : view === "month" ? (
           <MonthView cursor={cursor} events={filtered} />
         ) : view === "week" ? (
-          <WeekView cursor={cursor} events={filtered} />
+          <WeekView cursor={cursor} events={filtered} onCursorChange={setCursor} />
         ) : view === "day" ? (
           <DayView cursor={cursor} events={filtered} />
         ) : view === "list" ? (
           <ListView events={filtered} />
+        ) : view === "photo" ? (
+          <PhotoView events={filtered} />
+        ) : view === "summary" ? (
+          <SummaryView events={filtered} />
         ) : view === "map" ? (
           <div className="h-[70vh] overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
             {mapReady ? (
