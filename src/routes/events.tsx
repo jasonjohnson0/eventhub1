@@ -10,7 +10,12 @@ import { CalendarDays, ChevronLeft, ChevronRight, PartyPopper } from "lucide-rea
 import { fetchEvents, addDays, startOfWeek, distanceMiles, type CalendarEvent } from "@/queries/events";
 import { GeoFilter, type GeoState } from "@/components/geo-filter";
 import { MonthView } from "@/components/CalendarViews/MonthView";
-import { WeekView } from "@/components/CalendarViews/WeekView";
+import { WeekView } from "@/views/WeekView";
+import { PhotoView } from "@/views/PhotoView";
+import { SummaryView } from "@/views/SummaryView";
+import { EventsCountdownWidget } from "@/components/widgets/EventsCountdownWidget";
+import { WeekEventsWidget } from "@/components/widgets/WeekEventsWidget";
+import { FeaturedVenueWidget } from "@/components/widgets/FeaturedVenueWidget";
 import { DayView } from "@/components/CalendarViews/DayView";
 import { ListView } from "@/components/CalendarViews/ListView";
 import { AgendaView } from "@/components/CalendarViews/AgendaView";
@@ -49,7 +54,7 @@ function EventsRouteComponent() {
   return <EventsPage />;
 }
 
-const VIEWS = ["grid", "month", "week", "day", "list", "map", "agenda"] as const;
+const VIEWS = ["grid", "month", "week", "day", "list", "photo", "summary", "map", "agenda"] as const;
 type ViewKey = (typeof VIEWS)[number];
 const VIEW_LABELS: Record<ViewKey, string> = {
   grid: "Grid",
@@ -57,6 +62,8 @@ const VIEW_LABELS: Record<ViewKey, string> = {
   week: "Week",
   day: "Day",
   list: "List",
+  photo: "Photos",
+  summary: "Summary",
   map: "Map",
   agenda: "My agenda",
 };
@@ -80,13 +87,13 @@ function EventsPage() {
     : "grid";
 
   const setQuery = (q: string) =>
-    navigate({ search: (prev: Record<string, string>) => ({ ...prev, q }), replace: true });
+    navigate({ to: "/events", search: { ...search, q }, replace: true });
   const setCategory = (c: string | null) =>
-    navigate({ search: (prev: Record<string, string>) => ({ ...prev, category: c ?? "" }), replace: true });
+    navigate({ to: "/events", search: { ...search, category: c ?? "" }, replace: true });
   const setRange = (r: "all" | "week" | "month") =>
-    navigate({ search: (prev: Record<string, string>) => ({ ...prev, range: r }), replace: true });
+    navigate({ to: "/events", search: { ...search, range: r }, replace: true });
   const setView = (v: ViewKey) =>
-    navigate({ search: (prev: Record<string, string>) => ({ ...prev, view: v }), replace: true });
+    navigate({ to: "/events", search: { ...search, view: v }, replace: true });
 
   const geo: GeoState = {
     near: search.near,
@@ -96,13 +103,14 @@ function EventsPage() {
   };
   const setGeo = (next: Partial<GeoState>) =>
     navigate({
-      search: (prev: Record<string, unknown>) => ({
-        ...prev,
+      to: "/events",
+      search: {
+        ...search,
         near: next.near ?? geo.near,
         lat: next.lat !== undefined ? (next.lat ?? 0) : (geo.lat ?? 0),
         lng: next.lng !== undefined ? (next.lng ?? 0) : (geo.lng ?? 0),
         radius: next.radius ?? geo.radius,
-      }),
+      },
       replace: true,
     });
 
@@ -221,6 +229,15 @@ function EventsPage() {
       <main className="mx-auto max-w-7xl px-6 py-14">
         <GeoFilter geo={geo} onChange={setGeo} matchCount={geo.lat != null ? mappable.length : null} />
 
+        {/* Widgets */}
+        {!loading && filtered.length > 0 && (
+          <div className="mb-8 grid items-start gap-4 md:grid-cols-3">
+            <EventsCountdownWidget events={filtered} />
+            <WeekEventsWidget events={filtered} />
+            <FeaturedVenueWidget events={filtered} />
+          </div>
+        )}
+
         {/* View switcher */}
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap gap-1 rounded-full bg-slate-100 p-1 text-sm font-semibold">
@@ -298,11 +315,15 @@ function EventsPage() {
         ) : view === "month" ? (
           <MonthView cursor={cursor} events={filtered} />
         ) : view === "week" ? (
-          <WeekView cursor={cursor} events={filtered} />
+          <WeekView cursor={cursor} events={filtered} onCursorChange={setCursor} />
         ) : view === "day" ? (
           <DayView cursor={cursor} events={filtered} />
         ) : view === "list" ? (
           <ListView events={filtered} />
+        ) : view === "photo" ? (
+          <PhotoView events={filtered} />
+        ) : view === "summary" ? (
+          <SummaryView events={filtered} />
         ) : view === "map" ? (
           <div className="h-[70vh] overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
             {mapReady ? (
