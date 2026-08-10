@@ -5,7 +5,7 @@ import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PublicHero } from "@/components/public-hero";
-import { EventCardPublic, type PublicEvent } from "@/components/event-card-public";
+import { EventCardPublic } from "@/components/event-card-public";
 import { CalendarDays, ChevronLeft, ChevronRight, PartyPopper } from "lucide-react";
 import { fetchEvents, addDays, startOfWeek, type CalendarEvent } from "@/queries/events";
 import { MonthView } from "@/components/CalendarViews/MonthView";
