@@ -205,9 +205,13 @@ export const checkInViaQr = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ qr_token: z.string().min(8).max(128) }).parse(d))
   .handler(async ({ data, context }) => {
-    // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
-    const sb = context.supabase as any;
-    const { data: rows, error } = await sb.rpc("check_in_ticket", { _qr_token: data.qr_token });
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // biome-ignore lint/suspicious/noExplicitAny: RPC signature not in generated types yet
+    const sb = supabaseAdmin as any;
+    const { data: rows, error } = await sb.rpc("check_in_ticket", {
+      _qr_token: data.qr_token,
+      _actor_id: context.userId,
+    });
     if (error) throw new Error(error.message);
     const row = Array.isArray(rows) ? rows[0] : rows;
     if (!row) throw new Error("Check-in failed");
