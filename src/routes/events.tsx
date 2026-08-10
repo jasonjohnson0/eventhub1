@@ -231,7 +231,7 @@ function EventsPage() {
 
         {/* Widgets */}
         {!loading && filtered.length > 0 && (
-          <div className="mb-8 grid gap-4 md:grid-cols-3">
+          <div className="mb-8 grid items-start gap-4 md:grid-cols-3">
             <EventsCountdownWidget events={filtered} />
             <WeekEventsWidget events={filtered} />
             <FeaturedVenueWidget events={filtered} />
