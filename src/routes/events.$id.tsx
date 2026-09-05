@@ -61,8 +61,33 @@ type Detail = {
   moreFromCoordinator: { id: string; title: string; start_time: string; category: string | null }[];
   tickets: { id: string; name: string; description: string | null; price_cents: number; quantity_available: number | null; quantity_sold: number | null; early_bird?: boolean | null; early_bird_price_cents: number | null }[];
   sponsors: { id: string; position: number; slot_type: string; status: string; cost_cents: number }[];
+  sponsorAds: SponsorAd[];
   isOwner: boolean;
 };
+
+/** Public-facing sponsor creative, from get_public_sponsors(). Deliberately
+ *  carries no commercial terms: no cost, no buyer, no advertiser contact. */
+type SponsorAd = {
+  slot_id: string;
+  position: number;
+  slot_type: string;
+  business_name: string;
+  logo_url: string | null;
+  link_url: string | null;
+  headline: string | null;
+  body: string | null;
+};
+
+/** The database constrains these to https://, but this renders into a page and
+ *  the check is cheap, so it is enforced here too rather than assumed. */
+function safeHttps(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}
 
 const DEMO_SPONSOR_SLOTS = [
   { id: "demo-hero", position: 1, slot_type: "banner", status: "available", cost_cents: 25000 },
@@ -103,13 +128,15 @@ function PublicEventDetail() {
         }
         return;
       }
-      const [detailsRes, photosRes, rsvpRes, profileRes, ticketsRes, slotsRes] = await Promise.all([
+      const [detailsRes, photosRes, rsvpRes, profileRes, ticketsRes, slotsRes, adsRes] = await Promise.all([
         supabase.from("event_details").select("landscape_image_url, portrait_image_url").eq("event_id", id).maybeSingle(),
         supabase.from("event_photos").select("id, photo_url, caption").eq("event_id", id).order("created_at", { ascending: false }),
         supabase.from("event_rsvps").select("event_id", { count: "exact", head: true }).eq("event_id", id).eq("status", "going"),
         supabase.from("profiles").select("display_name").eq("id", ev.coordinator_id).maybeSingle(),
         supabase.from("event_tickets").select("id, name, description, price_cents, quantity_available, quantity_sold, early_bird, early_bird_price_cents").eq("event_id", id).order("price_cents"),
         supabase.from("sponsored_slots").select("id, position, slot_type, status, cost_cents").eq("event_id", id).order("position"),
+        // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+        (supabase as any).rpc("get_public_sponsors", { p_event_id: id }),
       ]);
       const nowIso = new Date().toISOString();
       const { data: more } = await supabase
@@ -133,6 +160,7 @@ function PublicEventDetail() {
           // biome-ignore lint/suspicious/noExplicitAny: extended types
           tickets: (ticketsRes.data as any) ?? [],
           sponsors: slotsRes.data ?? [],
+          sponsorAds: (adsRes.data as SponsorAd[] | null) ?? [],
           isOwner: !!userId && userId === ev.coordinator_id,
         });
         setLoading(false);
@@ -170,7 +198,7 @@ function PublicEventDetail() {
     );
   }
 
-  const { event, image, photos, goingCount, coordinatorName, moreFromCoordinator, tickets, sponsors, isOwner } = data;
+  const { event, image, photos, goingCount, coordinatorName, moreFromCoordinator, tickets, sponsors, sponsorAds, isOwner } = data;
   const start = new Date(event.start_time);
   const end = new Date(event.end_time);
   const dateLabel = start.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
@@ -194,7 +222,8 @@ function PublicEventDetail() {
 
   const sponsorSlots = sponsors.length > 0 ? sponsors : DEMO_SPONSOR_SLOTS;
   const availableSponsorSlots = sponsorSlots.filter((s) => s.status === "available" || s.status === "reserved");
-  const activeSponsors = sponsors.filter((s) => s.status === "sold" || s.status === "active");
+  const activeSponsors = sponsors.filter((s) => s.status === "paid");
+  const adsBySlot = new Map(sponsorAds.map((a) => [a.slot_id, a]));
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/60 via-white to-white">
@@ -355,32 +384,71 @@ function PublicEventDetail() {
             </span>
           </div>
           <div className="space-y-3">
-            {activeSponsors.map((slot) => (
-              <div
-                key={slot.id}
-                className="relative overflow-hidden rounded-2xl border-2 border-amber-200 bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 p-6 shadow-sm"
-              >
-                <div className="absolute right-4 top-4 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-white shadow">
-                  ⭐ Featured
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white text-3xl shadow">
-                    {slot.slot_type === "banner" ? "🎯" : slot.slot_type === "video" ? "🎬" : "📣"}
+            {activeSponsors.map((slot) => {
+              const ad = adsBySlot.get(slot.id);
+              const logo = safeHttps(ad?.logo_url ?? null);
+              const link = safeHttps(ad?.link_url ?? null);
+              const inner = (
+                <>
+                  <div className="absolute right-4 top-4 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-white shadow">
+                    ⭐ Sponsored
                   </div>
-                  <div className="flex-1">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-amber-700">
-                      Position #{slot.position} · {slot.slot_type}
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white text-3xl shadow">
+                      {logo ? (
+                        <img
+                          src={logo}
+                          alt={ad ? `${ad.business_name} logo` : ""}
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          className="h-full w-full object-contain"
+                        />
+                      ) : slot.slot_type === "banner" ? (
+                        "🎯"
+                      ) : (
+                        "📣"
+                      )}
                     </div>
-                    <div className="mt-1 text-lg font-bold text-slate-900">
-                      Community partner spotlight
-                    </div>
-                    <div className="text-sm text-slate-600">
-                      Sponsored placement shown to everyone viewing this event.
+                    <div className="flex-1">
+                      {/* An advertiser's name is a brand, so it keeps its own
+                          casing; only the generic slot label is uppercased. */}
+                      {ad ? (
+                        <div className="text-sm font-semibold text-amber-800">{ad.business_name}</div>
+                      ) : (
+                        <div className="text-xs font-semibold uppercase tracking-wider text-amber-700">
+                          {`Position #${slot.position} · ${slot.slot_type}`}
+                        </div>
+                      )}
+                      <div className="mt-1 text-lg font-bold text-slate-900">
+                        {ad?.headline ?? "Community partner spotlight"}
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        {ad?.body ?? "Sponsored placement shown to everyone viewing this event."}
+                      </div>
                     </div>
                   </div>
+                </>
+              );
+              const className =
+                "relative block overflow-hidden rounded-2xl border-2 border-amber-200 bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 p-6 shadow-sm";
+              // rel="sponsored" is what tells search engines this is paid
+              // placement; without it these links look like editorial ones.
+              return link ? (
+                <a
+                  key={slot.id}
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className={`${className} transition-shadow hover:shadow-md`}
+                >
+                  {inner}
+                </a>
+              ) : (
+                <div key={slot.id} className={className}>
+                  {inner}
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {availableSponsorSlots.map((slot) => (
               <div
                 key={slot.id}
