@@ -32,6 +32,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as ApiEmbedSlugRouteImport } from './routes/api/embed.$slug'
 import { Route as AuthenticatedCoordinatorSubmissionsRouteImport } from './routes/_authenticated/coordinator.submissions'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminSponsorshipRouteImport } from './routes/_authenticated/admin.sponsorship'
@@ -162,6 +163,11 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const ApiEmbedSlugRoute = ApiEmbedSlugRouteImport.update({
+  id: '/api/embed/$slug',
+  path: '/api/embed/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedCoordinatorSubmissionsRoute =
   AuthenticatedCoordinatorSubmissionsRouteImport.update({
     id: '/coordinator/submissions',
@@ -271,6 +277,7 @@ export interface FileRoutesByFullPath {
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
+  '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
@@ -308,6 +315,7 @@ export interface FileRoutesByTo {
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
+  '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
@@ -348,6 +356,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
+  '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/_authenticated/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
@@ -388,6 +397,7 @@ export interface FileRouteTypes {
     | '/admin/sponsorship'
     | '/admin/users'
     | '/coordinator/submissions'
+    | '/api/embed/$slug'
     | '/admin/'
     | '/coordinator/settings/custom-fields'
     | '/coordinator/settings/organizers'
@@ -425,6 +435,7 @@ export interface FileRouteTypes {
     | '/admin/sponsorship'
     | '/admin/users'
     | '/coordinator/submissions'
+    | '/api/embed/$slug'
     | '/admin'
     | '/coordinator/settings/custom-fields'
     | '/coordinator/settings/organizers'
@@ -464,6 +475,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/sponsorship'
     | '/_authenticated/admin/users'
     | '/_authenticated/coordinator/submissions'
+    | '/api/embed/$slug'
     | '/_authenticated/admin/'
     | '/_authenticated/coordinator/settings/custom-fields'
     | '/_authenticated/coordinator/settings/organizers'
@@ -489,6 +501,7 @@ export interface RootRouteChildren {
   MarketingConfirmRoute: typeof MarketingConfirmRoute
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
   MarketingUnsubscribeRoute: typeof MarketingUnsubscribeRoute
+  ApiEmbedSlugRoute: typeof ApiEmbedSlugRoute
   ApiPublicIcalTokenRoute: typeof ApiPublicIcalTokenRoute
 }
 
@@ -654,6 +667,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/api/embed/$slug': {
+      id: '/api/embed/$slug'
+      path: '/api/embed/$slug'
+      fullPath: '/api/embed/$slug'
+      preLoaderRoute: typeof ApiEmbedSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/coordinator/submissions': {
       id: '/_authenticated/coordinator/submissions'
@@ -856,6 +876,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarketingConfirmRoute: MarketingConfirmRoute,
   MarketingSubscribeRoute: MarketingSubscribeRoute,
   MarketingUnsubscribeRoute: MarketingUnsubscribeRoute,
+  ApiEmbedSlugRoute: ApiEmbedSlugRoute,
   ApiPublicIcalTokenRoute: ApiPublicIcalTokenRoute,
 }
 export const routeTree = rootRouteImport

@@ -52,17 +52,35 @@ performance. Keep the existing shape.
 
 ## Build order
 
-1. **Sponsor creative and its public read path.** Done — see
+1. ~~**Sponsor creative and its public read path.**~~ Done —
    `supabase/migrations/20260905120000_sponsor_creatives.sql`.
-2. **Render sponsors in EventHub itself**, replacing the hardcoded placeholder,
-   so advertisers get what they paid for on our own site first.
-3. **The embed endpoint** — server-rendered HTML fragment, cacheable, one per
-   calendar, honouring month and filter parameters.
-4. **The WordPress plugin** — fetch, cache in a transient, print. Nothing else.
-5. **Impression and click counting** that works for anonymous visitors, which
+2. ~~**Render sponsors in EventHub itself**~~ Done — `src/routes/events.$id.tsx`.
+3. ~~**A public page per coordinator**~~ Done — `src/routes/c.$slug.tsx`. This is
+   the canonical URL for a calendar, and what the embed mirrors.
+4. ~~**Sponsor creative entry UI**~~ Done —
+   `src/components/sponsor-creative-editor.tsx`.
+5. ~~**The embed endpoint**~~ Done — `src/routes/api/embed.$slug.ts`.
+6. ~~**The WordPress plugin**~~ Done — `wordpress-plugin/eventhub-calendar/`.
+7. **Impression and click counting** that works for anonymous visitors, which
    today's `click_tracking` cannot do (no anon grant; its INSERT policy requires
-   `user_id = auth.uid()`).
-6. **Billing enforcement** against `coordinator_billing_settings`.
+   `user_id = auth.uid()`). Load-bearing for "free with sponsors": without it
+   there are no numbers to show an advertiser.
+8. **Billing enforcement** against `coordinator_billing_settings`.
+
+## Style isolation, and its limit
+
+The fragment cannot use shadow DOM: the only server-side form is declarative
+shadow DOM, and putting the calendar inside one risks the indexability the
+endpoint exists for. So it competes on the host's terms — an
+`all: revert !important` reset scoped to `.ehx`, and every declaration marked
+important, since among important declarations the more specific selector wins
+and `.ehx *` outranks a bare `div`.
+
+This was not theoretical. The first version scoped its styles normally and
+rendered entirely red inside a theme using `div, a, p { color: red !important }`.
+
+A theme using `!important` at higher specificity than `.ehx` can still
+interfere. That is inherent to rendering into markup we do not control.
 
 ## Known bug blocking step 2
 
