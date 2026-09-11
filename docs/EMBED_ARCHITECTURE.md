@@ -82,13 +82,44 @@ rendered entirely red inside a theme using `div, a, p { color: red !important }`
 A theme using `!important` at higher specificity than `.ehx` can still
 interfere. That is inherent to rendering into markup we do not control.
 
-## Known bug blocking step 2
+## URL shape, and why it is not cosmetic
 
-`src/routes/events.$id.tsx:197` selects sold slots with
-`status === "sold" || status === "active"`. The `slot_status` enum is
-`('available','reserved','paid','expired')`. Neither value exists, so
-`activeSponsors` is always empty and a paid sponsorship renders nothing at all,
-independently of the missing creative fields. The paid state is `'paid'`.
+`/c/<slug>` is the URL an organizer prints, mails and hands to a customer, and
+the one the embed's "see the full calendar" link points at. It has to be the URL
+that actually renders.
+
+It briefly was not. Defaulting the search params in `validateSearch` made the
+router rewrite `/c/acme` to `/c/acme?view=month&q=&on=` before it would render,
+so the promoted URL answered 307 and one calendar presented as several URLs to a
+search engine. Defaults are resolved in the component instead; the params stay
+optional; the bare URL stays bare.
+
+Three rules follow, and the route holds to all three:
+
+- **Nothing at its default appears in a generated link.** `view=month`, an empty
+  `q`, an empty `on` are dropped. Otherwise one click on "Month" pins `?q=&on=`
+  to every URL a visitor copies from then on.
+- **Every variant declares a canonical pointing at the bare URL.** Seven views
+  times every month an organizer schedules is a large number of URLs showing one
+  calendar in different shapes. They should accumulate into one ranking page
+  rather than compete. Individual events rank on their own `/events/<id>`.
+- **Junk is dropped, not carried.** A shared `?view=bogus` link renders, and the
+  first click discards the bogus value instead of threading it through the site.
+
+`siteOrigin()` in `src/lib/site-url.ts` is the one place the absolute origin
+comes from. Set `PUBLIC_SITE_URL` on the deployment; without it the canonical
+degrades to a relative URL (still correct) and the embed falls back to the host
+it was reached on.
+
+## Deploying: push to `main`, and only `main`
+
+The Vercel project is git-connected with `main` as the production branch, so a
+push to `main` deploys to production. Pushing the same commit to a second branch
+moments later does not: GitHub sends a webhook per ref, Vercel attributes the
+build to the branch it saw last, and a commit that reached `main` first can end
+up built as a *preview* while production stays on the previous commit. If a
+feature branch needs syncing, push it **before** `main`, or promote the preview
+in the dashboard afterwards.
 
 ## A Supabase footgun worth remembering
 
