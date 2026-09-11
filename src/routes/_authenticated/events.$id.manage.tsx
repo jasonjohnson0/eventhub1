@@ -24,6 +24,7 @@ import { generateEventIcal, updateEventFormat } from "@/lib/distribution.functio
 import { Input } from "@/components/ui/input";
 import { TicketManager } from "@/components/ticket-manager";
 import { PhotoGallery } from "@/components/photo-gallery";
+import { SponsorCreativeEditor } from "@/components/sponsor-creative-editor";
 import { BarChart3, Smartphone } from "lucide-react";
 import {
   Select,
@@ -140,7 +141,7 @@ function EventPage() {
   if (err) return <div className="p-8 text-sm text-red-600">{err}</div>;
   if (!data) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
 
-  const { event, details, counts, myRsvp, slots, isCoordinator } = data;
+  const { event, details, counts, myRsvp, isCoordinator } = data;
   const maxCapacity = (event as unknown as { max_capacity: number | null }).max_capacity;
   const hasWaitlist = (event as unknown as { has_waitlist: boolean }).has_waitlist;
   const eventFormat = (event as unknown as { event_format?: "in_person" | "virtual" | "hybrid" | null }).event_format ?? "in_person";
@@ -499,28 +500,7 @@ function EventPage() {
           <CardTitle className="text-base">Sponsored slots</CardTitle>
         </CardHeader>
         <CardContent>
-          {slots.length === 0 && <p className="text-sm text-muted-foreground">No slots configured for this event.</p>}
-          <div className="grid gap-3 sm:grid-cols-2">
-            {slots.map((s) => (
-              <div key={s.id} className="flex items-center justify-between rounded-md border p-3">
-                <div>
-                  <div className="font-medium">Ad #{s.position}</div>
-                  <div className="text-xs text-muted-foreground capitalize">
-                    {s.slot_type} · {s.status}
-                  </div>
-                </div>
-                {s.status === "available" ? (
-                  <Button size="sm" variant="secondary" onClick={() => toast("Sponsor checkout lands in Phase 1b")}>
-                    Sponsor · ${(s.cost_cents / 100).toFixed(0)}
-                  </Button>
-                ) : (
-                  <Badge variant="outline" className="capitalize">
-                    {s.status}
-                  </Badge>
-                )}
-              </div>
-            ))}
-          </div>
+          <SponsorCreativeEditor eventId={id} />
         </CardContent>
       </Card>
 
