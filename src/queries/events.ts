@@ -26,6 +26,8 @@ export type EventFilters = {
   /** substring match on location */
   location?: string | null;
   organizer?: string | null;
+  /** Restrict to one coordinator's events. Drives per-coordinator pages and embeds. */
+  coordinator?: string | null;
   limit?: number;
 };
 
@@ -81,6 +83,7 @@ export async function fetchEvents(filters: EventFilters = {}): Promise<CalendarE
   if (filters.from) q = q.gte("end_time", filters.from);
   if (filters.to) q = q.lte("start_time", filters.to);
   if (filters.category) q = q.eq("category", filters.category as never);
+  if (filters.coordinator) q = q.eq("coordinator_id", filters.coordinator);
   if (filters.location) q = q.ilike("location", `%${filters.location.replace(/[%,]/g, "")}%`);
 
   type Row = {

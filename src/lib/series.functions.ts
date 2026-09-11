@@ -18,16 +18,25 @@ const categoryEnum = z.enum([
   "other",
 ]);
 
-const MAX_OCCURRENCES = 100;
+// A year of daily events is 365 occurrences, and coordinators schedule a year
+// ahead, so 100 cut those series off after about fourteen weeks. The cap still
+// exists to bound a runaway rule like FREQ=HOURLY, which would otherwise try to
+// insert tens of thousands of rows.
+const MAX_OCCURRENCES = 400;
 
-function computeOccurrences(rrule: string, dtstart: Date, until: Date | null): Date[] {
+function computeOccurrences(
+  rrule: string,
+  dtstart: Date,
+  until: Date | null,
+): { dates: Date[]; truncated: boolean } {
   // Ensure RRULE has DTSTART for rrulestr
   const rule = rrulestr(
     `DTSTART:${dtstart.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}\nRRULE:${rrule}`,
     { forceset: false },
   ) as RRule;
   const hardCap = until ?? new Date(dtstart.getTime() + 2 * 365 * 24 * 60 * 60 * 1000);
-  return rule.between(dtstart, hardCap, true).slice(0, MAX_OCCURRENCES);
+  const all = rule.between(dtstart, hardCap, true);
+  return { dates: all.slice(0, MAX_OCCURRENCES), truncated: all.length > MAX_OCCURRENCES };
 }
 
 export const createSeries = createServerFn({ method: "POST" })
@@ -51,7 +60,7 @@ export const createSeries = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const dtstart = new Date(data.dtstart);
     const until = data.until ? new Date(data.until) : null;
-    const occurrences = computeOccurrences(data.rrule, dtstart, until);
+    const { dates: occurrences, truncated } = computeOccurrences(data.rrule, dtstart, until);
     if (occurrences.length === 0) throw new Error("RRULE produced no occurrences");
 
     const { data: series, error: sErr } = await context.supabase
@@ -91,7 +100,9 @@ export const createSeries = createServerFn({ method: "POST" })
     const { error: eErr } = await context.supabase.from("events").insert(rows);
     if (eErr) throw new Error(eErr.message);
 
-    return { series_id: series.id, count: occurrences.length };
+    // truncated is surfaced so the coordinator is told the series was capped
+    // rather than being shown a count that looks like the whole thing.
+    return { series_id: series.id, count: occurrences.length, truncated };
   });
 
 export const updateSeriesInstance = createServerFn({ method: "POST" })

@@ -184,7 +184,14 @@ export function EventModal({
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           },
         });
-        toast.success(`Series created — ${res.count} occurrences`);
+        if (res.truncated) {
+          toast.warning(
+            `Series created with ${res.count} occurrences — the maximum per series. ` +
+              `Set a "repeat until" date or create a second series to cover the rest.`,
+          );
+        } else {
+          toast.success(`Series created — ${res.count} occurrences`);
+        }
       }
       if (imageUrl) toast("Media upload wiring lands in Phase 1d");
       setTitle("");
