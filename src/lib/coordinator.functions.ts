@@ -29,26 +29,29 @@ const slugSchema = z.object({
 /**
  * Resolve a coordinator's public profile by slug.
  *
- * Reads through the anon client rather than the service-role one, so the
- * "Public can view live coordinator profiles" policy
- * (setup_completed_at IS NOT NULL) does the gating. A half-finished onboarding
- * is therefore invisible here by construction rather than by our remembering to
+ * Goes through get_public_coordinator_profile() rather than selecting the
+ * table. Production does not grant anon SELECT on coordinator_profiles -- the
+ * repo's migrations say it does and the live database disagrees -- so a direct
+ * select 404s every anonymous visitor. Granting the table would fix that and
+ * overshare: RLS filters rows, not columns, so anon would also read
+ * contact_email and custom_domain on every live profile.
+ *
+ * The function also enforces setup_completed_at IS NOT NULL, so a half-finished
+ * onboarding is invisible by construction rather than by our remembering to
  * filter for it.
  */
 export const getPublicCoordinator = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => slugSchema.parse(d))
   .handler(async ({ data }): Promise<PublicCoordinator | null> => {
-    const { data: row, error } = await supabase
-      .from("coordinator_profiles")
-      .select(
-        "coordinator_id, slug, company_name, description, logo_url, favicon_url, primary_color, secondary_color",
-      )
-      .eq("slug", data.slug)
-      .maybeSingle();
+    // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+    const { data: rows, error } = await (supabase as any).rpc(
+      "get_public_coordinator_profile",
+      { p_slug: data.slug },
+    );
 
     if (error) {
       console.error("getPublicCoordinator error", error);
       return null;
     }
-    return (row as PublicCoordinator | null) ?? null;
+    return ((rows as PublicCoordinator[] | null) ?? [])[0] ?? null;
   });
