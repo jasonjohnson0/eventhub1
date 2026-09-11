@@ -22,6 +22,7 @@ import { Route as MarketingSubscribeRouteImport } from './routes/marketing.subsc
 import { Route as MarketingConfirmRouteImport } from './routes/marketing.confirm'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as EventsIdRouteImport } from './routes/events.$id'
+import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedSubmissionsRouteImport } from './routes/_authenticated/submissions'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -109,6 +110,11 @@ const EventsIdRoute = EventsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => EventsRoute,
+} as any)
+const CSlugRoute = CSlugRouteImport.update({
+  id: '/c/$slug',
+  path: '/c/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/callback',
@@ -253,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/c/$slug': typeof CSlugRoute
   '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
@@ -289,6 +296,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/submissions': typeof AuthenticatedSubmissionsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/c/$slug': typeof CSlugRoute
   '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
@@ -328,6 +336,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/submissions': typeof AuthenticatedSubmissionsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/c/$slug': typeof CSlugRoute
   '/events/$id': typeof EventsIdRoute
   '/invite/$token': typeof InviteTokenRoute
   '/marketing/confirm': typeof MarketingConfirmRoute
@@ -367,6 +376,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/submissions'
     | '/auth/callback'
+    | '/c/$slug'
     | '/events/$id'
     | '/invite/$token'
     | '/marketing/confirm'
@@ -403,6 +413,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/submissions'
     | '/auth/callback'
+    | '/c/$slug'
     | '/events/$id'
     | '/invite/$token'
     | '/marketing/confirm'
@@ -441,6 +452,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/submissions'
     | '/auth/callback'
+    | '/c/$slug'
     | '/events/$id'
     | '/invite/$token'
     | '/marketing/confirm'
@@ -472,6 +484,7 @@ export interface RootRouteChildren {
   SetupRoute: typeof SetupRoute
   SubmitEventRoute: typeof SubmitEventRoute
   TourRoute: typeof TourRoute
+  CSlugRoute: typeof CSlugRoute
   InviteTokenRoute: typeof InviteTokenRoute
   MarketingConfirmRoute: typeof MarketingConfirmRoute
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
@@ -571,6 +584,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/events/$id'
       preLoaderRoute: typeof EventsIdRouteImport
       parentRoute: typeof EventsRoute
+    }
+    '/c/$slug': {
+      id: '/c/$slug'
+      path: '/c/$slug'
+      fullPath: '/c/$slug'
+      preLoaderRoute: typeof CSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/auth/callback': {
       id: '/auth/callback'
@@ -831,6 +851,7 @@ const rootRouteChildren: RootRouteChildren = {
   SetupRoute: SetupRoute,
   SubmitEventRoute: SubmitEventRoute,
   TourRoute: TourRoute,
+  CSlugRoute: CSlugRoute,
   InviteTokenRoute: InviteTokenRoute,
   MarketingConfirmRoute: MarketingConfirmRoute,
   MarketingSubscribeRoute: MarketingSubscribeRoute,
