@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getPublicCoordinator } from "@/lib/coordinator.functions";
 import { fetchEvents, addDays, startOfWeek, type CalendarEvent } from "@/queries/events";
 import { supabase } from "@/integrations/supabase/client";
+import { siteOrigin } from "@/lib/site-url";
 
 /**
  * A calendar as a self-contained HTML fragment, for embedding on a customer's
@@ -240,7 +241,7 @@ export const Route = createFileRoute("/api/embed/$slug")({
         );
         const sponsors = (sponsorRows ?? []) as Sponsor[];
 
-        const appUrl = (process.env.PUBLIC_SITE_URL ?? url.origin).replace(/\/+$/, "");
+        const appUrl = siteOrigin() || url.origin.replace(/\/+$/, "");
         const self = `${appUrl}/api/embed/${encodeURIComponent(coordinator.slug)}`;
         const canonical = `${appUrl}/c/${encodeURIComponent(coordinator.slug)}`;
 

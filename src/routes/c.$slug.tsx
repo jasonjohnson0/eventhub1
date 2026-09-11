@@ -13,11 +13,14 @@ import { WeekView } from "@/views/WeekView";
 import { PhotoView } from "@/views/PhotoView";
 import { SummaryView } from "@/views/SummaryView";
 import { supabase } from "@/integrations/supabase/client";
+import { siteUrl } from "@/lib/site-url";
 
 /** Every view the platform has, minus the ones that need geo state the embed
  *  does not carry. Adding a view here is all it takes to expose it. */
 const VIEWS = ["month", "week", "day", "list", "agenda", "photo", "summary"] as const;
 type ViewKey = (typeof VIEWS)[number];
+const DEFAULT_VIEW: ViewKey = "month";
+const ANCHOR_RE = /^\d{4}-\d{2}-\d{2}$/;
 const VIEW_LABELS: Record<ViewKey, string> = {
   month: "Month",
   week: "Week",
@@ -28,13 +31,36 @@ const VIEW_LABELS: Record<ViewKey, string> = {
   summary: "Summary",
 };
 
+/** Every param is optional and nothing is defaulted here.
+ *
+ *  A `.default()` makes the router rewrite /c/acme to /c/acme?view=month&q=&on=
+ *  before it will render -- a 307 on the one URL an organizer actually hands
+ *  out, and three near-identical URLs for search engines to pick between.
+ *  Defaults are resolved in the component instead, so the bare URL stays bare
+ *  and only params a visitor really chose ever appear. */
 const searchSchema = z.object({
-  view: fallback(z.string(), "month").default("month"),
-  q: fallback(z.string(), "").default(""),
+  view: fallback(z.string(), "").optional(),
+  q: fallback(z.string(), "").optional(),
   /** Anchor date as YYYY-MM-DD. Real URLs mean crawlers and no-JS visitors can
    *  page through the calendar, which is what makes an embed indexable. */
-  on: fallback(z.string(), "").default(""),
+  on: fallback(z.string(), "").optional(),
 });
+
+type CalendarSearch = z.infer<typeof searchSchema>;
+
+/** Drops anything at its default so generated links carry only what differs
+ *  from the bare URL. Without this, one click on "Month" would pin ?q=&on= to
+ *  every link the visitor copies from then on. */
+function tidy(next: CalendarSearch): CalendarSearch {
+  const out: CalendarSearch = {};
+  // Junk a visitor arrived with is dropped rather than carried along, so a
+  // shared ?view=bogus link heals itself on the first click.
+  if (next.view && next.view !== DEFAULT_VIEW && (VIEWS as readonly string[]).includes(next.view))
+    out.view = next.view;
+  if (next.q) out.q = next.q;
+  if (next.on && ANCHOR_RE.test(next.on)) out.on = next.on;
+  return out;
+}
 
 export const Route = createFileRoute("/c/$slug")({
   validateSearch: zodValidator(searchSchema),
@@ -64,7 +90,16 @@ export const Route = createFileRoute("/c/$slug")({
         { property: "og:description", content: description },
         ...(c?.logo_url ? [{ property: "og:image", content: c.logo_url }] : []),
       ],
-      links: c?.favicon_url ? [{ rel: "icon", href: c.favicon_url }] : [],
+      links: [
+        // Every view and every month shows the same calendar in a different
+        // shape, so they all credit the one URL an organizer promotes. Without
+        // this, ?view=photo and ?on=2027-03-01 compete with /c/slug for the
+        // same search results and each gets a fraction of the ranking.
+        ...(c?.slug
+          ? [{ rel: "canonical", href: siteUrl(`/c/${encodeURIComponent(c.slug)}`) }]
+          : []),
+        ...(c?.favicon_url ? [{ rel: "icon", href: c.favicon_url }] : []),
+      ],
     };
   },
   notFoundComponent: () => (
@@ -83,7 +118,7 @@ export const Route = createFileRoute("/c/$slug")({
 });
 
 function parseAnchor(on: string): Date {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(on)) {
+  if (ANCHOR_RE.test(on)) {
     const d = new Date(`${on}T12:00:00`);
     if (!Number.isNaN(d.getTime())) return d;
   }
@@ -101,13 +136,16 @@ function CoordinatorCalendar() {
 
   const [signedIn, setSignedIn] = useState(false);
 
-  const view: ViewKey = (VIEWS as readonly string[]).includes(search.view)
+  const view: ViewKey = (VIEWS as readonly string[]).includes(search.view ?? "")
     ? (search.view as ViewKey)
-    : "month";
-  const cursor = useMemo(() => parseAnchor(search.on), [search.on]);
+    : DEFAULT_VIEW;
+  const query = search.q ?? "";
+  const cursor = useMemo(() => parseAnchor(search.on ?? ""), [search.on]);
 
-  const setSearch = (next: Partial<typeof search>) =>
-    navigate({ search: { ...search, ...next }, replace: true });
+  /** `replace` for typing, which would otherwise stack a history entry per
+   *  keystroke; a real push for anything a visitor would expect Back to undo. */
+  const setSearch = (next: CalendarSearch, replace = false) =>
+    navigate({ search: tidy({ ...search, ...next }), replace });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
@@ -116,12 +154,12 @@ function CoordinatorCalendar() {
   }, []);
 
   const filtered = useMemo(() => {
-    const q = search.q.trim().toLowerCase();
+    const q = query.trim().toLowerCase();
     if (!q) return events;
     return events.filter((e) =>
       `${e.title} ${e.description ?? ""} ${e.location ?? ""}`.toLowerCase().includes(q),
     );
-  }, [events, search.q]);
+  }, [events, query]);
 
   const periodLabel = useMemo(() => {
     if (view === "month")
@@ -195,8 +233,7 @@ function CoordinatorCalendar() {
                 key={v}
                 to="/c/$slug"
                 params={{ slug: coordinator.slug }}
-                search={{ ...search, view: v }}
-                replace
+                search={tidy({ ...search, view: v })}
                 className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
                   view === v ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"
                 }`}
@@ -207,8 +244,8 @@ function CoordinatorCalendar() {
           </div>
 
           <input
-            value={search.q}
-            onChange={(e) => setSearch({ q: e.target.value })}
+            value={query}
+            onChange={(e) => setSearch({ q: e.target.value }, true)}
             placeholder="Search these events"
             aria-label="Search events"
             className="w-full max-w-xs rounded-full border border-slate-200 px-4 py-2 text-sm outline-none focus:border-slate-400 sm:w-auto"

@@ -61,7 +61,13 @@ export const sendEventInvitations = createServerFn({ method: "POST" })
     // Deliver through the provider configured in /admin/setup.
     const { sendPlatformEmails } = await import("@/lib/platform-mailer.server");
     const { invitationTemplate } = await import("@/lib/email-templates");
-    const base = process.env["PUBLIC_SITE_URL"] ?? "https://sparkle-calendar-co.lovable.app";
+    // An invitation link has to be absolute -- there is no page for a relative
+    // URL to resolve against in an inbox. The fallback was lovable.app, which
+    // after the move to Vercel points at a deployment we no longer promote.
+    // Set PUBLIC_SITE_URL once a custom domain is attached and this stops
+    // mattering.
+    const { siteOrigin } = await import("@/lib/site-url");
+    const base = siteOrigin() || "https://eventhub1-eight.vercel.app";
     const messages = (inserted ?? []).map((inv) => {
       const tpl = invitationTemplate({
         event: {
