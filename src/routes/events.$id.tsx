@@ -60,8 +60,23 @@ type Detail = {
   goingCount: number;
   coordinatorName: string | null;
   moreFromCoordinator: { id: string; title: string; start_time: string; category: string | null }[];
-  tickets: { id: string; name: string; description: string | null; price_cents: number; quantity_available: number | null; quantity_sold: number | null; early_bird?: boolean | null; early_bird_price_cents: number | null }[];
-  sponsors: { id: string; position: number; slot_type: string; status: string; cost_cents: number }[];
+  tickets: {
+    id: string;
+    name: string;
+    description: string | null;
+    price_cents: number;
+    quantity_available: number | null;
+    quantity_sold: number | null;
+    early_bird?: boolean | null;
+    early_bird_price_cents: number | null;
+  }[];
+  sponsors: {
+    id: string;
+    position: number;
+    slot_type: string;
+    status: string;
+    cost_cents: number;
+  }[];
   sponsorAds: SponsorAd[];
   isOwner: boolean;
 };
@@ -110,6 +125,7 @@ function PublicEventDetail() {
   const [goingOverride, setGoingOverride] = useState<number | null>(null);
   const [rsvpBusy, setRsvpBusy] = useState(false);
   const [rsvpNote, setRsvpNote] = useState<string | null>(null);
+  const [sponsorOpen, setSponsorOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -147,7 +163,9 @@ function PublicEventDetail() {
       // biome-ignore lint/suspicious/noExplicitAny: extended columns not yet in generated types
       const { data: ev } = await (supabase as any)
         .from("events")
-        .select("id, title, description, location, start_time, end_time, category, coordinator_id, event_format, virtual_link, status")
+        .select(
+          "id, title, description, location, start_time, end_time, category, coordinator_id, event_format, virtual_link, status",
+        )
         .eq("id", id)
         .maybeSingle();
       if (!ev || ev.status !== "approved") {
@@ -157,16 +175,43 @@ function PublicEventDetail() {
         }
         return;
       }
-      const [detailsRes, photosRes, rsvpRes, profileRes, ticketsRes, slotsRes, adsRes] = await Promise.all([
-        supabase.from("event_details").select("landscape_image_url, portrait_image_url").eq("event_id", id).maybeSingle(),
-        supabase.from("event_photos").select("id, photo_url, caption").eq("event_id", id).order("created_at", { ascending: false }),
-        supabase.from("event_rsvps").select("event_id", { count: "exact", head: true }).eq("event_id", id).eq("status", "going"),
-        supabase.from("profiles").select("display_name").eq("id", ev.coordinator_id).maybeSingle(),
-        supabase.from("event_tickets").select("id, name, description, price_cents, quantity_available, quantity_sold, early_bird, early_bird_price_cents").eq("event_id", id).order("price_cents"),
-        supabase.from("sponsored_slots").select("id, position, slot_type, status, cost_cents").eq("event_id", id).order("position"),
-        // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
-        (supabase as any).rpc("get_public_sponsors", { p_event_id: id }),
-      ]);
+      const [detailsRes, photosRes, rsvpRes, profileRes, ticketsRes, slotsRes, adsRes] =
+        await Promise.all([
+          supabase
+            .from("event_details")
+            .select("landscape_image_url, portrait_image_url")
+            .eq("event_id", id)
+            .maybeSingle(),
+          supabase
+            .from("event_photos")
+            .select("id, photo_url, caption")
+            .eq("event_id", id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("event_rsvps")
+            .select("event_id", { count: "exact", head: true })
+            .eq("event_id", id)
+            .eq("status", "going"),
+          supabase
+            .from("profiles")
+            .select("display_name")
+            .eq("id", ev.coordinator_id)
+            .maybeSingle(),
+          supabase
+            .from("event_tickets")
+            .select(
+              "id, name, description, price_cents, quantity_available, quantity_sold, early_bird, early_bird_price_cents",
+            )
+            .eq("event_id", id)
+            .order("price_cents"),
+          supabase
+            .from("sponsored_slots")
+            .select("id, position, slot_type, status, cost_cents")
+            .eq("event_id", id)
+            .order("position"),
+          // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+          (supabase as any).rpc("get_public_sponsors", { p_event_id: id }),
+        ]);
       const nowIso = new Date().toISOString();
       const { data: more } = await supabase
         .from("events")
@@ -180,7 +225,8 @@ function PublicEventDetail() {
       if (!cancelled) {
         setData({
           event: ev,
-          image: detailsRes.data?.landscape_image_url ?? detailsRes.data?.portrait_image_url ?? null,
+          image:
+            detailsRes.data?.landscape_image_url ?? detailsRes.data?.portrait_image_url ?? null,
           photos: photosRes.data ?? [],
           goingCount: rsvpRes.count ?? 0,
           // biome-ignore lint/suspicious/noExplicitAny: profile may not exist
@@ -227,10 +273,26 @@ function PublicEventDetail() {
     );
   }
 
-  const { event, image, photos, goingCount, coordinatorName, moreFromCoordinator, tickets, sponsors, sponsorAds, isOwner } = data;
+  const {
+    event,
+    image,
+    photos,
+    goingCount,
+    coordinatorName,
+    moreFromCoordinator,
+    tickets,
+    sponsors,
+    sponsorAds,
+    isOwner,
+  } = data;
   const start = new Date(event.start_time);
   const end = new Date(event.end_time);
-  const dateLabel = start.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  const dateLabel = start.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
   const timeLabel = `${start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} – ${end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
   const encodedUrl = encodeURIComponent(shareUrl);
@@ -276,14 +338,19 @@ function PublicEventDetail() {
   };
 
   const sponsorSlots = sponsors.length > 0 ? sponsors : DEMO_SPONSOR_SLOTS;
-  const availableSponsorSlots = sponsorSlots.filter((s) => s.status === "available" || s.status === "reserved");
+  const availableSponsorSlots = sponsorSlots.filter(
+    (s) => s.status === "available" || s.status === "reserved",
+  );
   const activeSponsors = sponsors.filter((s) => s.status === "paid");
   const adsBySlot = new Map(sponsorAds.map((a) => [a.slot_id, a]));
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/60 via-white to-white">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <Link to="/events" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-fuchsia-600">
+        <Link
+          to="/events"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-fuchsia-600"
+        >
           <ArrowLeft className="h-4 w-4" /> All events
         </Link>
         <div className="flex items-center gap-3">
@@ -310,7 +377,9 @@ function PublicEventDetail() {
               <div className="flex h-full w-full items-center justify-center text-9xl">🎉</div>
             )}
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent p-6">
-              <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold shadow ${categoryClasses(event.category)}`}>
+              <span
+                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold shadow ${categoryClasses(event.category)}`}
+              >
                 {categoryLabel(event.category ?? "other")}
               </span>
               <h1 className="mt-3 text-3xl font-black text-white drop-shadow md:text-5xl">
@@ -338,7 +407,9 @@ function PublicEventDetail() {
                 <div className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-emerald-500" />
                   <div>
-                    <div className="font-semibold text-slate-900">{goingOverride ?? goingCount} going 🎊</div>
+                    <div className="font-semibold text-slate-900">
+                      {goingOverride ?? goingCount} going 🎊
+                    </div>
                     <div className="text-slate-500">Join the community</div>
                   </div>
                 </div>
@@ -347,7 +418,8 @@ function PublicEventDetail() {
               {event.event_format && event.event_format !== "in_person" && event.virtual_link && (
                 <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
                   <div className="flex items-center gap-2 font-semibold text-sky-900">
-                    <Video className="h-4 w-4" /> {event.event_format === "hybrid" ? "Hybrid event" : "Virtual event"}
+                    <Video className="h-4 w-4" />{" "}
+                    {event.event_format === "hybrid" ? "Hybrid event" : "Virtual event"}
                   </div>
                   <a
                     href={event.virtual_link}
@@ -445,7 +517,8 @@ function PublicEventDetail() {
               <Megaphone className="h-5 w-5 text-amber-500" /> Featured Sponsors & Ad Slots
             </h2>
             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-              {availableSponsorSlots.length} slot{availableSponsorSlots.length === 1 ? "" : "s"} available
+              {availableSponsorSlots.length} slot{availableSponsorSlots.length === 1 ? "" : "s"}{" "}
+              available
             </span>
           </div>
           <div className="space-y-3">
@@ -484,7 +557,9 @@ function PublicEventDetail() {
                       {/* An advertiser's name is a brand, so it keeps its own
                           casing; only the generic slot label is uppercased. */}
                       {ad ? (
-                        <div className="text-sm font-semibold text-amber-800">{ad.business_name}</div>
+                        <div className="text-sm font-semibold text-amber-800">
+                          {ad.business_name}
+                        </div>
                       ) : (
                         <div className="text-xs font-semibold uppercase tracking-wider text-amber-700">
                           {`Position #${slot.position} · ${slot.slot_type}`}
@@ -559,7 +634,17 @@ function PublicEventDetail() {
                   variant="outline"
                   size="sm"
                   className="rounded-full"
-                  onClick={() => (signedIn ? navigate({ to: "/events/$id/manage", params: { id: event.id } }) : setRsvpOpen(true))}
+                  // Only the owner manages slots. This used to send any signed-in
+                  // visitor to /events/$id/manage -- a page that is not theirs -- and
+                  // show anonymous visitors the RSVP dialog, which talks about saving
+                  // events. An advertiser reading the slot price deserves an answer
+                  // about sponsoring: it is the one path the free-with-sponsors model
+                  // depends on.
+                  onClick={() =>
+                    isOwner
+                      ? navigate({ to: "/events/$id/manage", params: { id: event.id } })
+                      : setSponsorOpen(true)
+                  }
                 >
                   Become a sponsor
                 </Button>
@@ -581,7 +666,10 @@ function PublicEventDetail() {
                     ? Math.max(0, t.quantity_available - (t.quantity_sold ?? 0))
                     : null;
                 const soldOut = remaining === 0;
-                const price = t.early_bird && t.early_bird_price_cents != null ? t.early_bird_price_cents : t.price_cents;
+                const price =
+                  t.early_bird && t.early_bird_price_cents != null
+                    ? t.early_bird_price_cents
+                    : t.price_cents;
                 return (
                   <div
                     key={t.id}
@@ -604,7 +692,9 @@ function PublicEventDetail() {
                         )}
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-black text-fuchsia-600">{formatPrice(price)}</div>
+                        <div className="text-2xl font-black text-fuchsia-600">
+                          {formatPrice(price)}
+                        </div>
                         {remaining != null && !soldOut && (
                           <div className="text-xs text-slate-500">{remaining} left</div>
                         )}
@@ -684,7 +774,10 @@ function PublicEventDetail() {
                       {m.title}
                     </div>
                     <div className="text-xs text-slate-500">
-                      {new Date(m.start_time).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      {new Date(m.start_time).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      })}
                       {" · "}
                       {categoryLabel(m.category ?? "other")}
                     </div>
@@ -695,6 +788,29 @@ function PublicEventDetail() {
           </section>
         )}
       </main>
+
+      <Dialog open={sponsorOpen} onOpenChange={setSponsorOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sponsor this event</DialogTitle>
+            <DialogDescription>
+              {coordinatorName
+                ? `Sponsorships for this event are arranged directly with ${coordinatorName}.`
+                : "Sponsorships for this event are arranged directly with the organizer."}{" "}
+              Get in touch and they can reserve a slot for you — your logo, headline and link then
+              appear here and on every site that embeds this calendar.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setSponsorOpen(false)}>
+              Close
+            </Button>
+            <Button asChild className="rounded-full">
+              <Link to="/events">See other events</Link>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={rsvpOpen} onOpenChange={setRsvpOpen}>
         <DialogContent>
