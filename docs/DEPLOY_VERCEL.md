@@ -33,7 +33,7 @@ and Preview.
 |---|---|
 | `VITE_SUPABASE_URL` | `https://fopxmuaogwchohwhrclk.supabase.co` |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Publishable/anon key. Public by design. |
-| `VITE_SUPABASE_PROJECT_ID` | `fopxmuaogwchohwhrclk`. Present in `.env` but not read anywhere in `src/`; set it for parity. |
+| `VITE_SUPABASE_PROJECT_ID` | `fopxmuaogwchohwhrclk`. **Load-bearing since the MCP integration** — `src/lib/mcp/index.ts` builds the OAuth issuer URL from it. A wrong value publishes a working-looking discovery document pointing at a host that does not exist. |
 
 These are compiled into JavaScript the browser downloads. Never put a secret
 behind a `VITE_` prefix.
@@ -70,6 +70,29 @@ through `siteOrigin()` in `src/lib/site-url.ts`: the canonical tag on every
 invite links in outbound email. Without it the canonical degrades to a relative
 URL and the embed falls back to whichever host it was reached on — neither
 errors, both are subtly wrong.
+
+### A variable that was silently a single letter
+
+`VITE_SUPABASE_PROJECT_ID` was set to the literal string `Y` in Vercel, almost
+certainly a stray keystroke answering a `vercel env add` prompt. Nothing
+complained, because until the MCP integration nothing read it.
+
+Then `src/lib/mcp/index.ts` started interpolating it into the OAuth issuer, and
+production published this:
+
+```json
+{ "authorization_servers": ["https://Y.supabase.co/auth/v1"] }
+```
+
+A well-formed discovery document naming a host that does not exist — so `/mcp`
+correctly returns 401 and no client can ever get past it. The value is inlined
+at build time, so fixing it requires a redeploy, not just an env edit.
+
+Worth checking the others the same way rather than trusting that they are set:
+
+```bash
+curl -s https://<host>/.well-known/oauth-protected-resource   # issuer must name the real ref
+```
 
 ### One variable that fails loudly, in a place nobody looks
 
