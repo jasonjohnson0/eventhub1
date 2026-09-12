@@ -2171,6 +2171,24 @@ export type Database = {
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
       get_ad_destination: { Args: { p_slot_id: string }; Returns: string }
+      get_all_coordinator_billing: {
+        Args: never
+        Returns: {
+          active_sponsorships: number
+          amount_due_cents: number
+          approved_events: number
+          company_name: string
+          coordinator_id: string
+          email: string
+          grace_ends_at: string
+          has_billing_row: boolean
+          monthly_fee_cents: number
+          slug: string
+          sponsored_enabled: boolean
+          state: string
+          unpaid_cents: number
+        }[]
+      }
       get_coordinator_billing_status: {
         Args: { p_coordinator_id: string }
         Returns: {
@@ -2184,6 +2202,23 @@ export type Database = {
           reason: string
           sponsored_enabled: boolean
           state: string
+        }[]
+      }
+      get_event_rsvp_counts: {
+        Args: { p_event_id: string }
+        Returns: {
+          declined: number
+          going: number
+          interested: number
+        }[]
+      }
+      get_event_rsvp_counts_bulk: {
+        Args: { p_event_ids: string[] }
+        Returns: {
+          declined: number
+          event_id: string
+          going: number
+          interested: number
         }[]
       }
       get_ical_feed_events: {
