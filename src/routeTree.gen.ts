@@ -13,6 +13,7 @@ import { Route as TourRouteImport } from './routes/tour'
 import { Route as SubmitEventRouteImport } from './routes/submit-event'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -31,6 +32,7 @@ import { Route as AuthenticatedMapRouteImport } from './routes/_authenticated/ma
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as ApiEmbedSlugRouteImport } from './routes/api/embed.$slug'
 import { Route as AuthenticatedCoordinatorSubmissionsRouteImport } from './routes/_authenticated/coordinator.submissions'
@@ -39,6 +41,7 @@ import { Route as AuthenticatedAdminSponsorshipRouteImport } from './routes/_aut
 import { Route as AuthenticatedAdminSetupRouteImport } from './routes/_authenticated/admin.setup'
 import { Route as AuthenticatedAdminModerationRouteImport } from './routes/_authenticated/admin.moderation'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicIcalTokenRouteImport } from './routes/api/public/ical.$token'
 import { Route as ApiAdISlotIdRouteImport } from './routes/api/ad.i.$slotId'
 import { Route as ApiAdCSlotIdRouteImport } from './routes/api/ad.c.$slotId'
@@ -68,6 +71,11 @@ const SetupRoute = SetupRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EventsRoute = EventsRouteImport.update({
@@ -160,6 +168,12 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -202,6 +216,11 @@ const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   id: '/audit',
   path: '/audit',
   getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicIcalTokenRoute = ApiPublicIcalTokenRouteImport.update({
   id: '/api/public/ical/$token',
@@ -265,10 +284,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/events': typeof EventsRouteWithChildren
+  '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
   '/setup': typeof SetupRoute
   '/submit-event': typeof SubmitEventRoute
   '/tour': typeof TourRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -283,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/admin/setup': typeof AuthenticatedAdminSetupRoute
@@ -306,10 +328,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/events': typeof EventsRouteWithChildren
+  '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
   '/setup': typeof SetupRoute
   '/submit-event': typeof SubmitEventRoute
   '/tour': typeof TourRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/map': typeof AuthenticatedMapRoute
@@ -323,6 +347,7 @@ export interface FileRoutesByTo {
   '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/admin/setup': typeof AuthenticatedAdminSetupRoute
@@ -348,10 +373,12 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
   '/events': typeof EventsRouteWithChildren
+  '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
   '/setup': typeof SetupRoute
   '/submit-event': typeof SubmitEventRoute
   '/tour': typeof TourRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -366,6 +393,7 @@ export interface FileRoutesById {
   '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/_authenticated/admin/setup': typeof AuthenticatedAdminSetupRoute
@@ -391,10 +419,12 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/events'
+    | '/mcp'
     | '/onboarding'
     | '/setup'
     | '/submit-event'
     | '/tour'
+    | '/.well-known/oauth-protected-resource'
     | '/admin'
     | '/calendar'
     | '/dashboard'
@@ -409,6 +439,7 @@ export interface FileRouteTypes {
     | '/marketing/confirm'
     | '/marketing/subscribe'
     | '/marketing/unsubscribe'
+    | '/.lovable/oauth/consent'
     | '/admin/audit'
     | '/admin/moderation'
     | '/admin/setup'
@@ -432,10 +463,12 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/events'
+    | '/mcp'
     | '/onboarding'
     | '/setup'
     | '/submit-event'
     | '/tour'
+    | '/.well-known/oauth-protected-resource'
     | '/calendar'
     | '/dashboard'
     | '/map'
@@ -449,6 +482,7 @@ export interface FileRouteTypes {
     | '/marketing/confirm'
     | '/marketing/subscribe'
     | '/marketing/unsubscribe'
+    | '/.lovable/oauth/consent'
     | '/admin/audit'
     | '/admin/moderation'
     | '/admin/setup'
@@ -473,10 +507,12 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/events'
+    | '/mcp'
     | '/onboarding'
     | '/setup'
     | '/submit-event'
     | '/tour'
+    | '/.well-known/oauth-protected-resource'
     | '/_authenticated/admin'
     | '/_authenticated/calendar'
     | '/_authenticated/dashboard'
@@ -491,6 +527,7 @@ export interface FileRouteTypes {
     | '/marketing/confirm'
     | '/marketing/subscribe'
     | '/marketing/unsubscribe'
+    | '/.lovable/oauth/consent'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/moderation'
     | '/_authenticated/admin/setup'
@@ -516,15 +553,18 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   EventsRoute: typeof EventsRouteWithChildren
+  McpRoute: typeof McpRoute
   OnboardingRoute: typeof OnboardingRoute
   SetupRoute: typeof SetupRoute
   SubmitEventRoute: typeof SubmitEventRoute
   TourRoute: typeof TourRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   CSlugRoute: typeof CSlugRoute
   InviteTokenRoute: typeof InviteTokenRoute
   MarketingConfirmRoute: typeof MarketingConfirmRoute
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
   MarketingUnsubscribeRoute: typeof MarketingUnsubscribeRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiEmbedSlugRoute: typeof ApiEmbedSlugRoute
   ApiAdCSlotIdRoute: typeof ApiAdCSlotIdRoute
   ApiAdISlotIdRoute: typeof ApiAdISlotIdRoute
@@ -559,6 +599,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/events': {
@@ -687,6 +734,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
       path: '/'
@@ -742,6 +796,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/audit'
       preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/ical/$token': {
       id: '/api/public/ical/$token'
@@ -907,15 +968,19 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   EventsRoute: EventsRouteWithChildren,
+  McpRoute: McpRoute,
   OnboardingRoute: OnboardingRoute,
   SetupRoute: SetupRoute,
   SubmitEventRoute: SubmitEventRoute,
   TourRoute: TourRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   CSlugRoute: CSlugRoute,
   InviteTokenRoute: InviteTokenRoute,
   MarketingConfirmRoute: MarketingConfirmRoute,
   MarketingSubscribeRoute: MarketingSubscribeRoute,
   MarketingUnsubscribeRoute: MarketingUnsubscribeRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiEmbedSlugRoute: ApiEmbedSlugRoute,
   ApiAdCSlotIdRoute: ApiAdCSlotIdRoute,
   ApiAdISlotIdRoute: ApiAdISlotIdRoute,
