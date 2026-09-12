@@ -34,6 +34,12 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  // Signup only ever issues a session once the confirmation link is clicked --
+  // there is no code-level way to skip that, since it's a Supabase Auth/SMTP
+  // setting, not something this app controls. What we can do is make it easy
+  // to ask for the email again if the first one never arrived or got lost.
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -52,6 +58,7 @@ function AuthPage() {
           options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next ?? "/dashboard")}` },
         });
         if (error) throw error;
+        setPendingEmail(email);
         toast.success("Check your email to confirm your account.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -62,6 +69,20 @@ function AuthPage() {
       toast.error(err instanceof Error ? err.message : "Authentication failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResendConfirmation() {
+    if (!pendingEmail) return;
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: "signup", email: pendingEmail });
+      if (error) throw error;
+      toast.success("Confirmation email sent again.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not resend the email");
+    } finally {
+      setResending(false);
     }
   }
 
@@ -122,9 +143,30 @@ function AuthPage() {
           </Button>
         </form>
 
+        {pendingEmail && (
+          <div className="mt-4 rounded-md border border-border bg-muted/40 p-3 text-sm">
+            <p className="text-muted-foreground">
+              We sent a confirmation link to{" "}
+              <span className="font-medium text-foreground">{pendingEmail}</span>. Click it to
+              finish creating your account.
+            </p>
+            <button
+              type="button"
+              onClick={handleResendConfirmation}
+              disabled={resending}
+              className="mt-2 text-sm font-medium text-primary hover:underline disabled:opacity-50"
+            >
+              {resending ? "Sending…" : "Resend confirmation email"}
+            </button>
+          </div>
+        )}
+
         <button
           type="button"
-          onClick={() => setMode((m) => (m === "signin" ? "signup" : "signin"))}
+          onClick={() => {
+            setMode((m) => (m === "signin" ? "signup" : "signin"));
+            setPendingEmail(null);
+          }}
           className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground"
         >
           {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
