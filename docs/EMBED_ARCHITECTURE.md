@@ -61,11 +61,78 @@ performance. Keep the existing shape.
    `src/components/sponsor-creative-editor.tsx`.
 5. ~~**The embed endpoint**~~ Done — `src/routes/api/embed.$slug.ts`.
 6. ~~**The WordPress plugin**~~ Done — `wordpress-plugin/eventhub-calendar/`.
-7. **Impression and click counting** that works for anonymous visitors, which
-   today's `click_tracking` cannot do (no anon grant; its INSERT policy requires
-   `user_id = auth.uid()`). Load-bearing for "free with sponsors": without it
-   there are no numbers to show an advertiser.
-8. **Billing enforcement** against `coordinator_billing_settings`.
+7. ~~**Impression and click counting** for anonymous visitors~~ Done —
+   `supabase/migrations/20260912100000_sponsor_ad_stats.sql`,
+   `src/lib/ad-tracking.server.ts`, `src/routes/api/ad.{i,c}.$slotId.ts`.
+8. ~~**Billing enforcement**~~ Done —
+   `supabase/migrations/20260912110000_billing_enforcement.sql`.
+
+## Counting ads on someone else's website
+
+`click_tracking` could not be reused: it is about events, and its `user_id` is
+`NOT NULL` with an INSERT policy of `user_id = auth.uid()`, so it cannot
+represent a logged-out visitor — nearly everyone who sees an ad on a customer's
+site.
+
+`sponsor_ad_stats` keys on (slot, kind, surface, day, visitor) with a hit
+counter, so **unique viewers is a row count and total views is a sum** from one
+table, and growth is bounded by unique daily visitors rather than page views.
+Both numbers are shown to a coordinator side by side: totals flatter, uniques
+are what an advertiser will believe against their own analytics.
+
+Four decisions worth not re-litigating:
+
+- **The pixel counts, not the render.** The fragment is served with
+  `s-maxage=300`; counting at render time counts once per cache fill and misses
+  everyone the CDN served in between — worst on the calendars that are most
+  popular.
+- **The pixel is `loading="lazy"`.** An ad nobody scrolled to is not billed as
+  one somebody saw. A smaller verifiable number is worth more than a larger
+  disputed one.
+- **The click destination comes from the slot, never the URL.** A
+  `/api/ad/c/<slot>?to=<url>` design is an open redirect wearing our own domain,
+  which is precisely what makes one valuable to a phisher.
+- **The visitor key rotates daily.** A salted HMAC of address and user agent
+  that includes the date: enough to separate two visitors within a day, useless
+  for following anyone across days. No cookie, no stored address, nothing
+  requiring a consent banner on a customer's site.
+
+Crawlers, prefetches and link unfurlers are excluded, and per-visitor hits are
+capped, because numbers a coordinator cannot defend are numbers they cannot
+sell against.
+
+## Who pays, and what "enforcement" means
+
+- Having ads *switched on* does not earn the free month — having a sponsor who
+  paid does. Otherwise the toggle is just a way to opt out of paying.
+- A new coordinator gets a 60-day window first. Selling a first sponsorship
+  takes longer than a signup flow.
+- **Owing money never switches a calendar off.** These calendars are embedded on
+  other people's websites: breaking one punishes the coordinator's visitors and
+  their web host's client, neither of whom owe us anything, and it makes the
+  product unsafe to embed — which is the whole proposition. Non-payment is
+  recorded and made unmissable in the dashboard, not enforced by sabotage.
+
+Assessment only closes months that are already over, and is idempotent on
+`(coordinator_id, period_month)`, so a retry, an overlapping run or a double
+click cannot bill a month twice.
+
+## The Supabase footgun has a second half
+
+The table half is below. The function half cost a live misconfiguration:
+
+`REVOKE EXECUTE ON FUNCTION ... FROM PUBLIC` is **not sufficient**. Supabase's
+default privileges grant `EXECUTE` on every new function in `public` to `anon`
+and `authenticated` *directly*, not through `PUBLIC`, so that revoke removes a
+grant which was never the one standing. On the live database `anon` could
+execute `record_ad_event` and `assess_all_coordinator_billing` — anyone could
+have inflated an advertiser's numbers or written billing rows for every
+coordinator — while a local replay said otherwise, because the test harness
+mirrored Supabase's default privileges for tables but not for functions.
+
+Always name the roles: `REVOKE EXECUTE ON FUNCTION f() FROM PUBLIC, anon,
+authenticated;` — and assert it with `has_function_privilege`, not by reading
+the migration.
 
 ## Style isolation, and its limit
 
