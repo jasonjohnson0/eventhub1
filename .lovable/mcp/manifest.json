@@ -1,0 +1,290 @@
+{
+  "version": 1,
+  "sdk_version": "2.0.4",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://fopxmuaogwchohwhrclk.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "eventhub",
+      "version": "0.1.0",
+      "title": "EventHub"
+    },
+    "tools": [
+      {
+        "name": "list_events",
+        "title": "List events",
+        "description": "List events visible to the signed-in user, optionally filtered by category, status, text search and date range.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "search": {
+              "description": "Match against event title.",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "category": {
+              "type": "string",
+              "enum": [
+                "sports",
+                "networking",
+                "education",
+                "social",
+                "fundraiser",
+                "workshop",
+                "other"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "removed"
+              ]
+            },
+            "from": {
+              "description": "ISO date/time lower bound on start_time.",
+              "type": "string"
+            },
+            "to": {
+              "description": "ISO date/time upper bound on start_time.",
+              "type": "string"
+            },
+            "limit": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_event",
+        "title": "Get event",
+        "description": "Fetch the full details of a single event by its id.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Event id."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_event",
+        "title": "Create event",
+        "description": "Create a new event owned by the signed-in user.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 4000
+            },
+            "location": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "start_time": {
+              "type": "string",
+              "description": "ISO 8601 start time, e.g. 2026-10-01T18:00:00Z."
+            },
+            "end_time": {
+              "type": "string",
+              "description": "ISO 8601 end time."
+            },
+            "category": {
+              "default": "other",
+              "type": "string",
+              "enum": [
+                "sports",
+                "networking",
+                "education",
+                "social",
+                "fundraiser",
+                "workshop",
+                "other"
+              ]
+            },
+            "tags": {
+              "default": [],
+              "maxItems": 20,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              }
+            },
+            "event_format": {
+              "default": "in_person",
+              "type": "string",
+              "enum": [
+                "in_person",
+                "virtual",
+                "hybrid"
+              ]
+            },
+            "virtual_link": {
+              "type": "string",
+              "maxLength": 500,
+              "format": "uri"
+            }
+          },
+          "required": [
+            "title",
+            "start_time",
+            "end_time"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_event",
+        "title": "Update event",
+        "description": "Update fields on an existing event the signed-in user is allowed to manage. Only provided fields change.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "description": {
+              "type": "string",
+              "maxLength": 4000
+            },
+            "location": {
+              "type": "string",
+              "maxLength": 300
+            },
+            "start_time": {
+              "description": "ISO 8601 start time.",
+              "type": "string"
+            },
+            "end_time": {
+              "description": "ISO 8601 end time.",
+              "type": "string"
+            },
+            "category": {
+              "type": "string",
+              "enum": [
+                "sports",
+                "networking",
+                "education",
+                "social",
+                "fundraiser",
+                "workshop",
+                "other"
+              ]
+            },
+            "tags": {
+              "maxItems": 20,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              }
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected"
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_venues",
+        "title": "List venues",
+        "description": "List venues available to the signed-in user, for use when scheduling events.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "search": {
+              "description": "Match against venue name.",
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "limit": {
+              "default": 25,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
