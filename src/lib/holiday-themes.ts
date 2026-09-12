@@ -96,3 +96,40 @@ export const HOLIDAY_ORDER: HolidayId[] = [
   "thanksgiving",
   "christmas",
 ];
+
+/**
+ * Christmas is the one holiday with a picker sub-choice: a richer, dedicated
+ * hero (dark background, a foreground pile of illustrated foil gifts, snow)
+ * rendered by `ChristmasHero` instead of the generic gradient-and-emoji
+ * treatment every other holiday uses. `HOLIDAY_THEMES.christmas` above stays
+ * as a plain fallback (kept for type completeness / in case ChristmasHero
+ * ever fails to resolve a variant) but isn't what a visitor actually sees.
+ */
+export type ChristmasVariantId = "emerald" | "ruby";
+/** What's actually stored: a fixed variant, or "alternate" to let it change
+ *  from one visit to the next rather than settle on one color. */
+export type ChristmasVariantChoice = ChristmasVariantId | "alternate";
+
+export type ChristmasVariant = {
+  id: ChristmasVariantId;
+  label: string;
+  menuEmoji: string;
+  background: string;
+};
+
+export const CHRISTMAS_VARIANTS: Record<ChristmasVariantId, ChristmasVariant> = {
+  emerald: {
+    id: "emerald",
+    label: "Emerald Night",
+    menuEmoji: "🟢",
+    background: "radial-gradient(120% 90% at 50% 0%, #0f3d2c 0%, #0a2b1f 55%, #071d15 100%)",
+  },
+  ruby: {
+    id: "ruby",
+    label: "Midnight Ruby",
+    menuEmoji: "🔴",
+    background: "radial-gradient(120% 90% at 50% 0%, #5c1220 0%, #420b17 55%, #2c0710 100%)",
+  },
+};
+
+export const CHRISTMAS_VARIANT_ORDER: ChristmasVariantId[] = ["emerald", "ruby"];

@@ -19,8 +19,9 @@ import { FeaturedVenueWidget } from "@/components/widgets/FeaturedVenueWidget";
 import { DayView } from "@/components/CalendarViews/DayView";
 import { ListView } from "@/components/CalendarViews/ListView";
 import { AgendaView } from "@/components/CalendarViews/AgendaView";
-import { useHolidayTheme } from "@/hooks/use-holiday-theme";
+import { useChristmasVariant, useHolidayTheme } from "@/hooks/use-holiday-theme";
 import { HOLIDAY_THEMES } from "@/lib/holiday-themes";
+import { ChristmasHero } from "@/components/christmas-hero";
 
 // Client-only: leaflet touches `window` at module load.
 const MapCanvas = lazy(() => import("@/components/map-canvas"));
@@ -80,6 +81,7 @@ function EventsPage() {
   const [mapReady, setMapReady] = useState(false);
   useEffect(() => setMapReady(true), []);
   const [holidayTheme] = useHolidayTheme();
+  const christmasVariant = useChristmasVariant();
   const theme = holidayTheme ? HOLIDAY_THEMES[holidayTheme] : null;
 
   const query = search.q;
@@ -228,13 +230,23 @@ function EventsPage() {
         </div>
       </header>
 
-      <PublicHero
-        query={query}
-        onQuery={setQuery}
-        category={category}
-        onCategory={setCategory}
-        theme={theme}
-      />
+      {holidayTheme === "christmas" ? (
+        <ChristmasHero
+          query={query}
+          onQuery={setQuery}
+          category={category}
+          onCategory={setCategory}
+          variant={christmasVariant ?? "emerald"}
+        />
+      ) : (
+        <PublicHero
+          query={query}
+          onQuery={setQuery}
+          category={category}
+          onCategory={setCategory}
+          theme={theme}
+        />
+      )}
 
       <main className="mx-auto max-w-7xl px-6 py-14">
         <GeoFilter geo={geo} onChange={setGeo} matchCount={geo.lat != null ? mappable.length : null} />

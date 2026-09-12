@@ -1,12 +1,21 @@
-import { Palette } from "lucide-react";
-import { useHolidayTheme } from "@/hooks/use-holiday-theme";
-import { HOLIDAY_ORDER, HOLIDAY_THEMES } from "@/lib/holiday-themes";
+import { Palette, Shuffle } from "lucide-react";
+import { selectChristmasVariant, useChristmasVariant, useHolidayTheme } from "@/hooks/use-holiday-theme";
+import {
+  CHRISTMAS_VARIANT_ORDER,
+  CHRISTMAS_VARIANTS,
+  HOLIDAY_ORDER,
+  HOLIDAY_THEMES,
+} from "@/lib/holiday-themes";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -21,6 +30,7 @@ import {
  */
 export function HolidayThemePicker() {
   const [theme, setTheme] = useHolidayTheme();
+  const christmasVariant = useChristmasVariant();
   const active = theme ? HOLIDAY_THEMES[theme] : null;
 
   return (
@@ -45,6 +55,51 @@ export function HolidayThemePicker() {
           </DropdownMenuItem>
           {HOLIDAY_ORDER.map((id) => {
             const t = HOLIDAY_THEMES[id];
+            if (id === "christmas") {
+              return (
+                <DropdownMenuSub key={id}>
+                  <DropdownMenuSubTrigger className="gap-2">
+                    <span className="w-5 text-center">{t.menuEmoji}</span>
+                    {t.label}
+                    {theme === "christmas" && (
+                      <span className="ml-auto text-xs text-muted-foreground">Current</span>
+                    )}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent className="w-48">
+                      {CHRISTMAS_VARIANT_ORDER.map((vId) => {
+                        const v = CHRISTMAS_VARIANTS[vId];
+                        return (
+                          <DropdownMenuItem
+                            key={vId}
+                            onClick={() => selectChristmasVariant(vId)}
+                            className="gap-2"
+                          >
+                            <span className="w-5 text-center">{v.menuEmoji}</span>
+                            {v.label}
+                            {theme === "christmas" && christmasVariant === vId && (
+                              <span className="ml-auto text-xs text-muted-foreground">Current</span>
+                            )}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                      <DropdownMenuItem
+                        onClick={() => selectChristmasVariant("alternate")}
+                        className="gap-2"
+                      >
+                        <span className="w-5 text-center">
+                          <Shuffle className="h-3.5 w-3.5" />
+                        </span>
+                        Alternate
+                        {theme === "christmas" && christmasVariant === "alternate" && (
+                          <span className="ml-auto text-xs text-muted-foreground">Current</span>
+                        )}
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+              );
+            }
             return (
               <DropdownMenuItem key={id} onClick={() => setTheme(id)} className="gap-2">
                 <span className="w-5 text-center">{t.menuEmoji}</span>
