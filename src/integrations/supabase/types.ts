@@ -131,6 +131,7 @@ export type Database = {
           description: string | null
           external_ref: string | null
           id: string
+          period_month: string | null
           sponsor_id: string | null
           status: Database["public"]["Enums"]["payment_status"]
           updated_at: string
@@ -143,6 +144,7 @@ export type Database = {
           description?: string | null
           external_ref?: string | null
           id?: string
+          period_month?: string | null
           sponsor_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
           updated_at?: string
@@ -155,6 +157,7 @@ export type Database = {
           description?: string | null
           external_ref?: string | null
           id?: string
+          period_month?: string | null
           sponsor_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
           updated_at?: string
@@ -218,6 +221,7 @@ export type Database = {
         Row: {
           coordinator_id: string
           created_at: string
+          grace_ends_at: string | null
           monthly_fee_cents: number
           sponsored_enabled: boolean
           stripe_customer_id: string | null
@@ -226,6 +230,7 @@ export type Database = {
         Insert: {
           coordinator_id: string
           created_at?: string
+          grace_ends_at?: string | null
           monthly_fee_cents?: number
           sponsored_enabled?: boolean
           stripe_customer_id?: string | null
@@ -234,6 +239,7 @@ export type Database = {
         Update: {
           coordinator_id?: string
           created_at?: string
+          grace_ends_at?: string | null
           monthly_fee_cents?: number
           sponsored_enabled?: boolean
           stripe_customer_id?: string | null
@@ -1320,6 +1326,91 @@ export type Database = {
         }
         Relationships: []
       }
+      sponsor_ad_stats: {
+        Row: {
+          first_seen: string
+          hits: number
+          kind: string
+          last_seen: string
+          slot_id: string
+          stat_date: string
+          surface: string
+          visitor_hash: string
+        }
+        Insert: {
+          first_seen?: string
+          hits?: number
+          kind: string
+          last_seen?: string
+          slot_id: string
+          stat_date: string
+          surface: string
+          visitor_hash: string
+        }
+        Update: {
+          first_seen?: string
+          hits?: number
+          kind?: string
+          last_seen?: string
+          slot_id?: string
+          stat_date?: string
+          surface?: string
+          visitor_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsor_ad_stats_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "sponsored_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsor_creatives: {
+        Row: {
+          body: string | null
+          business_name: string
+          created_at: string
+          headline: string | null
+          id: string
+          link_url: string | null
+          logo_url: string | null
+          sponsor_id: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          business_name: string
+          created_at?: string
+          headline?: string | null
+          id?: string
+          link_url?: string | null
+          logo_url?: string | null
+          sponsor_id: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          business_name?: string
+          created_at?: string
+          headline?: string | null
+          id?: string
+          link_url?: string | null
+          logo_url?: string | null
+          sponsor_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsor_creatives_sponsor_id_fkey"
+            columns: ["sponsor_id"]
+            isOneToOne: true
+            referencedRelation: "sponsors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sponsored_slots: {
         Row: {
           cost_cents: number
@@ -1922,6 +2013,17 @@ export type Database = {
             }
             Returns: string
           }
+      assess_all_coordinator_billing: {
+        Args: { p_month?: string }
+        Returns: {
+          coordinators_billed: number
+          total_cents: number
+        }[]
+      }
+      assess_coordinator_billing: {
+        Args: { p_coordinator_id: string; p_month?: string }
+        Returns: number
+      }
       check_in_ticket: {
         Args: { _actor_id: string; _qr_token: string }
         Returns: {
@@ -1932,6 +2034,10 @@ export type Database = {
           ticket_name: string
           user_id: string
         }[]
+      }
+      count_active_sponsorships: {
+        Args: { p_coordinator_id: string; p_month?: string }
+        Returns: number
       }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
@@ -2064,6 +2170,22 @@ export type Database = {
         Returns: boolean
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
+      get_ad_destination: { Args: { p_slot_id: string }; Returns: string }
+      get_coordinator_billing_status: {
+        Args: { p_coordinator_id: string }
+        Returns: {
+          active_sponsorships: number
+          amount_due_cents: number
+          coordinator_id: string
+          grace_days_left: number
+          grace_ends_at: string
+          monthly_fee_cents: number
+          next_assessment_on: string
+          reason: string
+          sponsored_enabled: boolean
+          state: string
+        }[]
+      }
       get_ical_feed_events: {
         Args: { _token: string }
         Returns: {
@@ -2075,6 +2197,81 @@ export type Database = {
           start_time: string
           title: string
           virtual_link: string
+        }[]
+      }
+      get_my_sponsorship_stats: {
+        Args: { p_days?: number }
+        Returns: {
+          business_name: string
+          clicks: number
+          ends_at: string
+          event_id: string
+          event_start: string
+          event_title: string
+          slot_id: string
+          starts_at: string
+          unique_clickers: number
+          unique_viewers: number
+          views: number
+        }[]
+      }
+      get_public_coordinator_profile: {
+        Args: { p_slug: string }
+        Returns: {
+          company_name: string
+          coordinator_id: string
+          description: string
+          favicon_url: string
+          logo_url: string
+          primary_color: string
+          secondary_color: string
+          slug: string
+        }[]
+      }
+      get_public_coordinator_sponsors: {
+        Args: { p_coordinator_id: string; p_limit?: number }
+        Returns: {
+          body: string
+          business_name: string
+          event_id: string
+          event_title: string
+          headline: string
+          link_url: string
+          logo_url: string
+          position: number
+          slot_id: string
+          slot_type: Database["public"]["Enums"]["slot_type"]
+        }[]
+      }
+      get_public_sponsors: {
+        Args: { p_event_id: string }
+        Returns: {
+          body: string
+          business_name: string
+          headline: string
+          link_url: string
+          logo_url: string
+          position: number
+          slot_id: string
+          slot_type: Database["public"]["Enums"]["slot_type"]
+        }[]
+      }
+      get_sponsor_ad_stats: {
+        Args: { p_coordinator_id: string; p_days?: number }
+        Returns: {
+          business_name: string
+          clicks: number
+          ends_at: string
+          event_id: string
+          event_title: string
+          position: number
+          slot_id: string
+          slot_type: Database["public"]["Enums"]["slot_type"]
+          starts_at: string
+          unique_clickers: number
+          unique_viewers: number
+          views: number
+          views_on_embeds: number
         }[]
       }
       gettransactionid: { Args: never; Returns: unknown }
@@ -2134,6 +2331,19 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      prune_sponsor_ad_stats: {
+        Args: { p_keep_days?: number }
+        Returns: number
+      }
+      record_ad_event: {
+        Args: {
+          p_kind: string
+          p_slot_id: string
+          p_surface: string
+          p_visitor_hash: string
+        }
+        Returns: boolean
+      }
       search_events_nearby: {
         Args: {
           _lat: number
@@ -2806,12 +3016,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2835,11 +3045,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2860,11 +3070,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2885,11 +3095,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2902,11 +3112,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
