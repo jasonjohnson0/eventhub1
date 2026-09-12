@@ -7,6 +7,41 @@ push it to GitHub, and Lovable pulls it — fine. But never let two editors
 diverge: pick Lovable as canonical, and when in doubt, ask before editing code
 outside Lovable.
 
+## 0. Two live origins — resolve before calling anything "released"
+
+This repo is deployed twice, independently, from the same GitHub `main`:
+
+- **Lovable**, published at `https://sparkle-calendar-co.lovable.app`. GitHub
+  sync is automatic on every push, but the *published* bundle only updates
+  when someone clicks Publish in the Lovable editor -- a push landing on
+  `main` does not by itself change what this URL serves. As of this note it is
+  stale by at least a few commits.
+- **Vercel** (`eventhub1` project, team `lmspro`), building from the same
+  `main` on every push. It was found paused (production traffic returning
+  503, and -- separately -- six pushes since "Add admin billing" never even
+  attempted a build, `readyState: BLOCKED` with zero build log lines). It has
+  been unpaused, and Vercel Authentication was narrowed from "all
+  deployments" to "previews only" so the production URL
+  (`eventhub1-lmspro.vercel.app`) is reachable without a Vercel login.
+
+Two publicly indexable origins serving the same content is a duplicate-content
+SEO problem, not just a curiosity. Before treating either as "the" production
+site: pick one as canonical (a `<link rel=canonical>` on the non-canonical
+origin pointing at the other, or a `noindex` + auth gate on it), publish the
+latest commit to whichever is canonical, and leave the other clearly
+secondary. Do not let both stay open and unlabeled.
+
+Also still broken in the Vercel project's production environment variables
+(pre-existing, unrelated to any of the above -- see git history for
+"Document the invalid service-role key" and "VITE_SUPABASE_PROJECT_ID is now
+load-bearing"): `SUPABASE_SERVICE_ROLE_KEY` is rejected by Supabase (breaks
+every `supabaseAdmin` path -- ad-event recording, the iCal feed, and
+`listAttendees`/`getAttendanceRate` on check-in), and `VITE_SUPABASE_PROJECT_ID`
+is literally the string `Y` (breaks only `/mcp`'s OAuth issuer). Both need
+correct values pasted into Vercel's dashboard directly -- never into a chat
+or a commit -- followed by a redeploy, since the `VITE_` one is inlined at
+build time.
+
 ---
 
 ## 1. What the MCP agent integration can and cannot do
