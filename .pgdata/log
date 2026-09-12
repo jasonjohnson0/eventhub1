@@ -1,0 +1,180 @@
+2026-09-12 16:13:34.316 UTC [3008] LOG:  starting PostgreSQL 16.2 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 10.2.1 20210130 (Red Hat 10.2.1-11), 64-bit
+2026-09-12 16:13:34.317 UTC [3008] LOG:  listening on Unix socket "/home/user/eventhub1/.pgdata/.s.PGSQL.5432"
+2026-09-12 16:13:34.319 UTC [3011] LOG:  database system was shut down at 2026-09-12 16:13:34 UTC
+2026-09-12 16:13:34.321 UTC [3008] LOG:  database system is ready to accept connections
+2026-09-12 16:13:34.696 UTC [3024] ERROR:  extension "postgis" is not available
+2026-09-12 16:13:34.696 UTC [3024] DETAIL:  Could not open extension control file "/usr/local/lib/python3.11/dist-packages/pgserver/pginstall/share/postgresql/extension/postgis.control": No such file or directory.
+2026-09-12 16:13:34.696 UTC [3024] HINT:  The extension must first be installed on the system where PostgreSQL is running.
+2026-09-12 16:13:34.696 UTC [3024] STATEMENT:  CREATE EXTENSION IF NOT EXISTS postgis;
+2026-09-12 16:13:34.725 UTC [3026] ERROR:  type "public.event_category" does not exist at character 232
+2026-09-12 16:13:34.725 UTC [3026] STATEMENT:  CREATE TABLE public.event_series (
+	  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	  coordinator_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+	  title TEXT NOT NULL,
+	  description TEXT,
+	  location TEXT,
+	  category public.event_category NOT NULL DEFAULT 'other',
+	  tags TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+	  rrule TEXT NOT NULL,             -- RFC 5545 RRULE string, e.g. "FREQ=WEEKLY;BYDAY=FR"
+	  dtstart TIMESTAMPTZ NOT NULL,
+	  duration_minutes INTEGER NOT NULL CHECK (duration_minutes > 0),
+	  timezone TEXT NOT NULL DEFAULT 'UTC',
+	  until TIMESTAMPTZ,
+	  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+	  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+	);
+2026-09-12 16:13:34.799 UTC [3030] ERROR:  function gen_random_bytes(integer) does not exist at character 346
+2026-09-12 16:13:34.799 UTC [3030] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-09-12 16:13:34.799 UTC [3030] STATEMENT:  CREATE TABLE IF NOT EXISTS public.event_invitations (
+	  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	  event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+	  sent_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+	  recipient_email TEXT NOT NULL,
+	  custom_message TEXT,
+	  token TEXT NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(18), 'hex'),
+	  sent_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+	  opened_at TIMESTAMPTZ,
+	  clicked_at TIMESTAMPTZ,
+	  rsvp_status public.invitation_rsvp_status NOT NULL DEFAULT 'pending',
+	  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+	  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+	  UNIQUE (event_id, recipient_email)
+	);
+2026-09-12 16:13:34.854 UTC [3034] ERROR:  function gen_random_bytes(integer) does not exist at character 188
+2026-09-12 16:13:34.854 UTC [3034] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-09-12 16:13:34.854 UTC [3034] STATEMENT:  CREATE TABLE IF NOT EXISTS public.coordinator_ical_feeds (
+	  coordinator_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+	  feed_token TEXT UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(24), 'hex'),
+	  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+	  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+	);
+2026-09-12 16:13:34.889 UTC [3036] ERROR:  function gen_random_bytes(integer) does not exist at character 607
+2026-09-12 16:13:34.889 UTC [3036] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-09-12 16:13:34.889 UTC [3036] STATEMENT:  CREATE TABLE public.ticket_purchases (
+	  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	  ticket_id UUID NOT NULL REFERENCES public.event_tickets(id) ON DELETE CASCADE,
+	  event_id UUID NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+	  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+	  quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
+	  amount_cents INT NOT NULL DEFAULT 0 CHECK (amount_cents >= 0),
+	  stripe_charge_id TEXT,
+	  status TEXT NOT NULL DEFAULT 'confirmed' CHECK (status IN ('pending','confirmed','refunded','cancelled')),
+	  qr_token TEXT NOT NULL DEFAULT encode(gen_random_bytes(16), 'hex') UNIQUE,
+	  check_in_count INT NOT NULL DEFAULT 0,
+	  purchased_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+	  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+	);
+2026-09-12 16:13:34.918 UTC [3038] ERROR:  schema "storage" does not exist
+2026-09-12 16:13:34.918 UTC [3038] STATEMENT:  CREATE POLICY "event_photos_read" ON storage.objects FOR SELECT TO authenticated, anon
+	  USING (bucket_id = 'event-photos');
+2026-09-12 16:13:34.942 UTC [3040] ERROR:  schema "storage" does not exist
+2026-09-12 16:13:34.942 UTC [3040] STATEMENT:  CREATE POLICY "event_photos_read" ON storage.objects
+	FOR SELECT
+	TO anon, authenticated
+	USING (
+	  bucket_id = 'event-photos'
+	  AND EXISTS (
+	    SELECT 1 FROM public.event_photos ep
+	    JOIN public.events e ON e.id = ep.event_id
+	    WHERE ep.photo_url LIKE '%' || storage.objects.name
+	      AND e.status = 'approved'
+	  )
+	);
+2026-09-12 16:13:35.061 UTC [3048] ERROR:  schema "storage" does not exist
+2026-09-12 16:13:35.061 UTC [3048] STATEMENT:  CREATE POLICY "Branding read for authenticated"
+	  ON storage.objects FOR SELECT TO authenticated
+	  USING (bucket_id = 'branding');
+2026-09-12 16:13:35.167 UTC [3052] ERROR:  schema "storage" does not exist
+2026-09-12 16:13:35.167 UTC [3052] STATEMENT:  CREATE POLICY "event_photos_read" ON storage.objects
+	  FOR SELECT TO anon, authenticated
+	  USING (
+	    bucket_id = 'event-photos'
+	    AND EXISTS (
+	      SELECT 1
+	      FROM public.event_photos ep
+	      JOIN public.events e ON e.id = ep.event_id
+	      WHERE split_part(ep.photo_url, '/event-photos/', 2) = objects.name
+	        AND e.status = 'approved'::event_status
+	    )
+	  );
+2026-09-12 16:13:35.194 UTC [3054] ERROR:  relation "public.spatial_ref_sys" does not exist
+2026-09-12 16:13:35.194 UTC [3054] CONTEXT:  SQL statement "REVOKE SELECT ON TABLE public.spatial_ref_sys FROM PUBLIC"
+	PL/pgSQL function inline_code_block line 3 at EXECUTE
+2026-09-12 16:13:35.194 UTC [3054] STATEMENT:  DO $$
+	BEGIN
+	  EXECUTE 'REVOKE SELECT ON TABLE public.spatial_ref_sys FROM PUBLIC';
+	EXCEPTION WHEN insufficient_privilege THEN
+	  RAISE NOTICE 'skipped: not owner of spatial_ref_sys';
+	END $$;
+2026-09-12 16:13:35.226 UTC [3056] ERROR:  relation "public.event_locations" does not exist
+2026-09-12 16:13:35.226 UTC [3056] STATEMENT:  CREATE POLICY "Public reads event locations" ON public.event_locations
+	FOR SELECT TO anon, authenticated
+	USING (
+	  EXISTS (
+	    SELECT 1 FROM public.events e
+	    WHERE e.id = event_locations.event_id
+	      AND e.status = 'approved'
+	  )
+	);
+2026-09-12 16:13:35.283 UTC [3060] ERROR:  relation "public.event_series" does not exist
+2026-09-12 16:13:35.283 UTC [3060] STATEMENT:  CREATE POLICY "Public reads active series"
+	ON public.event_series
+	FOR SELECT
+	TO anon, authenticated
+	USING (
+	  EXISTS (
+	    SELECT 1
+	    FROM public.events e
+	    WHERE e.series_id = event_series.id
+	      AND e.status = 'approved'
+	  )
+	  OR event_series.coordinator_id = auth.uid()
+	  OR public.has_role(auth.uid(), 'admin')
+	);
+2026-09-12 16:13:35.472 UTC [3072] ERROR:  relation "public.ticket_purchases" does not exist
+2026-09-12 16:13:35.472 UTC [3072] CONTEXT:  compilation of PL/pgSQL function "check_in_ticket" near line 3
+2026-09-12 16:13:35.472 UTC [3072] STATEMENT:  CREATE OR REPLACE FUNCTION public.check_in_ticket(_qr_token text, _actor_id uuid)
+	RETURNS TABLE(purchase_id uuid, event_id uuid, user_id uuid, check_in_count integer, quantity integer, ticket_name text)
+	LANGUAGE plpgsql
+	SECURITY DEFINER
+	SET search_path = public
+	AS $$
+	DECLARE
+	  v_purchase public.ticket_purchases%ROWTYPE;
+	  v_coord UUID;
+	BEGIN
+	  IF _actor_id IS NULL THEN RAISE EXCEPTION 'Not authorized'; END IF;
+	  SELECT * INTO v_purchase FROM public.ticket_purchases WHERE qr_token = _qr_token;
+	  IF NOT FOUND THEN RAISE EXCEPTION 'Ticket not found'; END IF;
+	  SELECT coordinator_id INTO v_coord FROM public.events WHERE id = v_purchase.event_id;
+	  IF v_coord IS DISTINCT FROM _actor_id AND NOT public.has_role(_actor_id, 'admin') THEN
+	    RAISE EXCEPTION 'Not authorized to check in this ticket';
+	  END IF;
+	  IF v_purchase.check_in_count >= v_purchase.quantity THEN
+	    RAISE EXCEPTION 'All % ticket(s) already checked in', v_purchase.quantity;
+	  END IF;
+	  UPDATE public.ticket_purchases SET check_in_count = check_in_count + 1 WHERE id = v_purchase.id
+	  RETURNING id, ticket_purchases.event_id, ticket_purchases.user_id, ticket_purchases.check_in_count, ticket_purchases.quantity
+	  INTO purchase_id, event_id, user_id, check_in_count, quantity;
+	  SELECT name INTO ticket_name FROM public.event_tickets WHERE id = v_purchase.ticket_id;
+	  UPDATE public.event_rsvps SET checked_in_at = COALESCE(checked_in_at, now())
+	    WHERE event_rsvps.event_id = v_purchase.event_id AND event_rsvps.user_id = v_purchase.user_id;
+	  RETURN NEXT;
+	END;
+	$$;
+2026-09-12 16:13:36.118 UTC [3116] ERROR:  Not authorised to read this billing status
+2026-09-12 16:13:36.118 UTC [3116] CONTEXT:  PL/pgSQL function get_coordinator_billing_status(uuid) line 13 at RAISE
+2026-09-12 16:13:36.118 UTC [3116] STATEMENT:  SELECT count(*) FROM public.get_coordinator_billing_status('a0000000-0000-4000-8000-000000000001');
+2026-09-12 16:13:36.453 UTC [3140] ERROR:  Month 2026-09 is not over yet
+2026-09-12 16:13:36.453 UTC [3140] CONTEXT:  PL/pgSQL function assess_coordinator_billing(uuid,date) line 13 at RAISE
+2026-09-12 16:13:36.453 UTC [3140] STATEMENT:  SELECT public.assess_coordinator_billing('a0000000-0000-4000-8000-000000000002', date_trunc('month', now())::date);
+2026-09-12 16:13:36.788 UTC [3164] ERROR:  Admins only
+2026-09-12 16:13:36.788 UTC [3164] CONTEXT:  PL/pgSQL function get_all_coordinator_billing() line 7 at RAISE
+2026-09-12 16:13:36.788 UTC [3164] STATEMENT:  SELECT count(*) FROM public.get_all_coordinator_billing();
+2026-09-12 16:13:36.955 UTC [3008] LOG:  received fast shutdown request
+2026-09-12 16:13:36.955 UTC [3008] LOG:  aborting any active transactions
+2026-09-12 16:13:36.956 UTC [3008] LOG:  background worker "logical replication launcher" (PID 3014) exited with exit code 1
+2026-09-12 16:13:36.956 UTC [3009] LOG:  shutting down
+2026-09-12 16:13:36.957 UTC [3009] LOG:  checkpoint starting: shutdown immediate
+2026-09-12 16:13:36.981 UTC [3009] LOG:  checkpoint complete: wrote 302 buffers (1.8%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.004 s, sync=0.019 s, total=0.025 s; sync files=226, longest=0.004 s, average=0.001 s; distance=1874 kB, estimate=1874 kB; lsn=0/1654EB8, redo lsn=0/1654EB8
+2026-09-12 16:13:36.984 UTC [3008] LOG:  database system is shut down

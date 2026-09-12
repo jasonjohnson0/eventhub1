@@ -96,7 +96,7 @@ function handle(req, res) {
   if (path === '/auth/v1/user') return send(USER);
   if (path === '/auth/v1/.well-known/jwks.json') return send({ keys: [] });
   if (path.startsWith('/auth/v1')) return send({ data: { session: null }, session: null, user: null });
-  if (path === '/rest/v1/user_roles') return send([]);
+  if (path === '/rest/v1/user_roles') return send([{ role: 'admin' }]);
 
   // The coordinator lookup goes through an RPC now, not a table select,
   // because production does not grant anon SELECT on coordinator_profiles.
@@ -138,6 +138,30 @@ function handle(req, res) {
   }
   // Stands in for the SECURITY DEFINER functions: only a live placement counts,
   // and only a live placement resolves a destination.
+  if (path === '/rest/v1/rpc/has_role') return send(true);
+  if (path === '/rest/v1/rpc/get_all_coordinator_billing') {
+    return send([
+      { coordinator_id: COORD, company_name: 'North Florida Events', slug: 'north-florida',
+        email: 'coord@example.com', state: 'fee_due', sponsored_enabled: true,
+        active_sponsorships: 0, monthly_fee_cents: 4900, amount_due_cents: 4900,
+        grace_ends_at: null, approved_events: 36, unpaid_cents: 4900, has_billing_row: true },
+      { coordinator_id: OTHER, company_name: "O'Brien & Sons Events", slug: 'obrien',
+        email: 'obrien@example.com', state: 'free_sponsored', sponsored_enabled: true,
+        active_sponsorships: 2, monthly_fee_cents: 4900, amount_due_cents: 0,
+        grace_ends_at: null, approved_events: 8, unpaid_cents: 0, has_billing_row: true },
+      { coordinator_id: '77777777-7777-4777-8777-777777777777', company_name: 'Unpriced Co',
+        slug: null, email: 'new@example.com', state: 'free_no_fee', sponsored_enabled: true,
+        active_sponsorships: 0, monthly_fee_cents: 0, amount_due_cents: 0,
+        grace_ends_at: null, approved_events: 3, unpaid_cents: 0, has_billing_row: false },
+    ]);
+  }
+  if (path === '/rest/v1/billing') {
+    return send([
+      { id: 'b1', coordinator_id: COORD, amount_cents: 4900, status: 'pending',
+        period_month: '2026-08-01', description: 'Calendar hosting for August 2026 (no sponsor running)',
+        created_at: new Date().toISOString() },
+    ]);
+  }
   if (path === '/rest/v1/rpc/get_coordinator_billing_status') {
     return send([{
       coordinator_id: COORD, state: 'fee_due',

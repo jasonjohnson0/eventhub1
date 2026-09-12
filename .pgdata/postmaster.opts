@@ -1,0 +1,1 @@
+/usr/local/lib/python3.11/dist-packages/pgserver/pginstall/bin/postgres "-D" "/home/user/eventhub1/.pgdata" "-h" "" "-k" "/home/user/eventhub1/.pgdata"

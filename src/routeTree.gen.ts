@@ -40,6 +40,7 @@ import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminSponsorshipRouteImport } from './routes/_authenticated/admin.sponsorship'
 import { Route as AuthenticatedAdminSetupRouteImport } from './routes/_authenticated/admin.setup'
 import { Route as AuthenticatedAdminModerationRouteImport } from './routes/_authenticated/admin.moderation'
+import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated/admin.billing'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicIcalTokenRouteImport } from './routes/api/public/ical.$token'
@@ -212,6 +213,12 @@ const AuthenticatedAdminModerationRoute =
     path: '/moderation',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminBillingRoute =
+  AuthenticatedAdminBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   id: '/audit',
   path: '/audit',
@@ -306,6 +313,7 @@ export interface FileRoutesByFullPath {
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/admin/setup': typeof AuthenticatedAdminSetupRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
@@ -349,6 +357,7 @@ export interface FileRoutesByTo {
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/admin/setup': typeof AuthenticatedAdminSetupRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
@@ -395,6 +404,7 @@ export interface FileRoutesById {
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/_authenticated/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/_authenticated/admin/moderation': typeof AuthenticatedAdminModerationRoute
   '/_authenticated/admin/setup': typeof AuthenticatedAdminSetupRoute
   '/_authenticated/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
@@ -441,6 +451,7 @@ export interface FileRouteTypes {
     | '/marketing/unsubscribe'
     | '/.lovable/oauth/consent'
     | '/admin/audit'
+    | '/admin/billing'
     | '/admin/moderation'
     | '/admin/setup'
     | '/admin/sponsorship'
@@ -484,6 +495,7 @@ export interface FileRouteTypes {
     | '/marketing/unsubscribe'
     | '/.lovable/oauth/consent'
     | '/admin/audit'
+    | '/admin/billing'
     | '/admin/moderation'
     | '/admin/setup'
     | '/admin/sponsorship'
@@ -529,6 +541,7 @@ export interface FileRouteTypes {
     | '/marketing/unsubscribe'
     | '/.lovable/oauth/consent'
     | '/_authenticated/admin/audit'
+    | '/_authenticated/admin/billing'
     | '/_authenticated/admin/moderation'
     | '/_authenticated/admin/setup'
     | '/_authenticated/admin/sponsorship'
@@ -790,6 +803,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminModerationRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/billing': {
+      id: '/_authenticated/admin/billing'
+      path: '/billing'
+      fullPath: '/admin/billing'
+      preLoaderRoute: typeof AuthenticatedAdminBillingRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/audit': {
       id: '/_authenticated/admin/audit'
       path: '/audit'
@@ -879,6 +899,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
+  AuthenticatedAdminBillingRoute: typeof AuthenticatedAdminBillingRoute
   AuthenticatedAdminModerationRoute: typeof AuthenticatedAdminModerationRoute
   AuthenticatedAdminSetupRoute: typeof AuthenticatedAdminSetupRoute
   AuthenticatedAdminSponsorshipRoute: typeof AuthenticatedAdminSponsorshipRoute
@@ -888,6 +909,7 @@ interface AuthenticatedAdminRouteChildren {
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
+  AuthenticatedAdminBillingRoute: AuthenticatedAdminBillingRoute,
   AuthenticatedAdminModerationRoute: AuthenticatedAdminModerationRoute,
   AuthenticatedAdminSetupRoute: AuthenticatedAdminSetupRoute,
   AuthenticatedAdminSponsorshipRoute: AuthenticatedAdminSponsorshipRoute,

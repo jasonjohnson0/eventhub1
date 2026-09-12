@@ -197,5 +197,44 @@ check("a coordinator sees their own charge", last(out) == "4900|pending", last(o
 ok, out, _ = as_user(SPON, "SELECT count(*) FROM public.billing;")
 check("and only their own", last(out) == "1", last(out))
 
+# ---- the platform-wide admin view --------------------------------------------
+# Give the admin role to one user so the authorisation branch is exercised
+# rather than skipped.
+sql(f"""INSERT INTO auth.users (id,email) VALUES
+  ('a0000000-0000-4000-8000-0000000000ad','admin@example.com')
+  ON CONFLICT DO NOTHING;
+  INSERT INTO public.user_roles (user_id, role)
+  VALUES ('a0000000-0000-4000-8000-0000000000ad','admin') ON CONFLICT DO NOTHING;""")
+ADMIN = "a0000000-0000-4000-8000-0000000000ad"
+
+ok, out, err = as_user(BARE, "SELECT count(*) FROM public.get_all_coordinator_billing();")
+check("a non-admin cannot read the platform billing view",
+      (not ok) and "admins only" in err.lower(), (err or out)[:160])
+
+ok, out, err = as_user(ADMIN, "SELECT count(*) FROM public.get_all_coordinator_billing();")
+check("an admin sees every priced coordinator", last(out) == "5", last(out) or err[:200])
+
+ok, out, err = as_user(ADMIN,
+  "SELECT state||'|'||amount_due_cents||'|'||has_billing_row "
+  f"FROM public.get_all_coordinator_billing() WHERE coordinator_id='{BARE}';")
+check("it agrees with the per-coordinator function", last(out) == "fee_due|4900|true",
+      last(out) or err[:200])
+
+# The ones owing money must sort first: that is the list an operator acts on.
+ok, out, err = as_user(ADMIN,
+  "SELECT string_agg(state, ',' ORDER BY ord) FROM ("
+  "  SELECT state, row_number() OVER () AS ord FROM public.get_all_coordinator_billing()) t;")
+check("fee_due sorts to the top", last(out).startswith("fee_due"), last(out) or err[:200])
+
+# Unsettled invoices are what you chase, so they are surfaced per coordinator.
+ok, out, err = as_user(ADMIN,
+  f"SELECT unpaid_cents FROM public.get_all_coordinator_billing() WHERE coordinator_id='{BARE}';")
+check("unpaid invoices are totalled", last(out) == "4900", last(out) or err[:200])
+
+# A coordinator nobody has priced still appears -- that set is the revenue leak.
+ok, out, err = as_user(ADMIN,
+  "SELECT count(*) FROM public.get_all_coordinator_billing() WHERE state='free_no_fee';")
+check("unpriced coordinators are visible, not hidden", int(last(out) or 0) >= 1, last(out))
+
 print("\n" + ("ALL CHECKS PASSED" if failures == 0 else f"{failures} CHECK(S) FAILED"))
 sys.exit(0 if failures == 0 else 1)

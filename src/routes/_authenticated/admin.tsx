@@ -19,6 +19,7 @@ const tabs: ReadonlyArray<{ title: string; to: string; exact?: boolean }> = [
   { title: "Setup", to: "/admin/setup" },
   { title: "Moderation", to: "/admin/moderation" },
   { title: "Sponsorship", to: "/admin/sponsorship" },
+  { title: "Billing", to: "/admin/billing" },
   { title: "Users", to: "/admin/users" },
   { title: "Audit Log", to: "/admin/audit" },
 ];
