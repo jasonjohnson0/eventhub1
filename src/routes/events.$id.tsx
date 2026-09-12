@@ -387,7 +387,13 @@ function PublicEventDetail() {
             {activeSponsors.map((slot) => {
               const ad = adsBySlot.get(slot.id);
               const logo = safeHttps(ad?.logo_url ?? null);
-              const link = safeHttps(ad?.link_url ?? null);
+              // Same-origin, so a relative URL is enough. The destination is
+              // resolved from the slot at click time rather than carried in the
+              // link -- putting it in the URL would make this an open redirect
+              // on our own domain.
+              const link = safeHttps(ad?.link_url ?? null)
+                ? `/api/ad/c/${encodeURIComponent(slot.id)}?s=site`
+                : null;
               const inner = (
                 <>
                   <div className="absolute right-4 top-4 rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-white shadow">
@@ -427,6 +433,24 @@ function PublicEventDetail() {
                       </div>
                     </div>
                   </div>
+                  {/* Counts a view. Rendered in the markup rather than fired
+                      from an effect so it survives ad blockers and works before
+                      hydration, and lazily so an ad nobody scrolled to is not
+                      billed as one somebody saw. Only real creative is
+                      counted -- an empty placeholder slot is not an advertiser
+                      impression. */}
+                  {ad ? (
+                    <img
+                      src={`/api/ad/i/${encodeURIComponent(slot.id)}?s=site`}
+                      alt=""
+                      width={1}
+                      height={1}
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      aria-hidden="true"
+                      className="pointer-events-none absolute h-px w-px opacity-0"
+                    />
+                  ) : null}
                 </>
               );
               const className =

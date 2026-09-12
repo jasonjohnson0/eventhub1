@@ -40,6 +40,8 @@ import { Route as AuthenticatedAdminSetupRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminModerationRouteImport } from './routes/_authenticated/admin.moderation'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as ApiPublicIcalTokenRouteImport } from './routes/api/public/ical.$token'
+import { Route as ApiAdISlotIdRouteImport } from './routes/api/ad.i.$slotId'
+import { Route as ApiAdCSlotIdRouteImport } from './routes/api/ad.c.$slotId'
 import { Route as AuthenticatedEventsIdManageRouteImport } from './routes/_authenticated/events.$id.manage'
 import { Route as AuthenticatedEventsIdCheckinMobileRouteImport } from './routes/_authenticated/events.$id.checkin-mobile'
 import { Route as AuthenticatedEventsIdCheckinRouteImport } from './routes/_authenticated/events.$id.checkin'
@@ -206,6 +208,16 @@ const ApiPublicIcalTokenRoute = ApiPublicIcalTokenRouteImport.update({
   path: '/api/public/ical/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdISlotIdRoute = ApiAdISlotIdRouteImport.update({
+  id: '/api/ad/i/$slotId',
+  path: '/api/ad/i/$slotId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdCSlotIdRoute = ApiAdCSlotIdRouteImport.update({
+  id: '/api/ad/c/$slotId',
+  path: '/api/ad/c/$slotId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedEventsIdManageRoute =
   AuthenticatedEventsIdManageRouteImport.update({
     id: '/events/$id/manage',
@@ -286,6 +298,8 @@ export interface FileRoutesByFullPath {
   '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
   '/events/$id/checkin-mobile': typeof AuthenticatedEventsIdCheckinMobileRoute
   '/events/$id/manage': typeof AuthenticatedEventsIdManageRoute
+  '/api/ad/c/$slotId': typeof ApiAdCSlotIdRoute
+  '/api/ad/i/$slotId': typeof ApiAdISlotIdRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
 }
 export interface FileRoutesByTo {
@@ -324,6 +338,8 @@ export interface FileRoutesByTo {
   '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
   '/events/$id/checkin-mobile': typeof AuthenticatedEventsIdCheckinMobileRoute
   '/events/$id/manage': typeof AuthenticatedEventsIdManageRoute
+  '/api/ad/c/$slotId': typeof ApiAdCSlotIdRoute
+  '/api/ad/i/$slotId': typeof ApiAdISlotIdRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
 }
 export interface FileRoutesById {
@@ -365,6 +381,8 @@ export interface FileRoutesById {
   '/_authenticated/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
   '/_authenticated/events/$id/checkin-mobile': typeof AuthenticatedEventsIdCheckinMobileRoute
   '/_authenticated/events/$id/manage': typeof AuthenticatedEventsIdManageRoute
+  '/api/ad/c/$slotId': typeof ApiAdCSlotIdRoute
+  '/api/ad/i/$slotId': typeof ApiAdISlotIdRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
 }
 export interface FileRouteTypes {
@@ -406,6 +424,8 @@ export interface FileRouteTypes {
     | '/events/$id/checkin'
     | '/events/$id/checkin-mobile'
     | '/events/$id/manage'
+    | '/api/ad/c/$slotId'
+    | '/api/ad/i/$slotId'
     | '/api/public/ical/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -444,6 +464,8 @@ export interface FileRouteTypes {
     | '/events/$id/checkin'
     | '/events/$id/checkin-mobile'
     | '/events/$id/manage'
+    | '/api/ad/c/$slotId'
+    | '/api/ad/i/$slotId'
     | '/api/public/ical/$token'
   id:
     | '__root__'
@@ -484,6 +506,8 @@ export interface FileRouteTypes {
     | '/_authenticated/events/$id/checkin'
     | '/_authenticated/events/$id/checkin-mobile'
     | '/_authenticated/events/$id/manage'
+    | '/api/ad/c/$slotId'
+    | '/api/ad/i/$slotId'
     | '/api/public/ical/$token'
   fileRoutesById: FileRoutesById
 }
@@ -502,6 +526,8 @@ export interface RootRouteChildren {
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
   MarketingUnsubscribeRoute: typeof MarketingUnsubscribeRoute
   ApiEmbedSlugRoute: typeof ApiEmbedSlugRoute
+  ApiAdCSlotIdRoute: typeof ApiAdCSlotIdRoute
+  ApiAdISlotIdRoute: typeof ApiAdISlotIdRoute
   ApiPublicIcalTokenRoute: typeof ApiPublicIcalTokenRoute
 }
 
@@ -724,6 +750,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicIcalTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ad/i/$slotId': {
+      id: '/api/ad/i/$slotId'
+      path: '/api/ad/i/$slotId'
+      fullPath: '/api/ad/i/$slotId'
+      preLoaderRoute: typeof ApiAdISlotIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ad/c/$slotId': {
+      id: '/api/ad/c/$slotId'
+      path: '/api/ad/c/$slotId'
+      fullPath: '/api/ad/c/$slotId'
+      preLoaderRoute: typeof ApiAdCSlotIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/events/$id/manage': {
       id: '/_authenticated/events/$id/manage'
       path: '/events/$id/manage'
@@ -877,6 +917,8 @@ const rootRouteChildren: RootRouteChildren = {
   MarketingSubscribeRoute: MarketingSubscribeRoute,
   MarketingUnsubscribeRoute: MarketingUnsubscribeRoute,
   ApiEmbedSlugRoute: ApiEmbedSlugRoute,
+  ApiAdCSlotIdRoute: ApiAdCSlotIdRoute,
+  ApiAdISlotIdRoute: ApiAdISlotIdRoute,
   ApiPublicIcalTokenRoute: ApiPublicIcalTokenRoute,
 }
 export const routeTree = rootRouteImport

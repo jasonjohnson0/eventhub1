@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar as CalendarIcon, PlusCircle, Users, Megaphone } from "lucide-react";
+import { BillingStatusCard } from "@/components/billing-status-card";
+import { SponsorPerformance } from "@/components/sponsor-performance";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -21,6 +23,13 @@ function Dashboard() {
             Manage your calendar, staff, and sponsorship from one place.
           </p>
         </div>
+
+        {/* Above the quick links: what a calendar costs and what its sponsors
+            are getting are the two things a coordinator is actually running a
+            business on. */}
+        <BillingStatusCard />
+
+        <SponsorPerformance />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <QuickCard

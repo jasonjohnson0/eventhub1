@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { adminSponsorshipStats } from "@/lib/admin.stats.functions";
+import { CloseBillingMonth } from "@/components/close-billing-month";
 import {
   Bar,
   BarChart,
@@ -32,6 +33,9 @@ function SponsorshipPage() {
         <Stat label="Paid" value={data.slots.paid} color="#a855f7" />
         <Stat label="Expired" value={data.slots.expired} color="#94a3b8" />
       </div>
+      {/* Sponsorship revenue is only half the picture; the other half is what
+          the unsponsored calendars owe. */}
+      <CloseBillingMonth />
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Revenue trend (last 6 months)</CardTitle>

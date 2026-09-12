@@ -114,6 +114,29 @@ check( 'date links now point at this site', ! empty( $m[1] ), 'no rewritten date
 check( 'rewritten date link keeps the view', ! empty( $m[1] ) && str_contains( $m[1], 'ehview=month' ), $m[1] ?? '' );
 check( 'event links still go to the platform',
 	str_contains( $html, '/events/e1' ), 'event deep links were rewritten by mistake' );
+// Ad tracking must keep pointing at the platform. Rewriting these to the
+// customer's page would send every sponsor click and view to a URL their
+// WordPress cannot answer, and the advertiser would be paying for traffic
+// nobody counted.
+//
+// Note these are NOT matched against EVENTHUB_CAL_HOST: like the view links,
+// the fragment builds them from PUBLIC_SITE_URL, which need not be the host
+// the plugin fetched from. Asserting against the fetch host is the same
+// mistake the rewrite regex itself once made.
+preg_match_all( '#(?:href|src)="([^"]*/api/ad/[^"]*)"#', $html, $ad_urls );
+$ad_urls = array_unique( $ad_urls[1] );
+check( 'the fragment carries ad tracking URLs', count( $ad_urls ) >= 2,
+	count( $ad_urls ) . ' found' );
+check( 'ad tracking is absolute, not relative to the customer site',
+	count( array_filter( $ad_urls, fn( $u ) => str_starts_with( $u, 'https://' ) ) ) === count( $ad_urls ),
+	implode( ' ', $ad_urls ) );
+check( 'ad tracking was not rewritten onto the customer page',
+	count( array_filter( $ad_urls, fn( $u ) => str_contains( $u, 'host.example' ) ) ) === 0,
+	implode( ' ', $ad_urls ) );
+check( 'both a click link and a pixel survive',
+	count( array_filter( $ad_urls, fn( $u ) => str_contains( $u, '/api/ad/c/' ) ) ) >= 1
+	&& count( array_filter( $ad_urls, fn( $u ) => str_contains( $u, '/api/ad/i/' ) ) ) >= 1,
+	implode( ' ', $ad_urls ) );
 
 // ---- paging via query string -------------------------------------------------
 $_GET = [ 'ehview' => 'list' ];

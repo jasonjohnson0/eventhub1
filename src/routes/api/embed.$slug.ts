@@ -128,6 +128,8 @@ const STYLE = armour(`
 .ehx-ad-name{font-size:12px;font-weight:700;color:#92400e}
 .ehx-ad-head{font-weight:650}
 .ehx-ad-body{font-size:13px;color:#52525b;margin:0}
+.ehx-spons{position:relative}
+.ehx-px{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;border:0}
 .ehx-foot{margin-top:14px;text-align:center;font-size:11px;color:#a1a1aa}
 @media(max-width:640px){.ehx-grid{grid-template-columns:minmax(0,1fr);border-radius:12px}.ehx-dow{display:none}.ehx-cell{min-height:0;border-right:0}.ehx-cell.ehx-dim{display:none}}
 `);
@@ -180,12 +182,33 @@ function renderList(events: CalendarEvent[], appUrl: string): string {
   return `<ul class="ehx-list">${items}</ul>`;
 }
 
-function renderSponsors(sponsors: Sponsor[]): string {
+/**
+ * Sponsor ads, with their views and clicks counted.
+ *
+ * Both go through our own origin rather than being measured here, because this
+ * fragment is served with s-maxage=300: counting at render time would count
+ * once per cache fill and miss every visitor the CDN served in between. The
+ * pixel and the click redirect are fetched per visitor, so they follow people
+ * rather than caches.
+ *
+ * Neither needs JavaScript, so the fragment keeps working with scripts off and
+ * the numbers survive whatever a customer's theme does to the page.
+ */
+function renderSponsors(sponsors: Sponsor[], appUrl: string): string {
   if (sponsors.length === 0) return "";
   const ads = sponsors
     .map((s) => {
       const logo = safeHttps(s.logo_url);
-      const link = safeHttps(s.link_url);
+      const slot = encodeURIComponent(s.slot_id);
+      // The destination is resolved from the slot at click time, so the URL
+      // never carries it -- see api/ad.c.$slotId.ts. A link is only offered
+      // when the advertiser actually supplied one.
+      const link = safeHttps(s.link_url) ? `${appUrl}/api/ad/c/${slot}?s=embed` : null;
+      // loading="lazy" is doing real work here: the browser fetches it when the
+      // ad approaches the viewport, so a sponsor block nobody scrolled to does
+      // not bill as a view. A smaller number an advertiser can verify against
+      // their own analytics is worth more than a bigger one they cannot.
+      const pixel = `<img class="ehx-px" src="${esc(appUrl)}/api/ad/i/${slot}?s=embed" alt="" width="1" height="1" loading="lazy" referrerpolicy="no-referrer" aria-hidden="true">`;
       const inner = `
         ${logo ? `<img src="${esc(logo)}" alt="${esc(s.business_name)} logo" loading="lazy" referrerpolicy="no-referrer">` : ""}
         <div>
@@ -195,9 +218,10 @@ function renderSponsors(sponsors: Sponsor[]): string {
         </div>`;
       // rel="sponsored" discloses paid placement; without it these look like
       // editorial links on the customer's domain, which is their problem too.
-      return link
+      const card = link
         ? `<a class="ehx-ad" href="${esc(link)}" target="_blank" rel="noopener noreferrer sponsored">${inner}</a>`
         : `<div class="ehx-ad">${inner}</div>`;
+      return `${card}${pixel}`;
     })
     .join("");
   return `<div class="ehx-spons"><p class="ehx-spons-h">Sponsors</p>${ads}</div>`;
@@ -302,7 +326,7 @@ export const Route = createFileRoute("/api/embed/$slug")({
     ${nav}
   </div>
   ${bodyHtml}
-  ${renderSponsors(sponsors)}
+  ${renderSponsors(sponsors, appUrl)}
   <p class="ehx-foot"><a href="${esc(canonical)}" target="_blank" rel="noopener">${esc(coordinator.company_name || coordinator.slug)} calendar</a> &middot; powered by EventHub</p>
 </div>`;
 
