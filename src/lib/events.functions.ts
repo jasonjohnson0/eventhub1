@@ -67,7 +67,9 @@ export const createEvent = createServerFn({ method: "POST" })
       .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
       .limit(1);
     if (activeBans && activeBans.length > 0) {
-      throw new Error(`You are banned from creating events: ${activeBans[0].reason ?? "no reason provided"}`);
+      throw new Error(
+        `You are banned from creating events: ${activeBans[0].reason ?? "no reason provided"}`,
+      );
     }
     const { data: row, error } = await context.supabase
       .from("events")
@@ -84,8 +86,9 @@ export const createEvent = createServerFn({ method: "POST" })
         // biome-ignore lint/suspicious/noExplicitAny: new columns not yet in generated types
         ...({
           event_format: data.event_format,
-          virtual_link: data.event_format === "in_person" ? null : data.virtual_link ?? null,
-          livestream_provider: data.event_format === "in_person" ? "none" : data.livestream_provider,
+          virtual_link: data.event_format === "in_person" ? null : (data.virtual_link ?? null),
+          livestream_provider:
+            data.event_format === "in_person" ? "none" : data.livestream_provider,
         } as any),
       })
       .select()
@@ -125,11 +128,30 @@ export const getEvent = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: ev, error } = await context.supabase
       .from("events")
-      .select("id, title, description, location, start_time, end_time, status, coordinator_id, created_at, category, tags, series_id, is_exception, max_capacity, has_waitlist")
+      .select(
+        "id, title, description, location, start_time, end_time, status, coordinator_id, created_at, category, tags, series_id, is_exception, max_capacity, has_waitlist",
+      )
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!ev) throw new Error("Event not found");
+
+    // getEvent backs both /events/$id/manage and /events/$id/checkin, and had
+    // no ownership check at all: any signed-in user could load either page for
+    // any event by URL. RLS still capped what the underlying tables would
+    // return to a stranger, so nothing was leaked -- but a stranger could still
+    // reach a "manage this event" screen for an event that is not theirs, which
+    // is not a screen they should ever see load at all.
+    const [{ data: isStaff }, { data: isAdmin }] = await Promise.all([
+      context.supabase.rpc("is_workspace_member", {
+        _user_id: context.userId,
+        _coord_id: ev.coordinator_id,
+      }),
+      context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+    ]);
+    if (!isStaff && !isAdmin) {
+      throw new Error("Not authorized to manage this event");
+    }
 
     const { data: series } = ev.series_id
       ? await context.supabase
@@ -151,18 +173,38 @@ export const getEvent = createServerFn({ method: "GET" })
       .eq("event_id", data.id)
       .maybeSingle();
 
-    const [{ count: rsvpGoing }, { count: rsvpInterested }, { count: rsvpDeclined }, { count: shareCount }, { count: clickCount }] =
-      await Promise.all([
-        context.supabase.from("event_rsvps").select("*", { count: "exact", head: true }).eq("event_id", data.id).eq("status", "going"),
-        context.supabase.from("event_rsvps").select("*", { count: "exact", head: true }).eq("event_id", data.id).eq("status", "interested"),
-        context.supabase.from("event_rsvps").select("*", { count: "exact", head: true }).eq("event_id", data.id).eq("status", "declined"),
-        context.supabase.from("share_tracking").select("*", { count: "exact", head: true }).eq("event_id", data.id),
-        context.supabase
-          .from("click_tracking")
-          .select("*", { count: "exact", head: true })
-          .eq("event_id", data.id)
-          .gte("clicked_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
-      ]);
+    const [
+      { count: rsvpGoing },
+      { count: rsvpInterested },
+      { count: rsvpDeclined },
+      { count: shareCount },
+      { count: clickCount },
+    ] = await Promise.all([
+      context.supabase
+        .from("event_rsvps")
+        .select("*", { count: "exact", head: true })
+        .eq("event_id", data.id)
+        .eq("status", "going"),
+      context.supabase
+        .from("event_rsvps")
+        .select("*", { count: "exact", head: true })
+        .eq("event_id", data.id)
+        .eq("status", "interested"),
+      context.supabase
+        .from("event_rsvps")
+        .select("*", { count: "exact", head: true })
+        .eq("event_id", data.id)
+        .eq("status", "declined"),
+      context.supabase
+        .from("share_tracking")
+        .select("*", { count: "exact", head: true })
+        .eq("event_id", data.id),
+      context.supabase
+        .from("click_tracking")
+        .select("*", { count: "exact", head: true })
+        .eq("event_id", data.id)
+        .gte("clicked_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+    ]);
 
     const { data: myRsvp } = await context.supabase
       .from("event_rsvps")

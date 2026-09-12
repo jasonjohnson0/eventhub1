@@ -1,11 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { getEvent } from "@/lib/events.functions";
-import {
-  listAttendees,
-  markAttended,
-  getAttendanceRate,
-} from "@/lib/attendee.functions";
+import { listAttendees, markAttended, getAttendanceRate } from "@/lib/attendee.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -28,9 +24,14 @@ type Attendee = {
 
 function CheckinPage() {
   const { id } = Route.useParams();
+  const navigate = useNavigate();
   const [title, setTitle] = useState<string>("");
   const [attendees, setAttendees] = useState<Attendee[]>([]);
-  const [rate, setRate] = useState<{ rsvp_count: number; checked_in_count: number; rate: number } | null>(null);
+  const [rate, setRate] = useState<{
+    rsvp_count: number;
+    checked_in_count: number;
+    rate: number;
+  } | null>(null);
   const [q, setQ] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -46,13 +47,23 @@ function CheckinPage() {
       setAttendees(list as Attendee[]);
       setRate(r);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed to load");
+      const message = e instanceof Error ? e.message : "Failed to load";
+      // Same gate as the management page: a stranger should never see even a
+      // broken-looking check-in screen for someone else's event. This fetches
+      // getEvent alongside listAttendees/getAttendanceRate, which gate the
+      // same way but through their own, older check that throws "Forbidden"
+      // instead -- whichever of the three rejects first is what lands here.
+      if (message === "Not authorized to manage this event" || message === "Forbidden") {
+        navigate({ to: "/events/$id", params: { id } });
+        return;
+      }
+      setErr(message);
     }
   }
 
   useEffect(() => {
     void reload();
-  }, [id]);
+  }, [id, navigate]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();

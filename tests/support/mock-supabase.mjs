@@ -30,7 +30,33 @@ const COORDINATORS = [{
   favicon_url: null,
   primary_color: '#0f766e',
   secondary_color: '#f97316',
+  // A finished coordinator, for tests that sign in as COORD and expect the
+  // full coordinator dashboard rather than the "not a coordinator yet" one.
+  setup_completed_at: '2026-01-01T00:00:00.000Z',
 }];
+
+// A coordinator who reached the Review step without ever choosing a calendar
+// address -- the exact shape of the bug where "Go live" completed onboarding
+// with slug='' and told the coordinator their (nonexistent) calendar was live.
+const UNSLUGGED = 'cccccccc-1111-4111-8111-111111111111';
+const UNSLUGGED_PROFILE = {
+  coordinator_id: UNSLUGGED,
+  full_name: 'No Slug Yet',
+  contact_email: 'noslug@example.com',
+  company_name: 'No Slug Yet Events',
+  description: null,
+  logo_url: null,
+  favicon_url: null,
+  primary_color: '#f97316',
+  secondary_color: '#06b6d4',
+  slug: '',
+  custom_domain: null,
+  email_provider: 'lovable',
+  dns_records_acknowledged: false,
+  setup_step: 7,
+  setup_completed_at: null,
+  updated_at: new Date().toISOString(),
+};
 
 const day = (n, h = 18) => {
   const d = new Date();
@@ -46,6 +72,11 @@ const EVENTS = [
   { id: 'e4', coordinator_id: COORD, title: '<img src=x onerror="window.__XSS=1">', description: 'hostile "quoted" & <b>markup</b>', location: "O'Brien Hall", start_time: day(12, 10), end_time: day(12, 12), category: 'other', status: 'approved' },
   // Belongs to a different coordinator: must never appear on /c/riverside.
   { id: 'x1', coordinator_id: OTHER, title: 'Somebody Else’s Gala', description: 'Not Riverside.', location: 'Elsewhere', start_time: day(3), end_time: day(3, 22), category: 'other', status: 'approved' },
+  // getEvent (and the attendee functions it shares /manage and /checkin with)
+  // validate `id` as a real UUID, same as production event ids -- the short
+  // 'e1'-style ids above fail that check. This one exists only so
+  // manage-authorization.mjs can exercise those routes.
+  { id: 'aaaaaaaa-1111-4111-8111-111111111111', coordinator_id: COORD, title: 'Harvest Festival', description: 'Music, food and a parade.', location: 'Main Street', start_time: day(2), end_time: day(2, 22), category: 'community', status: 'approved' },
 ];
 
 function parseEq(search, field) {
@@ -87,13 +118,41 @@ function handle(req, res) {
     return res.end();
   }
 
-  const USER = {
-    id: COORD, aud: 'authenticated', role: 'authenticated', email: 'coord@example.com',
-    app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString(),
-  };
+  // Decodes whatever bearer token the caller actually sent, rather than
+  // returning one fixed identity regardless of it. That distinction matters:
+  // _authenticated/route.tsx's beforeLoad calls supabase.auth.getUser(), which
+  // hits this endpoint, and is the one place in the app that resolves "who is
+  // signed in" for every authenticated page including /dashboard. A fixed
+  // response here made it impossible for any test to exercise a second
+  // identity through that path -- every forged session, no matter whose JWT it
+  // held, was silently treated as the one hardcoded user. Real GoTrue verifies
+  // and returns the user matching the token; this at least decodes it.
+  function userFromAuthHeader() {
+    const header = req.headers['authorization'] || '';
+    const token = header.replace(/^Bearer\s+/i, '');
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      try {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+        if (payload.sub) {
+          return {
+            id: payload.sub, aud: payload.aud ?? 'authenticated',
+            role: payload.role ?? 'authenticated', email: payload.email ?? null,
+            app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString(),
+          };
+        }
+      } catch {
+        // fall through to the default identity below
+      }
+    }
+    return {
+      id: COORD, aud: 'authenticated', role: 'authenticated', email: 'coord@example.com',
+      app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString(),
+    };
+  }
   // Enough GoTrue for an authenticated page to render: getUser() reads /user,
   // and the server functions' middleware verifies a token against the same.
-  if (path === '/auth/v1/user') return send(USER);
+  if (path === '/auth/v1/user') return send(userFromAuthHeader());
   if (path === '/auth/v1/.well-known/jwks.json') return send({ keys: [] });
   if (path.startsWith('/auth/v1')) return send({ data: { session: null }, session: null, user: null });
   if (path === '/rest/v1/user_roles') return send([{ role: 'admin' }]);
@@ -109,9 +168,20 @@ function handle(req, res) {
 
   if (path === '/rest/v1/coordinator_profiles') {
     const slug = parseEq(url.search, 'slug');
-    const row = COORDINATORS.find((c) => c.slug === slug) ?? null;
+    const coordinatorId = parseEq(url.search, 'coordinator_id');
+    const row = slug
+      ? (COORDINATORS.find((c) => c.slug === slug) ?? null)
+      : coordinatorId === UNSLUGGED
+        ? UNSLUGGED_PROFILE
+        : coordinatorId
+          ? (COORDINATORS.find((c) => c.coordinator_id === coordinatorId) ?? null)
+          : null;
     return send(wantsObject ? row : row ? [row] : []);
   }
+  // No fixture is workspace staff anywhere in this mock; made explicit rather
+  // than left to the generic fallback at the bottom of this file, so it reads
+  // as a deliberate "nobody is staff" rather than an unhandled route.
+  if (path === '/rest/v1/workspace_staff') return send(wantsObject ? null : []);
 
   if (path === '/rest/v1/events') {
     const coordinator = parseEq(url.search, 'coordinator_id');
@@ -164,7 +234,25 @@ function handle(req, res) {
   }
   // Stands in for the SECURITY DEFINER functions: only a live placement counts,
   // and only a live placement resolves a destination.
-  if (path === '/rest/v1/rpc/has_role') return send(true);
+  // Every fixture user is admin by default, since most tests only need "an
+  // admin" and not a specific non-admin identity. OTHER is the one deliberate
+  // exception -- "a stranger, belongs to a different coordinator" -- so a test
+  // can exercise the "not authorized" path without that path being accidentally
+  // bypassed by the admin fallback.
+  if (path === '/rest/v1/rpc/has_role') {
+    let b = {};
+    try { b = JSON.parse(req.__body || '{}'); } catch {}
+    return send(b._user_id !== OTHER);
+  }
+  // getEvent's authorization gate: the caller must own the event's coordinator
+  // account or be accepted staff there. is_workspace_member's real definition
+  // treats "is the coordinator themself" as membership too, which this mirrors;
+  // no fixture staff relationship exists here, so anyone else is refused.
+  if (path === '/rest/v1/rpc/is_workspace_member') {
+    let b = {};
+    try { b = JSON.parse(req.__body || '{}'); } catch {}
+    return send(b._user_id === b._coord_id);
+  }
   if (path === '/rest/v1/rpc/get_all_coordinator_billing') {
     return send([
       { coordinator_id: COORD, company_name: 'North Florida Events', slug: 'north-florida',

@@ -97,9 +97,9 @@ function OnboardingWizard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [slugState, setSlugState] = useState<"idle" | "checking" | "ok" | "taken" | "invalid">(
-    "idle",
-  );
+  const [slugState, setSlugState] = useState<
+    "idle" | "checking" | "ok" | "taken" | "invalid" | "error"
+  >("idle");
   const [uploading, setUploading] = useState<"logo" | "favicon" | null>(null);
   const [done, setDone] = useState(false);
 
@@ -133,28 +133,25 @@ function OnboardingWizard() {
     })();
   }, []);
 
-  const persist = useCallback(
-    async (patch: Draft, opts?: { silent?: boolean }) => {
-      setSaving(true);
-      try {
-        const updated = await saveCoordinatorProfile({ data: patch as never });
-        setProfile(updated);
-        setDraft((d) => {
-          const next = { ...d };
-          for (const k of Object.keys(patch)) delete next[k as keyof Draft];
-          return next;
-        });
-        setSavedAt(new Date().toLocaleTimeString());
-        return true;
-      } catch (e) {
-        if (!opts?.silent) toast.error(e instanceof Error ? e.message : "Could not save");
-        return false;
-      } finally {
-        setSaving(false);
-      }
-    },
-    [],
-  );
+  const persist = useCallback(async (patch: Draft, opts?: { silent?: boolean }) => {
+    setSaving(true);
+    try {
+      const updated = await saveCoordinatorProfile({ data: patch as never });
+      setProfile(updated);
+      setDraft((d) => {
+        const next = { ...d };
+        for (const k of Object.keys(patch)) delete next[k as keyof Draft];
+        return next;
+      });
+      setSavedAt(new Date().toLocaleTimeString());
+      return true;
+    } catch (e) {
+      if (!opts?.silent) toast.error(e instanceof Error ? e.message : "Could not save");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }, []);
 
   // Auto-save the draft ~1.2s after typing stops.
   const draftRef = useRef(draft);
@@ -181,7 +178,12 @@ function OnboardingWizard() {
         const { available } = await checkSlugAvailable({ data: { slug } });
         setSlugState(available ? "ok" : "taken");
       } catch {
-        setSlugState("idle");
+        // Was silently "idle" -- indistinguishable from having typed nothing --
+        // so a real failure (a bad key, a network blip, exactly the kind of
+        // thing that has broken a service-role-only RPC on this project more
+        // than once) let a coordinator continue as if the slug had never been
+        // checked at all, with no explanation.
+        setSlugState("error");
       }
     }, 500);
     return () => clearTimeout(t);
@@ -195,7 +197,9 @@ function OnboardingWizard() {
       if (!uid) throw new Error("Not signed in");
       const ext = file.name.split(".").pop()?.toLowerCase() ?? "png";
       const path = `${uid}/${kind}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("branding").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage
+        .from("branding")
+        .upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: signed, error: signErr } = await supabase.storage
         .from("branding")
@@ -276,10 +280,7 @@ function OnboardingWizard() {
 
   const primary = (value("primary_color") ?? "#f97316") as string;
   const secondary = (value("secondary_color") ?? "#06b6d4") as string;
-  const records = useMemo(
-    () => dnsRecordsFor((value("custom_domain") ?? "") as string),
-    [value],
-  );
+  const records = useMemo(() => dnsRecordsFor((value("custom_domain") ?? "") as string), [value]);
 
   if (loading) {
     return (
@@ -362,7 +363,11 @@ function OnboardingWizard() {
                   }`}
                   style={state === "current" ? { background: primary } : undefined}
                 >
-                  {state === "done" ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+                  {state === "done" ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <Icon className="h-3.5 w-3.5" />
+                  )}
                   {s.title}
                 </button>
               </li>
@@ -469,12 +474,21 @@ function OnboardingWizard() {
                   </div>
                 </Field>
                 <div className="text-sm">
-                  {slugState === "checking" && <span className="text-muted-foreground">Checking…</span>}
-                  {slugState === "ok" && <span className="text-primary">✅ {slug} is available</span>}
+                  {slugState === "checking" && (
+                    <span className="text-muted-foreground">Checking…</span>
+                  )}
+                  {slugState === "ok" && (
+                    <span className="text-primary">✅ {slug} is available</span>
+                  )}
                   {slugState === "taken" && <span className="text-destructive">Already taken</span>}
                   {slugState === "invalid" && (
                     <span className="text-destructive">
                       3–40 characters, lowercase letters, numbers and hyphens
+                    </span>
+                  )}
+                  {slugState === "error" && (
+                    <span className="text-destructive">
+                      Could not check availability. Try again in a moment.
                     </span>
                   )}
                 </div>
@@ -497,7 +511,9 @@ function OnboardingWizard() {
                 />
                 <RadioGroup
                   value={(value("email_provider") ?? "lovable") as string}
-                  onValueChange={(v) => set("email_provider", v as CoordinatorProfile["email_provider"])}
+                  onValueChange={(v) =>
+                    set("email_provider", v as CoordinatorProfile["email_provider"])
+                  }
                   className="grid gap-3 sm:grid-cols-2"
                 >
                   {[
@@ -533,7 +549,10 @@ function OnboardingWizard() {
                       />
                     </Field>
                     <Field label="From name">
-                      <Input value={emailFromName} onChange={(e) => setEmailFromName(e.target.value)} />
+                      <Input
+                        value={emailFromName}
+                        onChange={(e) => setEmailFromName(e.target.value)}
+                      />
                     </Field>
                     <Field label="From address">
                       <Input
@@ -645,12 +664,33 @@ function OnboardingWizard() {
             {step === 7 && (
               <section className="space-y-4">
                 <StepTitle title="Review & activate" subtitle="Everything look right?" />
+                {slugState !== "ok" && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                    {!slug
+                      ? "Choose a calendar address before going live."
+                      : slugState === "taken"
+                        ? "That address is already taken."
+                        : slugState === "invalid"
+                          ? "That address isn't valid -- lowercase letters, numbers and hyphens only."
+                          : "Still checking that address -- try again in a moment."}{" "}
+                    <button
+                      type="button"
+                      className="font-semibold underline underline-offset-2"
+                      onClick={() => goTo(3)}
+                    >
+                      Go back to Address
+                    </button>
+                  </div>
+                )}
                 <dl className="grid gap-3 sm:grid-cols-2">
                   <Summary label="Name" value={(value("full_name") as string) || "—"} />
                   <Summary label="Email" value={(value("contact_email") as string) || "—"} />
                   <Summary label="Organization" value={(value("company_name") as string) || "—"} />
                   <Summary label="Address" value={slug ? `${slug}.lovable.app` : "—"} />
-                  <Summary label="Custom domain" value={(value("custom_domain") as string) || "—"} />
+                  <Summary
+                    label="Custom domain"
+                    value={(value("custom_domain") as string) || "—"}
+                  />
                   <Summary
                     label="Email provider"
                     value={(value("email_provider") as string) || "lovable"}
@@ -687,8 +727,12 @@ function OnboardingWizard() {
                   </Button>
                 )}
                 {step === 7 ? (
-                  <Button onClick={finish} disabled={saving} size="lg">
-                    {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                  <Button onClick={finish} disabled={saving || slugState !== "ok"} size="lg">
+                    {saving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="mr-2 h-4 w-4" />
+                    )}
                     Go live
                   </Button>
                 ) : (
@@ -696,7 +740,13 @@ function OnboardingWizard() {
                     onClick={() =>
                       step === 4 ? saveEmailStep() : step === 5 ? saveStripeStep() : goTo(step + 1)
                     }
-                    disabled={saving || (step === 3 && slugState === "taken")}
+                    disabled={
+                      saving ||
+                      (step === 3 &&
+                        slugState !== "ok" &&
+                        slugState !== "checking" &&
+                        slugState !== "idle")
+                    }
                   >
                     Continue <ChevronRight className="ml-1 h-4 w-4" />
                   </Button>

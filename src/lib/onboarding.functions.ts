@@ -120,11 +120,30 @@ export const checkSlugAvailable = createServerFn({ method: "POST" })
   });
 
 /** Final step — marks the calendar live. */
+// Must match the client's own check in onboarding.tsx, and is re-checked here
+// because that is the only check that actually stops anything: the "Go live"
+// button was never gated on the slug at all, so a coordinator could -- and
+// one did -- complete onboarding with no calendar address and be told
+// "Your calendar is live!" while /c/ had nothing to serve.
+const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
+
 export const completeOnboarding = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
     const sb = context.supabase as any;
+    const { data: existing, error: readErr } = await sb
+      .from("coordinator_profiles")
+      .select("slug")
+      .eq("coordinator_id", context.userId)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!SLUG_RE.test((existing?.slug as string | null) ?? "")) {
+      throw new Error(
+        "Choose a calendar address before going live -- go back to the Address step.",
+      );
+    }
+
     const { data: row, error } = await sb
       .from("coordinator_profiles")
       .update({ setup_step: 7, setup_completed_at: new Date().toISOString() })

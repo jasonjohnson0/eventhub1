@@ -41,11 +41,16 @@ const main = [
   { title: "Calendar", url: "/calendar", icon: CalendarIcon },
   { title: "Search", url: "/search", icon: Search },
   { title: "Map", url: "/map", icon: MapIcon },
-  { title: "Submissions", url: "/submissions", icon: Inbox },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
+// Everything here is coordinator tooling. "Submissions" used to live in `main`
+// and rendered unconditionally, so an attendee who only ever wanted to RSVP saw
+// a "review community event submissions" queue in their nav alongside Venues,
+// Organizers and Custom fields -- none of it meant for them, all of it
+// implying capability they do not have.
 const coordinator = [
+  { title: "Submissions", url: "/submissions", icon: Inbox },
   { title: "Venues", url: "/coordinator/settings/venues", icon: MapPin },
   { title: "Organizers", url: "/coordinator/settings/organizers", icon: UserSquare2 },
   { title: "Custom fields", url: "/coordinator/settings/custom-fields", icon: ListPlus },
@@ -59,7 +64,13 @@ const admin = [
   { title: "Audit Log", url: "/admin/audit", icon: ScrollText },
 ];
 
-export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
+export function AppSidebar({
+  isAdmin,
+  coordinatorState,
+}: {
+  isAdmin: boolean;
+  coordinatorState: "none" | "pending" | "complete";
+}) {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
@@ -137,23 +148,25 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Coordinator</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {coordinator.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                    <Link to={item.url} className="flex items-center gap-2">
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {coordinatorState !== "none" && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Coordinator</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {coordinator.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <Link to={item.url} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {isAdmin && (
           <SidebarGroup>

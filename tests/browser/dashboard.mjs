@@ -78,6 +78,75 @@ check('the counting method is explained to the coordinator',
 
 check('no uncaught errors', errs.length === 0, errs.slice(0, 2).join('; '));
 await page.screenshot({ path: 'dashboard.png', fullPage: false });
+
+// ---- the same dashboard, for accounts that are not a completed coordinator ---
+//
+// Every signed-in account used to land on this exact console -- billing nags,
+// "Create an event", Venues, Submissions -- whether or not they had ever
+// touched a calendar. There is no account-type flag anywhere in this app's
+// signup flow, so "is this a coordinator" is derived instead: a
+// coordinator_profiles row with setup_completed_at set (or accepted workspace
+// staff) is complete; a row with no completed_at is pending; no row at all is
+// "none". This also exercises the mock's own identity handling: /auth/v1/user
+// used to return one fixed user no matter whose token was presented, which
+// would have made every one of these checks silently test the same account.
+async function asUser(uid, email) {
+  const jwt2 = [
+    b64({ alg: 'HS256', typ: 'JWT' }),
+    b64({ sub: uid, aud: 'authenticated', role: 'authenticated', email, iat: now, exp: now + 3600,
+          iss: 'http://127.0.0.1:51993/auth/v1' }),
+    'c2lnbmF0dXJl',
+  ].join('.');
+  const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 1000 }, deviceScaleFactor: 1.5 });
+  await ctx2.addInitScript(([k, v]) => { try { window.localStorage.setItem(k, v); } catch {} },
+    ['sb-127-auth-token', JSON.stringify({
+      access_token: jwt2, token_type: 'bearer', expires_in: 3600, expires_at: now + 3600,
+      refresh_token: 'r',
+      user: { id: uid, aud: 'authenticated', role: 'authenticated', email,
+              app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() },
+    })]);
+  const p2 = await ctx2.newPage();
+  await p2.goto(`${BASE}/dashboard`, { waitUntil: 'networkidle' });
+  await p2.waitForTimeout(1200);
+  const t = await p2.innerText('body');
+  return { ctx: ctx2, page: p2, body: t };
+}
+
+// pending: a coordinator_profiles row exists, setup_completed_at is null.
+{
+  const { ctx: c2, body } = await asUser('cccccccc-1111-4111-8111-111111111111', 'noslug@example.com');
+  check('a pending coordinator is greeted by name, correctly identified',
+    body.includes('Welcome back, noslug'), body.slice(0, 60));
+  check('billing card is not shown before setup is finished',
+    !body.includes('A monthly fee applies') && !body.includes('this calendar is free'), body.slice(0, 400));
+  check('sponsor performance is not shown before setup is finished',
+    !body.includes('Sponsor performance'), body.slice(0, 400));
+  check('a clear way to finish setup is offered',
+    /Finish setting up your calendar/i.test(body) && /Continue setup/i.test(body), body.slice(0, 500));
+  check('the Coordinator nav group still shows -- config tools are usable pre-launch',
+    body.includes('Submissions') && body.includes('Venues'), body.slice(0, 900));
+  await c2.close();
+}
+
+// none: no coordinator_profiles row, not staff anywhere.
+{
+  const { ctx: c2, body } = await asUser('99999999-0000-4000-8000-000000000001', 'plainuser@example.com');
+  check('a plain visitor is greeted by name, correctly identified',
+    body.includes('Welcome back, plainuser'), body.slice(0, 60));
+  check('billing card is not shown to a non-coordinator',
+    !body.includes('A monthly fee applies') && !body.includes('this calendar is free'), body.slice(0, 400));
+  check('sponsor performance is not shown to a non-coordinator',
+    !body.includes('Sponsor performance'), body.slice(0, 400));
+  check('browsing is offered as the primary action',
+    /Browse events/i.test(body), body.slice(0, 400));
+  check('becoming a coordinator is discoverable, not assumed',
+    /Run your own calendar|Set up a calendar/i.test(body), body.slice(0, 500));
+  check('the Coordinator-only nav group is hidden for a plain visitor',
+    !body.includes('Submissions') && !body.includes('Venues') && !body.includes('Organizers')
+      && !body.includes('Custom fields'), body.slice(0, 900));
+  await c2.close();
+}
+
 await browser.close();
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`);
 process.exit(failures === 0 ? 0 : 1);

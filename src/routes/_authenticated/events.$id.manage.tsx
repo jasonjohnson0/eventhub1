@@ -7,7 +7,20 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { colorForEvent } from "@/lib/event-colors";
-import { Calendar, MapPin, Users, Share2, Eye, Facebook, Twitter, Mail, Link2, Video, Download, ExternalLink } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Users,
+  Share2,
+  Eye,
+  Facebook,
+  Twitter,
+  Mail,
+  Link2,
+  Video,
+  Download,
+  ExternalLink,
+} from "lucide-react";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
 import { deleteSeriesInstance } from "@/lib/series.functions";
 import { Repeat, ClipboardCheck, UserCheck } from "lucide-react";
@@ -147,10 +160,20 @@ function EventPage() {
   useEffect(() => {
     getEvent({ data: { id } })
       .then(setData)
-      .catch((e) => setErr(e instanceof Error ? e.message : "Failed to load"));
+      .catch((e) => {
+        const message = e instanceof Error ? e.message : "Failed to load";
+        // A stranger who lands here by URL should never see a "management"
+        // screen for someone else's event, even a broken-looking one. Send
+        // them to the page that actually is theirs to see.
+        if (message === "Not authorized to manage this event") {
+          navigate({ to: "/events/$id", params: { id } });
+          return;
+        }
+        setErr(message);
+      });
     // Fire click tracking once on mount; server dedupes per (event,user,day)
     recordClick({ data: { event_id: id } }).catch(() => undefined);
-  }, [id]);
+  }, [id, navigate]);
 
   // Read through `data` rather than from the destructuring below, which cannot
   // run until the guards have passed. Both are null/false while loading, so the
@@ -178,7 +201,9 @@ function EventPage() {
       const dLon = toRad(geo.longitude - pos.coords.longitude);
       const a =
         Math.sin(dLat / 2) ** 2 +
-        Math.cos(toRad(pos.coords.latitude)) * Math.cos(toRad(geo.latitude)) * Math.sin(dLon / 2) ** 2;
+        Math.cos(toRad(pos.coords.latitude)) *
+          Math.cos(toRad(geo.latitude)) *
+          Math.sin(dLon / 2) ** 2;
       setDistanceMi(2 * R * Math.asin(Math.sqrt(a)));
     });
   }, [geo]);
@@ -193,17 +218,19 @@ function EventPage() {
   const { event, details, counts, myRsvp } = data;
   const maxCapacity = (event as unknown as { max_capacity: number | null }).max_capacity;
   const hasWaitlist = (event as unknown as { has_waitlist: boolean }).has_waitlist;
-  const eventFormat = (event as unknown as { event_format?: "in_person" | "virtual" | "hybrid" | null }).event_format ?? "in_person";
+  const eventFormat =
+    (event as unknown as { event_format?: "in_person" | "virtual" | "hybrid" | null })
+      .event_format ?? "in_person";
   const virtualLink = (event as unknown as { virtual_link?: string | null }).virtual_link ?? null;
-  const livestreamProvider = (event as unknown as { livestream_provider?: string | null }).livestream_provider ?? "none";
+  const livestreamProvider =
+    (event as unknown as { livestream_provider?: string | null }).livestream_provider ?? "none";
   const waitlistCount = (counts as unknown as { waitlist?: number }).waitlist ?? 0;
-  const myWaitlistPosition =
-    (data as unknown as { myWaitlistPosition: number | null }).myWaitlistPosition;
+  const myWaitlistPosition = (data as unknown as { myWaitlistPosition: number | null })
+    .myWaitlistPosition;
   const atCapacity = maxCapacity != null && counts.going >= maxCapacity;
   const series = (data as unknown as { series: { rrule: string } | null }).series;
   const c = colorForEvent(event.id);
   const cover = details?.landscape_image_url ?? null;
-
 
   async function handleAnnouncement() {
     if (!announcement.trim()) return;
@@ -297,7 +324,12 @@ function EventPage() {
   }
 
   async function handleDeleteSeries(scope: "this" | "future" | "all") {
-    if (!confirm(`Delete ${scope === "this" ? "this occurrence" : scope === "future" ? "this and future occurrences" : "the entire series"}?`)) return;
+    if (
+      !confirm(
+        `Delete ${scope === "this" ? "this occurrence" : scope === "future" ? "this and future occurrences" : "the entire series"}?`,
+      )
+    )
+      return;
     try {
       const res = await deleteSeriesInstance({ data: { event_id: id, scope } });
       toast.success(`Deleted ${res.deleted} event${res.deleted === 1 ? "" : "s"}`);
@@ -321,7 +353,9 @@ function EventPage() {
           <h1 className="text-3xl font-bold">{event.title}</h1>
           <div className="flex flex-wrap gap-2">
             {event.category && (
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${categoryClasses(event.category)}`}>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${categoryClasses(event.category)}`}
+              >
                 {categoryLabel(event.category)}
               </span>
             )}
@@ -348,17 +382,12 @@ function EventPage() {
               <Badge variant="outline">{distanceMi.toFixed(1)} miles away</Badge>
             )}
             {maxCapacity != null && (
-              <Badge
-                variant={atCapacity ? "destructive" : "outline"}
-                className="gap-1"
-              >
+              <Badge variant={atCapacity ? "destructive" : "outline"} className="gap-1">
                 <Users className="h-3 w-3" />
                 {counts.going}/{maxCapacity} RSVPs
               </Badge>
             )}
-            {waitlistCount > 0 && (
-              <Badge variant="secondary">{waitlistCount} on waitlist</Badge>
-            )}
+            {waitlistCount > 0 && <Badge variant="secondary">{waitlistCount} on waitlist</Badge>}
             {eventFormat !== "in_person" && (
               <Badge variant="secondary" className="gap-1 capitalize">
                 <Video className="h-3 w-3" />
@@ -381,14 +410,23 @@ function EventPage() {
         </Button>
       </div>
 
-      {event.description && <p className="whitespace-pre-line text-sm text-foreground/80">{event.description}</p>}
+      {event.description && (
+        <p className="whitespace-pre-line text-sm text-foreground/80">{event.description}</p>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {eventFormat !== "in_person" && virtualLink && (
           <Button asChild size="sm">
             <a href={virtualLink} target="_blank" rel="noopener noreferrer">
               <Video className="mr-1 h-4 w-4" />
-              Join {livestreamProvider === "zoom" ? "Zoom" : livestreamProvider === "google_meet" ? "Google Meet" : livestreamProvider === "youtube" ? "YouTube" : "link"}
+              Join{" "}
+              {livestreamProvider === "zoom"
+                ? "Zoom"
+                : livestreamProvider === "google_meet"
+                  ? "Google Meet"
+                  : livestreamProvider === "youtube"
+                    ? "YouTube"
+                    : "link"}
               <ExternalLink className="ml-1 h-3 w-3" />
             </a>
           </Button>
@@ -437,14 +475,9 @@ function EventPage() {
         <CardContent className="space-y-3">
           {myWaitlistPosition != null && (
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-              You're <strong>#{myWaitlistPosition}</strong> on the waitlist. We'll promote
-              you automatically when a spot opens.
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-2 h-7"
-                onClick={handleLeaveWaitlist}
-              >
+              You're <strong>#{myWaitlistPosition}</strong> on the waitlist. We'll promote you
+              automatically when a spot opens.
+              <Button variant="ghost" size="sm" className="ml-2 h-7" onClick={handleLeaveWaitlist}>
                 Leave waitlist
               </Button>
             </div>
@@ -536,7 +569,8 @@ function EventPage() {
             />
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Eye className="h-4 w-4" />
-              This event has been viewed {counts.clicksLast24h} times in the last 24 hours by registered users.
+              This event has been viewed {counts.clicksLast24h} times in the last 24 hours by
+              registered users.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button asChild size="sm" variant="outline">
@@ -560,7 +594,12 @@ function EventPage() {
                 </Link>
               </Button>
               <InviteAttendeesModal eventId={id} onSent={loadInvStats} />
-              <Button size="sm" variant="outline" onClick={handleScheduleReminders} disabled={commsBusy}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleScheduleReminders}
+                disabled={commsBusy}
+              >
                 Schedule reminders
               </Button>
             </div>
@@ -583,7 +622,11 @@ function EventPage() {
                 onChange={(e) => setAnnouncement(e.target.value)}
                 placeholder="Message for everyone who RSVP'd going or interested…"
               />
-              <Button size="sm" onClick={handleAnnouncement} disabled={commsBusy || !announcement.trim()}>
+              <Button
+                size="sm"
+                onClick={handleAnnouncement}
+                disabled={commsBusy || !announcement.trim()}
+              >
                 Send announcement
               </Button>
             </div>
