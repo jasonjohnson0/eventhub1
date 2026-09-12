@@ -13,6 +13,7 @@ export type PublicCoordinator = {
   favicon_url: string | null;
   primary_color: string;
   secondary_color: string;
+  show_nearby_events: boolean;
 };
 
 // Same shape onboarding validates against, so a slug that can be claimed is a

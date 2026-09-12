@@ -183,6 +183,44 @@ async function enrich(ids: string[]) {
   return { images, counts, organizers, coords };
 }
 
+export type NearbyEvent = {
+  id: string;
+  title: string;
+  coordinator_id: string;
+  start_time: string;
+  location: string | null;
+  category: string | null;
+  distance_meters: number;
+};
+
+/**
+ * Other coordinators' approved events near a point, via the search_events_nearby
+ * RPC. Used for the opt-in "also happening nearby" cross-promotion on a
+ * coordinator's own public calendar -- deliberately excludes that
+ * coordinator's own events, since the calendar already shows those.
+ */
+export async function fetchNearbyEvents(opts: {
+  lat: number;
+  lng: number;
+  radiusMiles?: number;
+  excludeCoordinator: string;
+  limit?: number;
+}): Promise<NearbyEvent[]> {
+  const radiusMeters = (opts.radiusMiles ?? 25) * 1609.34;
+  // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+  const { data, error } = await (supabase as any).rpc("search_events_nearby", {
+    _lat: opts.lat,
+    _lng: opts.lng,
+    _radius_meters: radiusMeters,
+    _limit: (opts.limit ?? 6) + 20, // headroom since the caller's own events get filtered out below
+  });
+  if (error) throw new Error(error.message);
+  const rows = (data ?? []) as NearbyEvent[];
+  return rows
+    .filter((r) => r.coordinator_id !== opts.excludeCoordinator)
+    .slice(0, opts.limit ?? 6);
+}
+
 /* ---------- shared date helpers used by the views ---------- */
 export function startOfDay(d: Date) {
   const x = new Date(d);

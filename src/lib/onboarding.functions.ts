@@ -16,6 +16,10 @@ export type CoordinatorProfile = {
   custom_domain: string | null;
   email_provider: "lovable" | "sendgrid" | "postmark" | "mailgun" | "none";
   dns_records_acknowledged: boolean;
+  /** Cross-promote other nearby organizers' events on this coordinator's own
+   *  public calendar. On by default -- more for a visitor to discover, more
+   *  reach for every organizer on the platform. Either side can opt out. */
+  show_nearby_events: boolean;
   setup_step: number;
   setup_completed_at: string | null;
   updated_at: string;
@@ -47,6 +51,7 @@ const profileSchema = z.object({
   custom_domain: z.string().trim().max(253).optional().nullable(),
   email_provider: z.enum(["lovable", "sendgrid", "postmark", "mailgun", "none"]).optional(),
   dns_records_acknowledged: z.boolean().optional(),
+  show_nearby_events: z.boolean().optional(),
   setup_step: z.number().int().min(1).max(7).optional(),
 });
 

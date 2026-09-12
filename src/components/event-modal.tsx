@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { createEvent } from "@/lib/events.functions";
 import { createSeries } from "@/lib/series.functions";
 import { CATEGORIES, categoryLabel, type EventCategory } from "@/lib/categories";
-import { listVenues, type Venue } from "@/lib/venues.functions";
+import { listVenues, searchVenuesPublic, type Venue } from "@/lib/venues.functions";
 import {
   assignToEvent,
   listOrganizers,
@@ -65,6 +65,9 @@ export function EventModal({
   const [loading, setLoading] = useState(false);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [venueId, setVenueId] = useState<string>("custom");
+  const [unit, setUnit] = useState("");
+  const [suggestions, setSuggestions] = useState<Venue[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
   const [selectedOrganizers, setSelectedOrganizers] = useState<string[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
@@ -98,9 +101,41 @@ export function EventModal({
     const v = venues.find((x) => x.id === id);
     if (!v) return;
     setLocation(v.address ? `${v.name}, ${v.address}` : v.name);
+    setUnit(v.unit ?? "");
     setLat(v.lat != null ? String(v.lat) : "");
     setLng(v.lng != null ? String(v.lng) : "");
+    setShowSuggestions(false);
   }
+
+  function pickSuggestion(v: Venue) {
+    setVenueId("custom");
+    setLocation(v.address ? `${v.name}, ${v.address}` : v.name);
+    setUnit(v.unit ?? "");
+    setLat(v.lat != null ? String(v.lat) : "");
+    setLng(v.lng != null ? String(v.lng) : "");
+    setSuggestions([]);
+    setShowSuggestions(false);
+  }
+
+  // Cross-coordinator autosuggest: a venue someone else already saved is a
+  // venue this coordinator shouldn't have to re-enter (and re-verify) from
+  // scratch. Only searches free-typed locations, not one already tied to a
+  // saved venue from the picker above.
+  useEffect(() => {
+    if (venueId !== "custom" || location.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const rows = await searchVenuesPublic({ data: { q: location.trim() } });
+        setSuggestions(rows);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [location, venueId]);
 
   function toggleOrganizer(id: string) {
     setSelectedOrganizers((prev) => {
@@ -125,6 +160,9 @@ export function EventModal({
         return;
       }
       const tags = tagsText.split(",").map((t) => t.trim()).filter(Boolean);
+      const fullLocation = unit.trim()
+        ? `${location}${location ? ", " : ""}${unit.trim()}`
+        : location;
       const missing = customFields.filter((f) => f.is_required && !fieldValues[f.id]);
       if (missing.length > 0) {
         toast.error(`Required: ${missing.map((f) => f.field_name).join(", ")}`);
@@ -136,7 +174,7 @@ export function EventModal({
           data: {
             title,
             description: description || null,
-            location: location || null,
+            location: fullLocation || null,
             start_time: startIso,
             end_time: endIso,
             category,
@@ -146,6 +184,7 @@ export function EventModal({
             event_format: format,
             virtual_link: format === "in_person" ? null : virtualLink || null,
             livestream_provider: format === "in_person" ? "none" : provider,
+            landscape_image_url: imageUrl.trim() || null,
           },
         });
         if (selectedOrganizers.length > 0) {
@@ -174,7 +213,7 @@ export function EventModal({
           data: {
             title,
             description: description || null,
-            location: location || null,
+            location: fullLocation || null,
             category,
             tags,
             dtstart: startIso,
@@ -193,10 +232,11 @@ export function EventModal({
           toast.success(`Series created — ${res.count} occurrences`);
         }
       }
-      if (imageUrl) toast("Media upload wiring lands in Phase 1d");
       setTitle("");
       setDescription("");
       setLocation("");
+      setUnit("");
+      setSuggestions([]);
       setImageUrl("");
       setTagsText("");
       setLat("");
@@ -253,9 +293,57 @@ export function EventModal({
               </Select>
             </div>
           )}
-          <div>
+          <div className="relative">
             <Label htmlFor="loc">Location</Label>
-            <Input id="loc" value={location} onChange={(e) => setLocation(e.target.value)} />
+            <Input
+              id="loc"
+              value={location}
+              onChange={(e) => {
+                setLocation(e.target.value);
+                setVenueId("custom");
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              placeholder="A verifiable address, e.g. 123 Main St, City, FL"
+              autoComplete="off"
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow-md">
+                <p className="border-b px-3 py-1.5 text-xs text-muted-foreground">
+                  Already a saved venue — use it?
+                </p>
+                {suggestions.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => pickSuggestion(v)}
+                    className="block w-full px-3 py-2 text-left text-sm hover:bg-accent"
+                  >
+                    <span className="font-medium">{v.name}</span>
+                    {v.address && (
+                      <span className="block text-xs text-muted-foreground">
+                        {v.address}
+                        {v.unit ? ` · ${v.unit}` : ""}
+                        {v.address_verified ? " · verified" : ""}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="unit">Building / suite / unit (optional)</Label>
+            <Input
+              id="unit"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              placeholder="Suite 200, Building B, …"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Use this when the same address has more than one venue.
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -299,13 +387,18 @@ export function EventModal({
             </div>
           </div>
           <div>
-            <Label htmlFor="img">Cover image URL (landscape)</Label>
+            <Label htmlFor="img">Header background image URL (optional)</Label>
             <Input
               id="img"
+              type="url"
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="https://…"
             />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Shown behind the title on the event page. You can change this anytime after
+              creating the event too.
+            </p>
           </div>
           <div className="rounded-md border p-3 space-y-3">
             <div>

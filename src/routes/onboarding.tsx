@@ -29,6 +29,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -412,6 +413,22 @@ function OnboardingWizard() {
                     placeholder="Community events across Jackson County, Florida."
                   />
                 </Field>
+                <label className="flex items-start gap-3 rounded-lg border p-3">
+                  <Switch
+                    checked={(value("show_nearby_events") ?? true) as boolean}
+                    onCheckedChange={(v) => set("show_nearby_events", v)}
+                  />
+                  <span>
+                    <span className="block text-sm font-medium">
+                      Show other nearby community events on my calendar
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      Helps visitors discover more happening nearby, and helps other
+                      organizers' calendars show yours too. On by default — change this
+                      anytime in Settings.
+                    </span>
+                  </span>
+                </label>
               </section>
             )}
 

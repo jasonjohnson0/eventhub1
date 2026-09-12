@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { getEvent } from "@/lib/events.functions";
+import { getEvent, updateEventCoverImage } from "@/lib/events.functions";
 import { recordShare, recordClick, upsertRsvp } from "@/lib/tracking.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
 import { deleteSeriesInstance } from "@/lib/series.functions";
-import { Repeat, ClipboardCheck, UserCheck } from "lucide-react";
+import { Repeat, ClipboardCheck, UserCheck, ImageIcon, Pencil } from "lucide-react";
 import { leaveWaitlist } from "@/lib/attendee.functions";
 import { useNavigate } from "@tanstack/react-router";
 import { InviteAttendeesModal } from "@/components/invite-attendees-modal";
@@ -132,6 +132,73 @@ function EventFormatEditor({
       <Button size="sm" variant="outline" onClick={save} disabled={saving}>
         {saving ? "Saving…" : "Save format"}
       </Button>
+    </div>
+  );
+}
+
+function HeaderImageEditor({
+  eventId,
+  initialUrl,
+  onSaved,
+}: {
+  eventId: string;
+  initialUrl: string | null;
+  onSaved: (url: string | null) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [url, setUrl] = useState(initialUrl ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const next = url.trim() || null;
+      await updateEventCoverImage({ data: { event_id: eventId, landscape_image_url: next } });
+      onSaved(next);
+      setEditing(false);
+      toast.success(next ? "Header image updated" : "Header image removed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update header image");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <Button
+        size="sm"
+        variant="secondary"
+        className="absolute right-3 top-3 gap-1.5 shadow"
+        onClick={() => {
+          setUrl(initialUrl ?? "");
+          setEditing(true);
+        }}
+      >
+        <Pencil className="h-3.5 w-3.5" />
+        {initialUrl ? "Change header image" : "Add header image"}
+      </Button>
+    );
+  }
+
+  return (
+    <div className="absolute inset-x-3 top-3 flex flex-col gap-2 rounded-md border bg-background/95 p-3 shadow-lg sm:flex-row sm:items-center">
+      <Input
+        type="url"
+        autoFocus
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="https://…"
+        className="flex-1"
+      />
+      <div className="flex gap-2">
+        <Button size="sm" onClick={save} disabled={saving}>
+          {saving ? "Saving…" : "Save"}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving}>
+          Cancel
+        </Button>
+      </div>
     </div>
   );
 }
@@ -346,6 +413,26 @@ function EventPage() {
         style={{ backgroundColor: c.hex }}
       >
         {cover && <img src={cover} alt={event.title} className="h-full w-full object-cover" />}
+        {!cover && (
+          <div className="flex h-full items-center justify-center gap-2 text-sm text-white/70">
+            <ImageIcon className="h-5 w-5" /> No header image yet
+          </div>
+        )}
+        {isCoordinator && (
+          <HeaderImageEditor
+            eventId={id}
+            initialUrl={cover}
+            onSaved={(next) =>
+              setData((d) => {
+                if (!d) return d;
+                const details = d.details
+                  ? { ...d.details, landscape_image_url: next }
+                  : { landscape_image_url: next, portrait_image_url: null, metadata: {} };
+                return { ...d, details };
+              })
+            }
+          />
+        )}
       </div>
 
       <div className="flex items-start justify-between gap-4">

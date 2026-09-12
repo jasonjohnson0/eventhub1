@@ -2,9 +2,9 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
-import { CalendarDays, ChevronLeft, ChevronRight, PartyPopper } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Compass, PartyPopper } from "lucide-react";
 import { getPublicCoordinator } from "@/lib/coordinator.functions";
-import { fetchEvents, addDays, startOfWeek } from "@/queries/events";
+import { fetchEvents, fetchNearbyEvents, addDays, startOfWeek, type NearbyEvent } from "@/queries/events";
 import { MonthView } from "@/components/CalendarViews/MonthView";
 import { DayView } from "@/components/CalendarViews/DayView";
 import { ListView } from "@/components/CalendarViews/ListView";
@@ -76,7 +76,28 @@ export const Route = createFileRoute("/c/$slug")({
       coordinator: coordinator.coordinator_id,
       limit: 400,
     });
-    return { coordinator, events };
+
+    // Cross-promotion, opt-in per coordinator (default on): anchor on the
+    // average location of this coordinator's own upcoming events, and look
+    // for other organizers' events nearby. No anchor, no section -- there's
+    // nothing honest to search from.
+    let nearby: NearbyEvent[] = [];
+    if (coordinator.show_nearby_events) {
+      const withLoc = events.filter(
+        (e): e is typeof e & { latitude: number; longitude: number } =>
+          e.latitude != null && e.longitude != null,
+      );
+      if (withLoc.length > 0) {
+        const lat = withLoc.reduce((s, e) => s + e.latitude, 0) / withLoc.length;
+        const lng = withLoc.reduce((s, e) => s + e.longitude, 0) / withLoc.length;
+        nearby = await fetchNearbyEvents({
+          lat,
+          lng,
+          excludeCoordinator: coordinator.coordinator_id,
+        }).catch(() => []);
+      }
+    }
+    return { coordinator, events, nearby };
   },
   head: ({ loaderData }) => {
     const c = loaderData?.coordinator;
@@ -131,7 +152,7 @@ function toAnchor(d: Date): string {
 }
 
 function CoordinatorCalendar() {
-  const { coordinator, events } = Route.useLoaderData();
+  const { coordinator, events, nearby } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
 
@@ -300,6 +321,39 @@ function CoordinatorCalendar() {
           <PhotoView events={filtered} />
         ) : (
           <SummaryView events={filtered} />
+        )}
+
+        {nearby.length > 0 && (
+          <div className="mt-12 border-t border-slate-200 pt-8">
+            <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-slate-900">
+              <Compass className="h-5 w-5 text-slate-400" /> Also happening nearby
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {nearby.map((e) => (
+                <Link
+                  key={e.id}
+                  to="/events/$id"
+                  params={{ id: e.id }}
+                  className="rounded-xl border border-slate-200 p-4 transition hover:border-slate-300 hover:shadow-sm"
+                >
+                  <p className="truncate text-sm font-semibold text-slate-900">{e.title}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {new Date(e.start_time).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                    {e.location ? ` · ${e.location}` : ""}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {(e.distance_meters / 1609.34).toFixed(1)} miles away
+                  </p>
+                </Link>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-slate-400">
+              From other organizers' calendars on EventHub, not {name}'s own events.
+            </p>
+          </div>
         )}
       </main>
 

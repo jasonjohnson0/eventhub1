@@ -18,6 +18,7 @@ import {
 const EMPTY = {
   name: "",
   address: "",
+  unit: "",
   capacity: "",
   phone: "",
   website: "",
@@ -53,6 +54,7 @@ export function VenueManager() {
       const payload = {
         name: form.name.trim(),
         address: form.address || null,
+        unit: form.unit || null,
         capacity: form.capacity ? Number(form.capacity) : null,
         phone: form.phone || null,
         website: form.website || null,
@@ -81,6 +83,7 @@ export function VenueManager() {
     setForm({
       name: v.name,
       address: v.address ?? "",
+      unit: v.unit ?? "",
       capacity: v.capacity?.toString() ?? "",
       phone: v.phone ?? "",
       website: v.website ?? "",
@@ -145,7 +148,22 @@ export function VenueManager() {
                 <Input
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  placeholder="123 Main St, City, FL 32401"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Checked against a real map lookup when you save.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Building / suite / unit (optional)</Label>
+                <Input
+                  value={form.unit}
+                  onChange={(e) => setForm({ ...form, unit: e.target.value })}
+                  placeholder="Suite 200, Building B, …"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use this to tell apart two venues that share one address.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label>Capacity</Label>
@@ -168,7 +186,7 @@ export function VenueManager() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
-                  <Label>Latitude</Label>
+                  <Label>Latitude (if address can't be verified)</Label>
                   <Input value={form.lat} onChange={(e) => setForm({ ...form, lat: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
@@ -214,8 +232,20 @@ export function VenueManager() {
                 <div className="flex items-center gap-2">
                   <span className="truncate font-medium">{v.name}</span>
                   {v.capacity ? <Badge variant="secondary">cap {v.capacity}</Badge> : null}
+                  {v.address_verified ? (
+                    <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                      Verified
+                    </Badge>
+                  ) : v.lat != null && v.lng != null ? (
+                    <Badge variant="outline" className="text-amber-700">
+                      Unverified pin
+                    </Badge>
+                  ) : null}
                 </div>
-                <p className="truncate text-xs text-muted-foreground">{v.address ?? "No address"}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {v.address ?? "No address"}
+                  {v.unit ? ` · ${v.unit}` : ""}
+                </p>
               </div>
               <Button size="sm" variant="ghost" onClick={() => startEdit(v)}>
                 <Pencil className="h-4 w-4" />

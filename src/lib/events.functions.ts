@@ -54,6 +54,7 @@ export const createEvent = createServerFn({ method: "POST" })
         event_format: z.enum(["in_person", "virtual", "hybrid"]).default("in_person"),
         virtual_link: z.string().url().max(500).optional().nullable(),
         livestream_provider: z.enum(["zoom", "google_meet", "youtube", "none"]).default("none"),
+        landscape_image_url: z.string().trim().url().max(1000).optional().nullable(),
       })
       .parse(data),
   )
@@ -105,7 +106,47 @@ export const createEvent = createServerFn({ method: "POST" })
         { onConflict: "event_id" },
       );
     }
+    if (data.landscape_image_url) {
+      await context.supabase.from("event_details").upsert(
+        { event_id: row.id, landscape_image_url: data.landscape_image_url },
+        { onConflict: "event_id" },
+      );
+    }
     return row;
+  });
+
+/** Set (or clear) an event's header image -- available at creation and, since
+ *  a coordinator's first pick isn't always their last, at any point after. */
+export const updateEventCoverImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z
+      .object({
+        event_id: z.string().uuid(),
+        landscape_image_url: z.string().trim().url().max(1000).optional().nullable(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: event, error: eventErr } = await context.supabase
+      .from("events")
+      .select("coordinator_id")
+      .eq("id", data.event_id)
+      .maybeSingle();
+    if (eventErr) throw new Error(eventErr.message);
+    if (!event) throw new Error("Event not found");
+    const { data: isMember } = await context.supabase.rpc("is_workspace_member", {
+      _user_id: context.userId,
+      _coord_id: event.coordinator_id,
+    });
+    if (!isMember) throw new Error("Not authorized to manage this event");
+
+    const { error } = await context.supabase.from("event_details").upsert(
+      { event_id: data.event_id, landscape_image_url: data.landscape_image_url ?? null },
+      { onConflict: "event_id" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const rescheduleEvent = createServerFn({ method: "POST" })

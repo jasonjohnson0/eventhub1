@@ -17,11 +17,13 @@ import {
   updateNotificationPrefs,
 } from "@/lib/communications.functions";
 import { createOrGetIcalToken, rotateIcalToken } from "@/lib/distribution.functions";
-import { Copy, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
+import { Copy, RefreshCw, Calendar as CalendarIcon, Compass } from "lucide-react";
 import { CoordinatorAnalyticsCard } from "@/components/coordinator-analytics-card";
 import { VenueManager } from "@/components/venue-manager";
 import { OrganizerManager } from "@/components/organizer-manager";
 import { CustomFieldManager } from "@/components/custom-field-manager";
+import { Switch } from "@/components/ui/switch";
+import { getCoordinatorProfile, saveCoordinatorProfile } from "@/lib/onboarding.functions";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -55,6 +57,8 @@ function SettingsPage() {
   }>({ email_reminders: true, push_reminders: false, days_before: [1, 7] });
   const [icalToken, setIcalToken] = useState<string | null>(null);
   const [icalBusy, setIcalBusy] = useState(false);
+  const [showNearby, setShowNearby] = useState(true);
+  const [nearbyBusy, setNearbyBusy] = useState(false);
 
   const icalUrl = icalToken
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/api/public/ical/${icalToken}.ics`
@@ -135,7 +139,29 @@ function SettingsPage() {
         /* keep defaults */
       }
     })();
+    void (async () => {
+      try {
+        const p = await getCoordinatorProfile();
+        setShowNearby(p.show_nearby_events);
+      } catch {
+        /* keep default */
+      }
+    })();
   }, []);
+
+  async function toggleShowNearby(v: boolean) {
+    setNearbyBusy(true);
+    setShowNearby(v);
+    try {
+      await saveCoordinatorProfile({ data: { show_nearby_events: v } });
+      toast.success(v ? "Now showing nearby events" : "Nearby events hidden from your calendar");
+    } catch (e) {
+      setShowNearby(!v);
+      toast.error(e instanceof Error ? e.message : "Could not save");
+    } finally {
+      setNearbyBusy(false);
+    }
+  }
 
   function toggleDay(d: number) {
     setPrefs((p) => ({
@@ -210,6 +236,28 @@ function SettingsPage() {
         </div>
 
         <CoordinatorAnalyticsCard />
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Compass className="h-4 w-4" /> Discovery
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <label className="flex items-start gap-3">
+              <Switch checked={showNearby} onCheckedChange={toggleShowNearby} disabled={nearbyBusy} />
+              <span>
+                <span className="block text-sm font-medium">
+                  Show other nearby community events on my calendar
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  Helps visitors discover more happening nearby, and helps other
+                  organizers' calendars show yours too.
+                </span>
+              </span>
+            </label>
+          </CardContent>
+        </Card>
 
         <VenueManager />
         <OrganizerManager />
