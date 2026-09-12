@@ -3,6 +3,7 @@ import { getPublicCoordinator } from "@/lib/coordinator.functions";
 import { fetchEvents, addDays, startOfWeek, type CalendarEvent } from "@/queries/events";
 import { supabase } from "@/integrations/supabase/client";
 import { siteOrigin } from "@/lib/site-url";
+import { findPresetByColor } from "@/lib/organizer-presets";
 
 /**
  * A calendar as a self-contained HTML fragment, for embedding on a customer's
@@ -318,6 +319,8 @@ export const Route = createFileRoute("/api/embed/$slug")({
         const brand = /^#[0-9a-f]{3,8}$/i.test(coordinator.primary_color)
           ? coordinator.primary_color
           : "#0f766e";
+        const preset = findPresetByColor(coordinator.primary_color);
+        const badge = preset ? `${preset.emoji} ` : "";
 
         const html = `<style>${STYLE}</style>
 <div class="ehx" style="--ehx-brand:${esc(brand)}">
@@ -327,7 +330,7 @@ export const Route = createFileRoute("/api/embed/$slug")({
   </div>
   ${bodyHtml}
   ${renderSponsors(sponsors, appUrl)}
-  <p class="ehx-foot"><a href="${esc(canonical)}" target="_blank" rel="noopener">${esc(coordinator.company_name || coordinator.slug)} calendar</a> &middot; powered by EventHub</p>
+  <p class="ehx-foot"><a href="${esc(canonical)}" target="_blank" rel="noopener">${badge}${esc(coordinator.company_name || coordinator.slug)} calendar</a> &middot; powered by EventHub</p>
 </div>`;
 
         return new Response(html, {

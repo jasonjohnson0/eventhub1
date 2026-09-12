@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { HolidayThemePicker } from "@/components/holiday-theme-picker";
 
 function NotFoundComponent() {
   return (
@@ -125,6 +126,9 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      {/* Available everywhere, on purpose -- a personal display preference,
+          not tied to any one page. */}
+      <HolidayThemePicker />
     </QueryClientProvider>
   );
 }

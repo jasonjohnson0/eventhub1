@@ -14,6 +14,7 @@ import { PhotoView } from "@/views/PhotoView";
 import { SummaryView } from "@/views/SummaryView";
 import { supabase } from "@/integrations/supabase/client";
 import { siteUrl } from "@/lib/site-url";
+import { findPresetByColor } from "@/lib/organizer-presets";
 
 /** Every view the platform has, minus the ones that need geo state the embed
  *  does not carry. Adding a view here is all it takes to expose it. */
@@ -191,6 +192,7 @@ function CoordinatorCalendar() {
 
   const brand = coordinator.primary_color || "#f97316";
   const name = coordinator.company_name || coordinator.slug;
+  const preset = findPresetByColor(coordinator.primary_color);
 
   return (
     <div className="min-h-screen bg-white">
@@ -215,7 +217,10 @@ function CoordinatorCalendar() {
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-2xl font-black text-slate-900">{name}</h1>
+            <h1 className="truncate text-2xl font-black text-slate-900">
+              {preset && <span className="mr-1.5">{preset.emoji}</span>}
+              {name}
+            </h1>
             {coordinator.description && (
               <p className="mt-0.5 line-clamp-2 text-sm text-slate-500">
                 {coordinator.description}

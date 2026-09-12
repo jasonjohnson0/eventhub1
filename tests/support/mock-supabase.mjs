@@ -168,7 +168,15 @@ function handle(req, res) {
 
   if (path === '/rest/v1/coordinator_profiles') {
     const slug = parseEq(url.search, 'slug');
-    const coordinatorId = parseEq(url.search, 'coordinator_id');
+    // saveCoordinatorProfile upserts via a plain POST with ?on_conflict=
+    // coordinator_id -- there's no coordinator_id=eq.* filter on an upsert
+    // (the key lives in the body, not the URL), so the row to patch has to be
+    // looked up there instead of only from the query string.
+    let body = {};
+    if (req.method === 'PATCH' || req.method === 'POST') {
+      try { body = JSON.parse(req.__body || '{}'); } catch {}
+    }
+    const coordinatorId = parseEq(url.search, 'coordinator_id') || body.coordinator_id || null;
     const row = slug
       ? (COORDINATORS.find((c) => c.slug === slug) ?? null)
       : coordinatorId === UNSLUGGED
@@ -176,6 +184,12 @@ function handle(req, res) {
         : coordinatorId
           ? (COORDINATORS.find((c) => c.coordinator_id === coordinatorId) ?? null)
           : null;
+    // Applying the body onto the matched fixture in place is what lets a test
+    // (or a manual smoke check) verify the write actually round-trips, rather
+    // than silently getting the pre-save row back.
+    if ((req.method === 'PATCH' || req.method === 'POST') && row) {
+      Object.assign(row, body);
+    }
     return send(wantsObject ? row : row ? [row] : []);
   }
   // No fixture is workspace staff anywhere in this mock; made explicit rather

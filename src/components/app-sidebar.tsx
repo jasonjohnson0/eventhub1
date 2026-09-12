@@ -14,6 +14,7 @@ import {
   MapPin,
   UserSquare2,
   ListPlus,
+  Palette,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -54,6 +55,7 @@ const coordinator = [
   { title: "Venues", url: "/coordinator/settings/venues", icon: MapPin },
   { title: "Organizers", url: "/coordinator/settings/organizers", icon: UserSquare2 },
   { title: "Custom fields", url: "/coordinator/settings/custom-fields", icon: ListPlus },
+  { title: "Styling", url: "/coordinator/settings/styling", icon: Palette },
 ];
 
 const admin = [

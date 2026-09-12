@@ -19,6 +19,8 @@ import { FeaturedVenueWidget } from "@/components/widgets/FeaturedVenueWidget";
 import { DayView } from "@/components/CalendarViews/DayView";
 import { ListView } from "@/components/CalendarViews/ListView";
 import { AgendaView } from "@/components/CalendarViews/AgendaView";
+import { useHolidayTheme } from "@/hooks/use-holiday-theme";
+import { HOLIDAY_THEMES } from "@/lib/holiday-themes";
 
 // Client-only: leaflet touches `window` at module load.
 const MapCanvas = lazy(() => import("@/components/map-canvas"));
@@ -77,6 +79,8 @@ function EventsPage() {
   const [cursor, setCursor] = useState<Date>(() => new Date());
   const [mapReady, setMapReady] = useState(false);
   useEffect(() => setMapReady(true), []);
+  const [holidayTheme] = useHolidayTheme();
+  const theme = holidayTheme ? HOLIDAY_THEMES[holidayTheme] : null;
 
   const query = search.q;
   const category = search.category ? search.category : null;
@@ -202,7 +206,7 @@ function EventsPage() {
       {/* Top bar */}
       <header className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between px-6 py-5">
         <Link to="/events" className="flex items-center gap-2 text-lg font-black text-slate-900">
-          <PartyPopper className="h-6 w-6 text-fuchsia-500" />
+          <PartyPopper className={`h-6 w-6 ${theme?.accentText ?? "text-fuchsia-500"}`} />
           EventHub
         </Link>
         <div className="flex items-center gap-2">
@@ -224,7 +228,13 @@ function EventsPage() {
         </div>
       </header>
 
-      <PublicHero query={query} onQuery={setQuery} category={category} onCategory={setCategory} />
+      <PublicHero
+        query={query}
+        onQuery={setQuery}
+        category={category}
+        onCategory={setCategory}
+        theme={theme}
+      />
 
       <main className="mx-auto max-w-7xl px-6 py-14">
         <GeoFilter geo={geo} onChange={setGeo} matchCount={geo.lat != null ? mappable.length : null} />

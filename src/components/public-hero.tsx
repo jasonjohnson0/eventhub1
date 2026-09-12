@@ -4,13 +4,26 @@ import { Link } from "@tanstack/react-router";
 import confetti from "canvas-confetti";
 import { CATEGORIES, categoryLabel } from "@/lib/categories";
 import thumbnail from "@/assets/gumroad-thumbnail.jpg";
+import type { HolidayTheme } from "@/lib/holiday-themes";
 
 type Props = {
   query: string;
   onQuery: (q: string) => void;
   category: string | null;
   onCategory: (c: string | null) => void;
+  /** The visitor's own holiday theme (see useHolidayTheme), or null for the
+   *  year-round default look. */
+  theme?: HolidayTheme | null;
 };
+
+const DEFAULT_HERO_GRADIENT = "from-amber-100 via-pink-100 to-sky-100";
+const DEFAULT_HEADING_GRADIENT = "from-fuchsia-600 via-pink-500 to-amber-500";
+const DEFAULT_BADGE_BG = "bg-white/70";
+const DEFAULT_BADGE_TEXT = "text-fuchsia-700";
+const DEFAULT_SUBTEXT = "text-slate-700";
+const DEFAULT_ACCENT = "text-fuchsia-500";
+const DEFAULT_EMOJIS = ["☀️", "🎈", "😊", "🎉", "🎭", "⭐"];
+const DEFAULT_CONFETTI = ["#f472b6", "#facc15", "#38bdf8", "#4ade80", "#c084fc"];
 
 const PILL_COLORS: Record<string, string> = {
   sports: "from-emerald-400 to-teal-500",
@@ -22,8 +35,9 @@ const PILL_COLORS: Record<string, string> = {
   other: "from-slate-400 to-slate-500",
 };
 
-export function PublicHero({ query, onQuery, category, onCategory }: Props) {
+export function PublicHero({ query, onQuery, category, onCategory, theme }: Props) {
   const fired = useRef(false);
+  const confettiColors = theme?.confettiColors ?? DEFAULT_CONFETTI;
   useEffect(() => {
     if (fired.current) return;
     fired.current = true;
@@ -32,10 +46,12 @@ export function PublicHero({ query, onQuery, category, onCategory }: Props) {
         particleCount: 120,
         spread: 90,
         origin: { y: 0.35 },
-        colors: ["#f472b6", "#facc15", "#38bdf8", "#4ade80", "#c084fc"],
+        colors: confettiColors,
       });
     }, 250);
     return () => clearTimeout(t);
+    // Re-fire once per mount only; a theme switch shouldn't replay the intro burst.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function burst() {
@@ -43,36 +59,73 @@ export function PublicHero({ query, onQuery, category, onCategory }: Props) {
       particleCount: 60,
       spread: 60,
       origin: { y: 0.4 },
-      colors: ["#f472b6", "#facc15", "#38bdf8"],
+      colors: confettiColors,
     });
   }
 
+  const heroGradient = theme?.heroGradient ?? DEFAULT_HERO_GRADIENT;
+  const headingGradient = theme?.headingGradient ?? DEFAULT_HEADING_GRADIENT;
+  const badgeBg = theme?.badgeBg ?? DEFAULT_BADGE_BG;
+  const badgeText = theme?.badgeText ?? DEFAULT_BADGE_TEXT;
+  const headingText = theme?.dark ? "text-white" : "text-slate-900";
+  const subtext = theme?.subtextClass ?? DEFAULT_SUBTEXT;
+  const accent = theme?.accentText ?? DEFAULT_ACCENT;
+  const emojis = theme?.floatingEmojis ?? DEFAULT_EMOJIS;
+  const emojiDelays = ["", "0.5s", "1s", "1.5s", "2s", "2.5s"];
+  const emojiSizes = ["text-5xl", "text-4xl", "text-3xl", "text-3xl", "text-4xl", "text-3xl"];
+  const emojiPositions = [
+    "left-8 top-10",
+    "right-10 top-16",
+    "left-1/4 bottom-10",
+    "right-1/4 bottom-16",
+    "right-16 bottom-8",
+    "left-16 top-1/2",
+  ];
+  // Tailwind generates CSS only for class names it can see as complete,
+  // literal strings in the source -- a template literal like
+  // `animate-[float_${n}s_...]` never matches anything, since the scanner
+  // never evaluates the expression. These are the exact six durations the
+  // original markup used, kept as a static lookup table for that reason.
+  const emojiAnimations = [
+    "animate-[float_6s_ease-in-out_infinite]",
+    "animate-[float_7s_ease-in-out_infinite]",
+    "animate-[float_8s_ease-in-out_infinite]",
+    "animate-[float_9s_ease-in-out_infinite]",
+    "animate-[float_7s_ease-in-out_infinite]",
+    "animate-[float_10s_ease-in-out_infinite]",
+  ];
+
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-amber-100 via-pink-100 to-sky-100">
+    <section className={`relative overflow-hidden bg-gradient-to-br ${heroGradient}`}>
       {/* Floating decorations */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-8 top-10 animate-[float_6s_ease-in-out_infinite] text-5xl">☀️</div>
-        <div className="absolute right-10 top-16 animate-[float_7s_ease-in-out_infinite] text-4xl" style={{ animationDelay: "0.5s" }}>🎈</div>
-        <div className="absolute left-1/4 bottom-10 animate-[float_8s_ease-in-out_infinite] text-3xl" style={{ animationDelay: "1s" }}>😊</div>
-        <div className="absolute right-1/4 bottom-16 animate-[float_9s_ease-in-out_infinite] text-3xl" style={{ animationDelay: "1.5s" }}>🎉</div>
-        <div className="absolute right-16 bottom-8 animate-[float_7s_ease-in-out_infinite] text-4xl" style={{ animationDelay: "2s" }}>🎭</div>
-        <div className="absolute left-16 top-1/2 animate-[float_10s_ease-in-out_infinite] text-3xl" style={{ animationDelay: "2.5s" }}>⭐</div>
+        {emojis.map((e, i) => (
+          <div
+            key={i}
+            className={`absolute ${emojiPositions[i]} ${emojiAnimations[i]} ${emojiSizes[i]}`}
+            style={{ animationDelay: emojiDelays[i] }}
+          >
+            {e}
+          </div>
+        ))}
       </div>
 
       <div className="relative mx-auto max-w-5xl px-6 pt-20 pb-14 text-center">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-fuchsia-700 shadow-sm backdrop-blur">
+        <div
+          className={`mb-4 inline-flex items-center gap-2 rounded-full ${badgeBg} px-4 py-1.5 text-xs font-semibold uppercase tracking-widest ${badgeText} shadow-sm backdrop-blur`}
+        >
           <Sparkles className="h-3.5 w-3.5" /> Something's always happening
         </div>
-        <h1 className="text-5xl md:text-6xl font-black tracking-tight text-slate-900 leading-tight">
-          <span className="mr-2">🎉</span>
+        <h1 className={`text-5xl md:text-6xl font-black tracking-tight ${headingText} leading-tight`}>
+          <span className="mr-2">{theme ? theme.menuEmoji : "🎉"}</span>
           Discover amazing events
-          <span className="ml-2">🎉</span>
+          <span className="ml-2">{theme ? theme.menuEmoji : "🎉"}</span>
           <br />
-          <span className="bg-gradient-to-r from-fuchsia-600 via-pink-500 to-amber-500 bg-clip-text text-transparent">
+          <span className={`bg-gradient-to-r ${headingGradient} bg-clip-text text-transparent`}>
             happening near you
           </span>
         </h1>
-        <p className="mx-auto mt-5 max-w-xl text-lg text-slate-700">
+        <p className={`mx-auto mt-5 max-w-xl text-lg ${subtext}`}>
           Browse the community calendar. Find your next adventure — no account needed.
         </p>
 
@@ -93,7 +146,7 @@ export function PublicHero({ query, onQuery, category, onCategory }: Props) {
         {/* Search */}
         <div className="mx-auto mt-10 max-w-2xl">
           <div className="group flex items-center gap-3 rounded-full border-2 border-white bg-white/95 p-2 pl-6 shadow-[0_10px_40px_-10px_rgba(236,72,153,0.4)] focus-within:shadow-[0_20px_50px_-10px_rgba(236,72,153,0.6)] transition-shadow">
-            <Search className="h-5 w-5 text-fuchsia-500" />
+            <Search className={`h-5 w-5 ${accent}`} />
             <input
               type="text"
               value={query}

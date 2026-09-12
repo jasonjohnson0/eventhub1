@@ -51,6 +51,7 @@ import { Route as AuthenticatedEventsIdCheckinMobileRouteImport } from './routes
 import { Route as AuthenticatedEventsIdCheckinRouteImport } from './routes/_authenticated/events.$id.checkin'
 import { Route as AuthenticatedEventsIdAnalyticsRouteImport } from './routes/_authenticated/events.$id.analytics'
 import { Route as AuthenticatedCoordinatorSettingsVenuesRouteImport } from './routes/_authenticated/coordinator.settings.venues'
+import { Route as AuthenticatedCoordinatorSettingsStylingRouteImport } from './routes/_authenticated/coordinator.settings.styling'
 import { Route as AuthenticatedCoordinatorSettingsOrganizersRouteImport } from './routes/_authenticated/coordinator.settings.organizers'
 import { Route as AuthenticatedCoordinatorSettingsCustomFieldsRouteImport } from './routes/_authenticated/coordinator.settings.custom-fields'
 
@@ -274,6 +275,12 @@ const AuthenticatedCoordinatorSettingsVenuesRoute =
     path: '/coordinator/settings/venues',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCoordinatorSettingsStylingRoute =
+  AuthenticatedCoordinatorSettingsStylingRouteImport.update({
+    id: '/coordinator/settings/styling',
+    path: '/coordinator/settings/styling',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCoordinatorSettingsOrganizersRoute =
   AuthenticatedCoordinatorSettingsOrganizersRouteImport.update({
     id: '/coordinator/settings/organizers',
@@ -323,6 +330,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
+  '/coordinator/settings/styling': typeof AuthenticatedCoordinatorSettingsStylingRoute
   '/coordinator/settings/venues': typeof AuthenticatedCoordinatorSettingsVenuesRoute
   '/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
@@ -367,6 +375,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
+  '/coordinator/settings/styling': typeof AuthenticatedCoordinatorSettingsStylingRoute
   '/coordinator/settings/venues': typeof AuthenticatedCoordinatorSettingsVenuesRoute
   '/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
@@ -414,6 +423,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/_authenticated/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
+  '/_authenticated/coordinator/settings/styling': typeof AuthenticatedCoordinatorSettingsStylingRoute
   '/_authenticated/coordinator/settings/venues': typeof AuthenticatedCoordinatorSettingsVenuesRoute
   '/_authenticated/events/$id/analytics': typeof AuthenticatedEventsIdAnalyticsRoute
   '/_authenticated/events/$id/checkin': typeof AuthenticatedEventsIdCheckinRoute
@@ -461,6 +471,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/coordinator/settings/custom-fields'
     | '/coordinator/settings/organizers'
+    | '/coordinator/settings/styling'
     | '/coordinator/settings/venues'
     | '/events/$id/analytics'
     | '/events/$id/checkin'
@@ -505,6 +516,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/coordinator/settings/custom-fields'
     | '/coordinator/settings/organizers'
+    | '/coordinator/settings/styling'
     | '/coordinator/settings/venues'
     | '/events/$id/analytics'
     | '/events/$id/checkin'
@@ -551,6 +563,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/coordinator/settings/custom-fields'
     | '/_authenticated/coordinator/settings/organizers'
+    | '/_authenticated/coordinator/settings/styling'
     | '/_authenticated/coordinator/settings/venues'
     | '/_authenticated/events/$id/analytics'
     | '/_authenticated/events/$id/checkin'
@@ -880,6 +893,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCoordinatorSettingsVenuesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/coordinator/settings/styling': {
+      id: '/_authenticated/coordinator/settings/styling'
+      path: '/coordinator/settings/styling'
+      fullPath: '/coordinator/settings/styling'
+      preLoaderRoute: typeof AuthenticatedCoordinatorSettingsStylingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/coordinator/settings/organizers': {
       id: '/_authenticated/coordinator/settings/organizers'
       path: '/coordinator/settings/organizers'
@@ -931,6 +951,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCoordinatorSubmissionsRoute: typeof AuthenticatedCoordinatorSubmissionsRoute
   AuthenticatedCoordinatorSettingsCustomFieldsRoute: typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   AuthenticatedCoordinatorSettingsOrganizersRoute: typeof AuthenticatedCoordinatorSettingsOrganizersRoute
+  AuthenticatedCoordinatorSettingsStylingRoute: typeof AuthenticatedCoordinatorSettingsStylingRoute
   AuthenticatedCoordinatorSettingsVenuesRoute: typeof AuthenticatedCoordinatorSettingsVenuesRoute
   AuthenticatedEventsIdAnalyticsRoute: typeof AuthenticatedEventsIdAnalyticsRoute
   AuthenticatedEventsIdCheckinRoute: typeof AuthenticatedEventsIdCheckinRoute
@@ -952,6 +973,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedCoordinatorSettingsCustomFieldsRoute,
   AuthenticatedCoordinatorSettingsOrganizersRoute:
     AuthenticatedCoordinatorSettingsOrganizersRoute,
+  AuthenticatedCoordinatorSettingsStylingRoute:
+    AuthenticatedCoordinatorSettingsStylingRoute,
   AuthenticatedCoordinatorSettingsVenuesRoute:
     AuthenticatedCoordinatorSettingsVenuesRoute,
   AuthenticatedEventsIdAnalyticsRoute: AuthenticatedEventsIdAnalyticsRoute,
