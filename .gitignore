@@ -31,3 +31,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Test scratch: embedded Postgres data dirs and browser screenshots. The data
+# dir is owned by another user, so git silently skips it rather than erroring --
+# which is exactly why it needs to be named here.
+.pgdata
+*.png
+!public/**/*.png

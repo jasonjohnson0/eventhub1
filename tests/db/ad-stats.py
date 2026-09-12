@@ -1,4 +1,5 @@
 import os
+import tempfile
 """Verifies the sponsor ad-stats schema against a real Postgres.
 
 Covers what a static read cannot: that the migration is genuinely re-runnable,
@@ -9,7 +10,9 @@ import glob, os, shutil, subprocess, sys
 import pgserver
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-PG = os.path.abspath(".pgdata")
+# Outside the repo on purpose: an embedded Postgres data directory is ~40MB
+# of files owned by another user, which git cannot read and eslint walks.
+PG = os.path.join(tempfile.mkdtemp(prefix="eventhub-pg-"), "data")
 shutil.rmtree(PG, ignore_errors=True)
 os.makedirs(PG); os.chmod(PG, 0o777)
 uri = pgserver.get_server(PG).get_uri()

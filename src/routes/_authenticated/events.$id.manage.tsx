@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getEvent } from "@/lib/events.functions";
 import { recordShare, recordClick, upsertRsvp } from "@/lib/tracking.functions";
 import { Button } from "@/components/ui/button";
@@ -124,37 +124,16 @@ function EventFormatEditor({
 }
 
 function EventPage() {
+  // Every hook this component uses lives above the two guards below, and has to
+  // stay there. They used to sit after them, so the loading render called six
+  // hooks and the render after data arrived called twelve -- "Rendered more
+  // hooks than during the previous render", every single time, which meant the
+  // error boundary and nobody could open this page at all.
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const [data, setData] = useState<Data | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    getEvent({ data: { id } })
-      .then(setData)
-      .catch((e) => setErr(e instanceof Error ? e.message : "Failed to load"));
-    // Fire click tracking once on mount; server dedupes per (event,user,day)
-    recordClick({ data: { event_id: id } }).catch(() => undefined);
-  }, [id]);
-
-  if (err) return <div className="p-8 text-sm text-red-600">{err}</div>;
-  if (!data) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
-
-  const { event, details, counts, myRsvp, isCoordinator } = data;
-  const maxCapacity = (event as unknown as { max_capacity: number | null }).max_capacity;
-  const hasWaitlist = (event as unknown as { has_waitlist: boolean }).has_waitlist;
-  const eventFormat = (event as unknown as { event_format?: "in_person" | "virtual" | "hybrid" | null }).event_format ?? "in_person";
-  const virtualLink = (event as unknown as { virtual_link?: string | null }).virtual_link ?? null;
-  const livestreamProvider = (event as unknown as { livestream_provider?: string | null }).livestream_provider ?? "none";
-  const waitlistCount = (counts as unknown as { waitlist?: number }).waitlist ?? 0;
-  const myWaitlistPosition =
-    (data as unknown as { myWaitlistPosition: number | null }).myWaitlistPosition;
-  const atCapacity = maxCapacity != null && counts.going >= maxCapacity;
-  const series = (data as unknown as { series: { rrule: string } | null }).series;
-  const geo = (data as unknown as { geo: { latitude: number; longitude: number } | null }).geo;
-  const c = colorForEvent(event.id);
-  const cover = details?.landscape_image_url ?? null;
   const [distanceMi, setDistanceMi] = useState<number | null>(null);
   const [invStats, setInvStats] = useState<{
     total: number;
@@ -164,6 +143,32 @@ function EventPage() {
   } | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [commsBusy, setCommsBusy] = useState(false);
+
+  useEffect(() => {
+    getEvent({ data: { id } })
+      .then(setData)
+      .catch((e) => setErr(e instanceof Error ? e.message : "Failed to load"));
+    // Fire click tracking once on mount; server dedupes per (event,user,day)
+    recordClick({ data: { event_id: id } }).catch(() => undefined);
+  }, [id]);
+
+  // Read through `data` rather than from the destructuring below, which cannot
+  // run until the guards have passed. Both are null/false while loading, so the
+  // effects simply do nothing on that render instead of being skipped entirely.
+  const geo =
+    (data as unknown as { geo: { latitude: number; longitude: number } | null } | null)?.geo ??
+    null;
+  const isCoordinator = data?.isCoordinator ?? false;
+
+  const loadInvStats = useCallback(async () => {
+    try {
+      const res = await listEventInvitations({ data: { event_id: id } });
+      setInvStats(res.stats);
+    } catch {
+      /* ignore */
+    }
+  }, [id]);
+
   useEffect(() => {
     if (!geo || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition((pos) => {
@@ -178,18 +183,27 @@ function EventPage() {
     });
   }, [geo]);
 
-  async function loadInvStats() {
-    try {
-      const res = await listEventInvitations({ data: { event_id: id } });
-      setInvStats(res.stats);
-    } catch {
-      /* ignore */
-    }
-  }
   useEffect(() => {
     if (isCoordinator) void loadInvStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, isCoordinator]);
+  }, [isCoordinator, loadInvStats]);
+
+  if (err) return <div className="p-8 text-sm text-red-600">{err}</div>;
+  if (!data) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
+
+  const { event, details, counts, myRsvp } = data;
+  const maxCapacity = (event as unknown as { max_capacity: number | null }).max_capacity;
+  const hasWaitlist = (event as unknown as { has_waitlist: boolean }).has_waitlist;
+  const eventFormat = (event as unknown as { event_format?: "in_person" | "virtual" | "hybrid" | null }).event_format ?? "in_person";
+  const virtualLink = (event as unknown as { virtual_link?: string | null }).virtual_link ?? null;
+  const livestreamProvider = (event as unknown as { livestream_provider?: string | null }).livestream_provider ?? "none";
+  const waitlistCount = (counts as unknown as { waitlist?: number }).waitlist ?? 0;
+  const myWaitlistPosition =
+    (data as unknown as { myWaitlistPosition: number | null }).myWaitlistPosition;
+  const atCapacity = maxCapacity != null && counts.going >= maxCapacity;
+  const series = (data as unknown as { series: { rrule: string } | null }).series;
+  const c = colorForEvent(event.id);
+  const cover = details?.landscape_image_url ?? null;
+
 
   async function handleAnnouncement() {
     if (!announcement.trim()) return;

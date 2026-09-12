@@ -2,6 +2,7 @@
 # Runs the whole suite against a real Postgres and a real browser.
 #
 #   tests/run.sh          everything
+#   tests/run.sh lint     correctness lint only (2 seconds, no deps)
 #   tests/run.sh db       schema, RLS, grants and the billing rules only
 #   tests/run.sh browser  the rendered pages and HTTP endpoints only
 #
@@ -21,6 +22,20 @@ run() { # name, command...
   echo; echo "=============== $name ==============="
   if "$@"; then echo "--- $name OK"; else echo "--- $name FAILED"; fails=$((fails+1)); fi
 }
+
+# ---------------------------------------------------------------------------
+# Correctness lint. Deliberately not the full `npm run lint`: 1084 of its 1166
+# findings are prettier formatting, and a gate that shouts about whitespace is a
+# gate people learn to skip. These are the rules that cause outages -- the
+# rules-of-hooks error that made /events/$id/manage crash for every visitor was
+# sitting in `npm run lint` output nobody read, because until this was fixed
+# `eslint .` ran for over eight minutes and never returned.
+# ---------------------------------------------------------------------------
+if [ "$WHICH" = "all" ] || [ "$WHICH" = "lint" ]; then
+  run "lint (correctness rules)" npx eslint . \
+    --rule '{"prettier/prettier":"off","@typescript-eslint/no-explicit-any":"off"}' \
+    --max-warnings 20
+fi
 
 if [ "$WHICH" = "all" ] || [ "$WHICH" = "db" ]; then
   # pgserver boots an embedded Postgres; no server needs to be installed.

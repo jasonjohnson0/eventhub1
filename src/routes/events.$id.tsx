@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { upsertRsvp } from "@/lib/tracking.functions";
 import { Button } from "@/components/ui/button";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
 import {
@@ -103,6 +104,12 @@ function PublicEventDetail() {
   const [userId, setUserId] = useState<string | null>(null);
   const [rsvpOpen, setRsvpOpen] = useState(false);
   const [photoIdx, setPhotoIdx] = useState(0);
+  /** The visitor's own RSVP, and the going count once they change it. Both are
+   *  null until known, so the loader's count is shown in the meantime. */
+  const [myRsvp, setMyRsvp] = useState<"going" | "interested" | "declined" | null>(null);
+  const [goingOverride, setGoingOverride] = useState<number | null>(null);
+  const [rsvpBusy, setRsvpBusy] = useState(false);
+  const [rsvpNote, setRsvpNote] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -110,6 +117,28 @@ function PublicEventDetail() {
       setUserId(data.session?.user.id ?? null);
     });
   }, []);
+
+  // The "Users manage own rsvp" policy covers exactly this row and no other, so
+  // a visitor can be shown their own state without seeing anyone else's.
+  useEffect(() => {
+    if (!userId) {
+      setMyRsvp(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data: mine } = await supabase
+        .from("event_rsvps")
+        .select("status")
+        .eq("event_id", id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (!cancelled) setMyRsvp((mine?.status as "going" | "interested" | "declined") ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,11 +236,37 @@ function PublicEventDetail() {
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(event.title);
 
-  const handleRsvpClick = () => {
-    if (signedIn) {
-      navigate({ to: "/events/$id/manage", params: { id: event.id } });
-    } else {
+  /**
+   * RSVPs. Previously this sent a signed-in visitor to /events/$id/manage --
+   * the coordinator's management screen -- so the primary call to action on
+   * every event page did not RSVP anybody, and pushed attendees at a page that
+   * is not theirs.
+   *
+   * Clicking again withdraws, because there was previously no way to undo.
+   */
+  const handleRsvpClick = async () => {
+    if (!signedIn) {
       setRsvpOpen(true);
+      return;
+    }
+    setRsvpBusy(true);
+    setRsvpNote(null);
+    try {
+      const next = myRsvp === "going" ? "declined" : "going";
+      const res = await upsertRsvp({ data: { event_id: event.id, status: next } });
+      setMyRsvp((res.myRsvp as "going" | "interested" | "declined") ?? null);
+      setGoingOverride(res.counts.going);
+      if (res.waitlisted) {
+        setRsvpNote(
+          res.waitlistPosition
+            ? `This event is full — you're #${res.waitlistPosition} on the waitlist.`
+            : "This event is full — you've been added to the waitlist.",
+        );
+      }
+    } catch (e) {
+      setRsvpNote(e instanceof Error ? e.message : "Could not save your RSVP.");
+    } finally {
+      setRsvpBusy(false);
     }
   };
 
@@ -283,7 +338,7 @@ function PublicEventDetail() {
                 <div className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-emerald-500" />
                   <div>
-                    <div className="font-semibold text-slate-900">{goingCount} going 🎊</div>
+                    <div className="font-semibold text-slate-900">{goingOverride ?? goingCount} going 🎊</div>
                     <div className="text-slate-500">Join the community</div>
                   </div>
                 </div>
@@ -327,14 +382,24 @@ function PublicEventDetail() {
             <aside className="space-y-4">
               <div className="rounded-2xl border border-fuchsia-100 bg-gradient-to-br from-fuchsia-50 to-amber-50 p-5 text-center">
                 <div className="text-3xl">🎟️</div>
-                <div className="mt-1 text-sm font-semibold text-slate-700">Save your spot</div>
+                <div className="mt-1 text-sm font-semibold text-slate-700">
+                  {myRsvp === "going" ? "You're going" : "Save your spot"}
+                </div>
                 <Button
                   onClick={handleRsvpClick}
+                  disabled={rsvpBusy}
                   className="mt-3 w-full rounded-full bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white hover:opacity-95"
                   size="lg"
                 >
-                  {signedIn ? "RSVP now" : "Sign in to RSVP"}
+                  {rsvpBusy
+                    ? "Saving…"
+                    : !signedIn
+                      ? "Sign in to RSVP"
+                      : myRsvp === "going"
+                        ? "Cancel my RSVP"
+                        : "RSVP now"}
                 </Button>
+                {rsvpNote && <p className="mt-2 text-xs text-slate-600">{rsvpNote}</p>}
               </div>
 
               <div className="rounded-2xl border border-slate-100 bg-white p-5">
