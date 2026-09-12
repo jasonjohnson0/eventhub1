@@ -64,10 +64,45 @@ key here does not start fresh; it fails to decrypt rows that are already there,
 and admin setup pages break with "Malformed encrypted value" or an
 authentication-tag error. Copy the existing value.
 
-**`PUBLIC_SITE_URL` is easy to forget.** `communications.functions.ts` falls
-back to `https://sparkle-calendar-co.lovable.app`, so without it your outbound
-emails and invite links keep pointing at the Lovable domain while the site
-itself runs on Vercel. Nothing errors; the links are just wrong.
+**`PUBLIC_SITE_URL` is easy to forget.** Everything absolute is built from it
+through `siteOrigin()` in `src/lib/site-url.ts`: the canonical tag on every
+`/c/<slug>` page, the links and ad tracking URLs inside an embed fragment, and
+invite links in outbound email. Without it the canonical degrades to a relative
+URL and the embed falls back to whichever host it was reached on — neither
+errors, both are subtly wrong.
+
+### One variable that fails loudly, in a place nobody looks
+
+**`SUPABASE_SERVICE_ROLE_KEY` must actually be valid, and this has been wrong in
+production.** A live test of ad tracking found every write silently dropped;
+the Vercel runtime log said `record_ad_event failed Invalid API key`. The key
+was set but not accepted, so the client constructed fine and every call failed
+at the database.
+
+Nothing on a page breaks when this happens, which is why it went unnoticed:
+`recordAdEvent` swallows failures by design so a bad stats write cannot break
+an advertiser's placement, and the pixel returns its image either way. The only
+symptom is that nothing is ever counted.
+
+The blast radius is every route using `supabaseAdmin`, not just tracking — the
+iCal subscription feed at `/api/public/ical/<token>` was returning
+`500 Invalid API key` from the same cause, unrelated to and predating the
+tracking work.
+
+Anon-key paths keep working throughout, so the site looks healthy. To tell the
+two apart:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://<host>/c/<slug>                     # anon  — 200
+curl -s                                   https://<host>/api/public/ical/0123456789abcdef0123456789abcdef
+#   "Server error: Invalid API key" means the service-role pair is wrong
+```
+
+Fix it by re-copying the `service_role` key from the Supabase dashboard
+(Settings → API) for project `fopxmuaogwchohwhrclk`, and check `SUPABASE_URL`
+points at that same project. **Paste the value with no surrounding quotes** —
+Vite strips quotes from `.env`, Vercel does not, and a quoted value is a
+different string.
 
 ## Deploying
 
