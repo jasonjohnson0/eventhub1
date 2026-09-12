@@ -1,8 +1,7 @@
+"""Verifies the coordinator-scoped sponsor RPC against a real Postgres."""
 import os
 import tempfile
-"""Verifies the coordinator-scoped sponsor RPC against a real Postgres."""
 import glob
-import os
 import shutil
 import subprocess
 import sys

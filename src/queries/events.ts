@@ -154,7 +154,14 @@ async function enrich(ids: string[]) {
 
   const [detailsRes, rsvpRes, orgRes, locRes] = await Promise.all([
     supabase.from("event_details").select("event_id, landscape_image_url, portrait_image_url").in("event_id", ids),
-    supabase.from("event_rsvps").select("event_id").in("event_id", ids).eq("status", "going"),
+    // event_rsvps' own RLS only lets a caller read their own row (or an
+    // event's staff/admin see everyone's), so a direct count here read as zero
+    // for almost every visitor -- including signed-in attendees who are not
+    // staff -- on the "going" badge shown across every calendar view. This RPC
+    // returns the true aggregate for many events in one call, without exposing
+    // who is attending any of them.
+    // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+    (supabase as any).rpc("get_event_rsvp_counts_bulk", { p_event_ids: ids }),
     supabase.from("event_organizers").select("event_id, organizers(name)").in("event_id", ids),
     supabase.from("event_locations").select("event_id, latitude, longitude").in("event_id", ids),
   ]);
@@ -162,7 +169,9 @@ async function enrich(ids: string[]) {
   for (const d of detailsRes.data ?? []) {
     images.set(d.event_id, d.landscape_image_url ?? d.portrait_image_url ?? null);
   }
-  for (const r of rsvpRes.data ?? []) counts.set(r.event_id, (counts.get(r.event_id) ?? 0) + 1);
+  for (const r of (rsvpRes.data ?? []) as { event_id: string; going: number }[]) {
+    counts.set(r.event_id, r.going);
+  }
   for (const o of (orgRes.data ?? []) as { event_id: string; organizers: { name: string } | null }[]) {
     if (!o.organizers?.name) continue;
     organizers.set(o.event_id, [...(organizers.get(o.event_id) ?? []), o.organizers.name]);

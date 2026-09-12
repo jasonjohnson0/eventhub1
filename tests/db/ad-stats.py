@@ -1,12 +1,15 @@
-import os
-import tempfile
 """Verifies the sponsor ad-stats schema against a real Postgres.
 
 Covers what a static read cannot: that the migration is genuinely re-runnable,
 that a placement which is not live records nothing, that dedup counts hits
 without multiplying rows, and that a coordinator cannot read another's numbers.
 """
-import glob, os, shutil, subprocess, sys
+import os
+import tempfile
+import glob
+import shutil
+import subprocess
+import sys
 import pgserver
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))

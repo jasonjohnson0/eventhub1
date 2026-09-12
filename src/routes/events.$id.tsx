@@ -175,7 +175,7 @@ function PublicEventDetail() {
         }
         return;
       }
-      const [detailsRes, photosRes, rsvpRes, profileRes, ticketsRes, slotsRes, adsRes] =
+      const [detailsRes, photosRes, rsvpCountsRes, profileRes, ticketsRes, slotsRes, adsRes] =
         await Promise.all([
           supabase
             .from("event_details")
@@ -187,11 +187,13 @@ function PublicEventDetail() {
             .select("id, photo_url, caption")
             .eq("event_id", id)
             .order("created_at", { ascending: false }),
-          supabase
-            .from("event_rsvps")
-            .select("event_id", { count: "exact", head: true })
-            .eq("event_id", id)
-            .eq("status", "going"),
+          // event_rsvps' own RLS only lets a caller read their own row (or an
+          // event's staff/admin see everyone's), so a direct count here reads
+          // as zero for almost every visitor -- including signed-in attendees
+          // who are not staff. This RPC returns the true aggregate without
+          // exposing who is attending.
+          // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+          (supabase as any).rpc("get_event_rsvp_counts", { p_event_id: id }),
           supabase
             .from("profiles")
             .select("display_name")
@@ -228,7 +230,7 @@ function PublicEventDetail() {
           image:
             detailsRes.data?.landscape_image_url ?? detailsRes.data?.portrait_image_url ?? null,
           photos: photosRes.data ?? [],
-          goingCount: rsvpRes.count ?? 0,
+          goingCount: (rsvpCountsRes.data?.[0]?.going as number | undefined) ?? 0,
           // biome-ignore lint/suspicious/noExplicitAny: profile may not exist
           coordinatorName: (profileRes.data as any)?.display_name ?? null,
           moreFromCoordinator: more ?? [],

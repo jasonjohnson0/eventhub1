@@ -117,13 +117,17 @@ export const upsertRsvp = createServerFn({ method: "POST" })
     } else {
       // Enforce capacity on "going"
       if (data.status === "going" && ev?.max_capacity != null) {
-        const { count: goingCount } = await context.supabase
-          .from("event_rsvps")
-          .select("*", { count: "exact", head: true })
-          .eq("event_id", data.event_id)
-          .eq("status", "going");
+        // "Users manage own rsvp" is USING (user_id = auth.uid()): a direct
+        // count here only ever sees the caller's own row, so capacity would
+        // effectively never trigger for anyone but event staff. The public RPC
+        // returns the true aggregate without exposing who is attending.
+        // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+        const { data: rsvpCounts } = await (context.supabase as any).rpc("get_event_rsvp_counts", {
+          p_event_id: data.event_id,
+        });
+        const goingCount = (rsvpCounts as { going: number }[] | null)?.[0]?.going ?? 0;
         const wasGoing = existing?.status === "going";
-        const currentGoing = (goingCount ?? 0) - (wasGoing ? 1 : 0);
+        const currentGoing = goingCount - (wasGoing ? 1 : 0);
         if (currentGoing >= ev.max_capacity) {
           if (!ev.has_waitlist) {
             throw new Error("This event is at capacity");
@@ -170,14 +174,18 @@ export const upsertRsvp = createServerFn({ method: "POST" })
       }
     }
 
-    const [{ count: going }, { count: interested }, { count: declined }] = await Promise.all([
-      context.supabase.from("event_rsvps").select("*", { count: "exact", head: true }).eq("event_id", data.event_id).eq("status", "going"),
-      context.supabase.from("event_rsvps").select("*", { count: "exact", head: true }).eq("event_id", data.event_id).eq("status", "interested"),
-      context.supabase.from("event_rsvps").select("*", { count: "exact", head: true }).eq("event_id", data.event_id).eq("status", "declined"),
-    ]);
+    // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+    const { data: finalCounts } = await (context.supabase as any).rpc("get_event_rsvp_counts", {
+      p_event_id: data.event_id,
+    });
+    const row = (finalCounts as { going: number; interested: number; declined: number }[] | null)?.[0];
     return {
       myRsvp: newStatus,
-      counts: { going: going ?? 0, interested: interested ?? 0, declined: declined ?? 0 },
+      counts: {
+        going: row?.going ?? 0,
+        interested: row?.interested ?? 0,
+        declined: row?.declined ?? 0,
+      },
       waitlisted,
       waitlistPosition,
     };

@@ -1,11 +1,14 @@
-import os
-import tempfile
 """Billing enforcement against a real Postgres.
 
 The expensive failure modes here are silent: billing a month twice, billing a
 month that was earned, or never billing anyone at all. Each gets a test.
 """
-import glob, os, shutil, subprocess, sys
+import os
+import tempfile
+import glob
+import shutil
+import subprocess
+import sys
 import pgserver
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))

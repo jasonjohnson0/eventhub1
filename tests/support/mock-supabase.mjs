@@ -124,6 +124,32 @@ function handle(req, res) {
   }
 
   if (path === '/rest/v1/event_rsvps') return send([], { 'content-range': '0-0/7' });
+  // The public going/interested/declined aggregate. e1 gets a deliberately
+  // nonzero, distinctive value so a test can tell "wired to the RPC" apart
+  // from "silently fell back to 0" -- the exact failure mode of the bug this
+  // RPC replaced, where a direct table count read as zero for almost everyone.
+  if (path === '/rest/v1/rpc/get_event_rsvp_counts') {
+    let b = {};
+    try { b = JSON.parse(req.__body || '{}'); } catch {}
+    if (b.p_event_id === 'e1') return send([{ going: 42, interested: 7, declined: 2 }]);
+    return send([{ going: 0, interested: 0, declined: 0 }]);
+  }
+  if (path === '/rest/v1/rpc/get_event_rsvp_counts_bulk') {
+    let b = {};
+    try { b = JSON.parse(req.__body || '{}'); } catch {}
+    const ids = Array.isArray(b.p_event_ids) ? b.p_event_ids : [];
+    const known = { e1: [42, 7, 2], e2: [3, 1, 0], e3: [0, 0, 0] };
+    return send(
+      ids
+        .filter((id) => id in known)
+        .map((id) => ({
+          event_id: id,
+          going: known[id][0],
+          interested: known[id][1],
+          declined: known[id][2],
+        })),
+    );
+  }
   if (path === '/rest/v1/rpc/get_public_coordinator_sponsors') {
     return send([
       { slot_id: SLOT_LIVE, event_id: 'e1', event_title: 'Harvest Festival',
