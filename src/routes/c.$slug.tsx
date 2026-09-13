@@ -14,7 +14,7 @@ import { PhotoView } from "@/views/PhotoView";
 import { SummaryView } from "@/views/SummaryView";
 import { supabase } from "@/integrations/supabase/client";
 import { siteUrl } from "@/lib/site-url";
-import { findPresetByColor } from "@/lib/organizer-presets";
+import { brandWash, findPresetByColor } from "@/lib/organizer-presets";
 
 /** Every view the platform has, minus the ones that need geo state the embed
  *  does not carry. Adding a view here is all it takes to expose it. */
@@ -212,14 +212,20 @@ function CoordinatorCalendar() {
   };
 
   const brand = coordinator.primary_color || "#f97316";
+  const brand2 = coordinator.secondary_color || "#06b6d4";
   const name = coordinator.company_name || coordinator.slug;
   const preset = findPresetByColor(coordinator.primary_color);
 
   return (
     <div className="min-h-screen bg-white">
       <header
-        className="border-b border-slate-200 bg-gradient-to-r from-white to-slate-50"
-        style={{ borderTopColor: brand, borderTopWidth: 4, borderTopStyle: "solid" }}
+        className="border-b border-slate-200"
+        style={{
+          background: brandWash(brand, brand2),
+          borderTopColor: brand,
+          borderTopWidth: 4,
+          borderTopStyle: "solid",
+        }}
       >
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-6 py-6">
           {coordinator.logo_url ? (

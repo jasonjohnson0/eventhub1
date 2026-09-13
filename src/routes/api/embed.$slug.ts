@@ -3,7 +3,7 @@ import { getPublicCoordinator } from "@/lib/coordinator.functions";
 import { fetchEvents, addDays, startOfWeek, type CalendarEvent } from "@/queries/events";
 import { supabase } from "@/integrations/supabase/client";
 import { siteOrigin } from "@/lib/site-url";
-import { findPresetByColor } from "@/lib/organizer-presets";
+import { brandWash, findPresetByColor } from "@/lib/organizer-presets";
 
 /**
  * A calendar as a self-contained HTML fragment, for embedding on a customer's
@@ -91,14 +91,27 @@ const fmtDay = (d: Date) =>
  */
 function armour(css: string): string {
   // Declarations end in ; or }. Selectors end in {, so they never match.
-  return css.replace(/([^;{}]+:[^;{}]+?)(\s*[;}])/g, (_m, decl, end) =>
-    decl.includes("!important") ? `${decl}${end}` : `${decl} !important${end}`,
-  );
+  return css.replace(/([^;{}]+:[^;{}]+?)(\s*[;}])/g, (_m, decl, end) => {
+    if (decl.includes("!important")) return `${decl}${end}`;
+    // A custom property's *default* (--ehx-brand, --ehx-wash) must stay
+    // plain. `!important` here doesn't defend against anything -- a hostile
+    // host page has no reason to target an unpredictable custom-property
+    // name -- and it actively breaks the one thing these exist for: each
+    // `.ehx` instance sets its own value via an inline `style="--ehx-brand:…"`
+    // attribute, and a stylesheet `!important` beats a plain inline
+    // declaration on the same property. With the default marked important,
+    // every coordinator's embed silently rendered the hardcoded fallback
+    // color instead of their own -- invisible in testing only because the
+    // fixture coordinator's color happened to match the fallback.
+    const prop = decl.slice(0, decl.indexOf(":")).trim();
+    if (prop.startsWith("--")) return `${decl}${end}`;
+    return `${decl} !important${end}`;
+  });
 }
 
 const STYLE = armour(`
 .ehx,.ehx *,.ehx *::before,.ehx *::after{all:revert}
-.ehx{--ehx-brand:#0f766e;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#18181b;font-size:15px;line-height:1.5;box-sizing:border-box}
+.ehx{--ehx-brand:#0f766e;--ehx-wash:transparent;background:var(--ehx-wash);border-radius:16px;padding:16px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#18181b;font-size:15px;line-height:1.5;box-sizing:border-box}
 .ehx *,.ehx *::before,.ehx *::after{box-sizing:border-box}
 .ehx a{color:inherit;text-decoration:none}
 .ehx-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:14px}
@@ -319,11 +332,14 @@ export const Route = createFileRoute("/api/embed/$slug")({
         const brand = /^#[0-9a-f]{3,8}$/i.test(coordinator.primary_color)
           ? coordinator.primary_color
           : "#0f766e";
+        const brand2 = /^#[0-9a-f]{3,8}$/i.test(coordinator.secondary_color)
+          ? coordinator.secondary_color
+          : "#06b6d4";
         const preset = findPresetByColor(coordinator.primary_color);
         const badge = preset ? `${preset.emoji} ` : "";
 
         const html = `<style>${STYLE}</style>
-<div class="ehx" style="--ehx-brand:${esc(brand)}">
+<div class="ehx" style="--ehx-brand:${esc(brand)};--ehx-wash:${esc(brandWash(brand, brand2))}">
   <div class="ehx-bar">
     <nav class="ehx-views" aria-label="Calendar views">${tabs}</nav>
     ${nav}

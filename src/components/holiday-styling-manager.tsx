@@ -12,10 +12,12 @@ import { findPresetByColor, presetsByHoliday, type OrganizerPreset } from "@/lib
 /**
  * Lets a coordinator pick a holiday look for their own public calendar
  * (`/c/$slug` and the embed) without writing any CSS. Under the hood this is
- * just `primary_color` -- the same field onboarding's branding step already
- * sets -- so every existing render path (the calendar header's accent bar,
- * the logo-less badge, `--ehx-brand` in the embed) picks it up with no
- * further changes.
+ * just `primary_color` + `secondary_color` -- fields onboarding's branding
+ * step already sets -- so every existing render path (the calendar header's
+ * accent bar and two-tone wash, the logo-less badge, `--ehx-brand` /
+ * `--ehx-brand2` in the embed) picks it up with no further changes, and the
+ * embed ends up looking like the real calendar because they read the same
+ * two colors.
  */
 export function HolidayStylingManager() {
   const [profile, setProfile] = useState<CoordinatorProfile | null>(null);
@@ -34,7 +36,9 @@ export function HolidayStylingManager() {
   async function apply(preset: OrganizerPreset) {
     setSavingId(preset.id);
     try {
-      const updated = await saveCoordinatorProfile({ data: { primary_color: preset.hex } });
+      const updated = await saveCoordinatorProfile({
+        data: { primary_color: preset.hex, secondary_color: preset.secondaryHex },
+      });
       setProfile(updated);
       toast.success(`Calendar styled: ${preset.label}`);
     } catch (e) {
@@ -47,7 +51,9 @@ export function HolidayStylingManager() {
   async function clear() {
     setSavingId("__default");
     try {
-      const updated = await saveCoordinatorProfile({ data: { primary_color: "#f97316" } });
+      const updated = await saveCoordinatorProfile({
+        data: { primary_color: "#f97316", secondary_color: "#06b6d4" },
+      });
       setProfile(updated);
       toast.success("Back to the default look");
     } catch (e) {
@@ -95,8 +101,10 @@ export function HolidayStylingManager() {
                       </span>
                     )}
                     <span
-                      className="flex h-12 w-12 items-center justify-center rounded-full text-xl text-white"
-                      style={{ backgroundColor: preset.hex }}
+                      className="flex h-12 w-12 items-center justify-center rounded-full text-xl text-white shadow-inner"
+                      style={{
+                        background: `linear-gradient(135deg, ${preset.hex}, ${preset.secondaryHex})`,
+                      }}
                     >
                       {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : preset.emoji}
                     </span>

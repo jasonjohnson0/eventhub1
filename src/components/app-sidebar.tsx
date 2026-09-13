@@ -15,6 +15,7 @@ import {
   UserSquare2,
   ListPlus,
   Palette,
+  Code2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -56,6 +57,7 @@ const coordinator = [
   { title: "Organizers", url: "/coordinator/settings/organizers", icon: UserSquare2 },
   { title: "Custom fields", url: "/coordinator/settings/custom-fields", icon: ListPlus },
   { title: "Styling", url: "/coordinator/settings/styling", icon: Palette },
+  { title: "Embed", url: "/coordinator/settings/embed", icon: Code2 },
 ];
 
 const admin = [

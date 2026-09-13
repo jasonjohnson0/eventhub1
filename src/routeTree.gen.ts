@@ -53,6 +53,7 @@ import { Route as AuthenticatedEventsIdAnalyticsRouteImport } from './routes/_au
 import { Route as AuthenticatedCoordinatorSettingsVenuesRouteImport } from './routes/_authenticated/coordinator.settings.venues'
 import { Route as AuthenticatedCoordinatorSettingsStylingRouteImport } from './routes/_authenticated/coordinator.settings.styling'
 import { Route as AuthenticatedCoordinatorSettingsOrganizersRouteImport } from './routes/_authenticated/coordinator.settings.organizers'
+import { Route as AuthenticatedCoordinatorSettingsEmbedRouteImport } from './routes/_authenticated/coordinator.settings.embed'
 import { Route as AuthenticatedCoordinatorSettingsCustomFieldsRouteImport } from './routes/_authenticated/coordinator.settings.custom-fields'
 
 const TourRoute = TourRouteImport.update({
@@ -287,6 +288,12 @@ const AuthenticatedCoordinatorSettingsOrganizersRoute =
     path: '/coordinator/settings/organizers',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCoordinatorSettingsEmbedRoute =
+  AuthenticatedCoordinatorSettingsEmbedRouteImport.update({
+    id: '/coordinator/settings/embed',
+    path: '/coordinator/settings/embed',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCoordinatorSettingsCustomFieldsRoute =
   AuthenticatedCoordinatorSettingsCustomFieldsRouteImport.update({
     id: '/coordinator/settings/custom-fields',
@@ -329,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
+  '/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
   '/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
   '/coordinator/settings/styling': typeof AuthenticatedCoordinatorSettingsStylingRoute
   '/coordinator/settings/venues': typeof AuthenticatedCoordinatorSettingsVenuesRoute
@@ -374,6 +382,7 @@ export interface FileRoutesByTo {
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
+  '/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
   '/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
   '/coordinator/settings/styling': typeof AuthenticatedCoordinatorSettingsStylingRoute
   '/coordinator/settings/venues': typeof AuthenticatedCoordinatorSettingsVenuesRoute
@@ -422,6 +431,7 @@ export interface FileRoutesById {
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
+  '/_authenticated/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
   '/_authenticated/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
   '/_authenticated/coordinator/settings/styling': typeof AuthenticatedCoordinatorSettingsStylingRoute
   '/_authenticated/coordinator/settings/venues': typeof AuthenticatedCoordinatorSettingsVenuesRoute
@@ -470,6 +480,7 @@ export interface FileRouteTypes {
     | '/api/embed/$slug'
     | '/admin/'
     | '/coordinator/settings/custom-fields'
+    | '/coordinator/settings/embed'
     | '/coordinator/settings/organizers'
     | '/coordinator/settings/styling'
     | '/coordinator/settings/venues'
@@ -515,6 +526,7 @@ export interface FileRouteTypes {
     | '/api/embed/$slug'
     | '/admin'
     | '/coordinator/settings/custom-fields'
+    | '/coordinator/settings/embed'
     | '/coordinator/settings/organizers'
     | '/coordinator/settings/styling'
     | '/coordinator/settings/venues'
@@ -562,6 +574,7 @@ export interface FileRouteTypes {
     | '/api/embed/$slug'
     | '/_authenticated/admin/'
     | '/_authenticated/coordinator/settings/custom-fields'
+    | '/_authenticated/coordinator/settings/embed'
     | '/_authenticated/coordinator/settings/organizers'
     | '/_authenticated/coordinator/settings/styling'
     | '/_authenticated/coordinator/settings/venues'
@@ -907,6 +920,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCoordinatorSettingsOrganizersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/coordinator/settings/embed': {
+      id: '/_authenticated/coordinator/settings/embed'
+      path: '/coordinator/settings/embed'
+      fullPath: '/coordinator/settings/embed'
+      preLoaderRoute: typeof AuthenticatedCoordinatorSettingsEmbedRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/coordinator/settings/custom-fields': {
       id: '/_authenticated/coordinator/settings/custom-fields'
       path: '/coordinator/settings/custom-fields'
@@ -950,6 +970,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSubmissionsRoute: typeof AuthenticatedSubmissionsRoute
   AuthenticatedCoordinatorSubmissionsRoute: typeof AuthenticatedCoordinatorSubmissionsRoute
   AuthenticatedCoordinatorSettingsCustomFieldsRoute: typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
+  AuthenticatedCoordinatorSettingsEmbedRoute: typeof AuthenticatedCoordinatorSettingsEmbedRoute
   AuthenticatedCoordinatorSettingsOrganizersRoute: typeof AuthenticatedCoordinatorSettingsOrganizersRoute
   AuthenticatedCoordinatorSettingsStylingRoute: typeof AuthenticatedCoordinatorSettingsStylingRoute
   AuthenticatedCoordinatorSettingsVenuesRoute: typeof AuthenticatedCoordinatorSettingsVenuesRoute
@@ -971,6 +992,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedCoordinatorSubmissionsRoute,
   AuthenticatedCoordinatorSettingsCustomFieldsRoute:
     AuthenticatedCoordinatorSettingsCustomFieldsRoute,
+  AuthenticatedCoordinatorSettingsEmbedRoute:
+    AuthenticatedCoordinatorSettingsEmbedRoute,
   AuthenticatedCoordinatorSettingsOrganizersRoute:
     AuthenticatedCoordinatorSettingsOrganizersRoute,
   AuthenticatedCoordinatorSettingsStylingRoute:
