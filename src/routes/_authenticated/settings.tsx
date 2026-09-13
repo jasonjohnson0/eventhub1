@@ -24,6 +24,7 @@ import { OrganizerManager } from "@/components/organizer-manager";
 import { CustomFieldManager } from "@/components/custom-field-manager";
 import { Switch } from "@/components/ui/switch";
 import { getCoordinatorProfile, saveCoordinatorProfile } from "@/lib/onboarding.functions";
+import { AnnualPlanCard } from "@/components/annual-plan-card";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -235,6 +236,7 @@ function SettingsPage() {
           </p>
         </div>
 
+        <AnnualPlanCard />
         <CoordinatorAnalyticsCard />
 
         <Card>

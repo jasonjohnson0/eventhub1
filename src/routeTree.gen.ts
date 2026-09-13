@@ -34,6 +34,7 @@ import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
 import { Route as ApiEmbedSlugRouteImport } from './routes/api/embed.$slug'
 import { Route as AuthenticatedCoordinatorSubmissionsRouteImport } from './routes/_authenticated/coordinator.submissions'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
@@ -181,6 +182,11 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiEmbedSlugRoute = ApiEmbedSlugRouteImport.update({
   id: '/api/embed/$slug',
@@ -334,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
@@ -380,6 +387,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
@@ -429,6 +437,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/_authenticated/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
@@ -478,6 +487,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/coordinator/submissions'
     | '/api/embed/$slug'
+    | '/api/stripe/webhook'
     | '/admin/'
     | '/coordinator/settings/custom-fields'
     | '/coordinator/settings/embed'
@@ -524,6 +534,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/coordinator/submissions'
     | '/api/embed/$slug'
+    | '/api/stripe/webhook'
     | '/admin'
     | '/coordinator/settings/custom-fields'
     | '/coordinator/settings/embed'
@@ -572,6 +583,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users'
     | '/_authenticated/coordinator/submissions'
     | '/api/embed/$slug'
+    | '/api/stripe/webhook'
     | '/_authenticated/admin/'
     | '/_authenticated/coordinator/settings/custom-fields'
     | '/_authenticated/coordinator/settings/embed'
@@ -605,6 +617,7 @@ export interface RootRouteChildren {
   MarketingUnsubscribeRoute: typeof MarketingUnsubscribeRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiEmbedSlugRoute: typeof ApiEmbedSlugRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiAdCSlotIdRoute: typeof ApiAdCSlotIdRoute
   ApiAdISlotIdRoute: typeof ApiAdISlotIdRoute
   ApiPublicIcalTokenRoute: typeof ApiPublicIcalTokenRoute
@@ -786,6 +799,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/embed/$slug': {
       id: '/api/embed/$slug'
@@ -1050,6 +1070,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarketingUnsubscribeRoute: MarketingUnsubscribeRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiEmbedSlugRoute: ApiEmbedSlugRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiAdCSlotIdRoute: ApiAdCSlotIdRoute,
   ApiAdISlotIdRoute: ApiAdISlotIdRoute,
   ApiPublicIcalTokenRoute: ApiPublicIcalTokenRoute,
