@@ -72,7 +72,11 @@ export function EmbedCodeManager() {
       view === "month"
         ? `[eventhub_calendar slug="${slug}"]`
         : `[eventhub_calendar slug="${slug}" view="${view}"]`;
-    const iframeSnippet = `<iframe src="${calendarUrl}" width="100%" height="800" style="border:0" title="Event calendar"></iframe>`;
+    // Scripts, popups (for the calendar's own new-tab event links) and
+    // same-origin (so a signed-in visitor's session/localStorage still work
+    // inside the frame) are allowed; top-level navigation deliberately is
+    // not, so nothing embedded here can ever redirect the host page itself.
+    const iframeSnippet = `<iframe src="${calendarUrl}" width="100%" height="800" style="border:0" title="Event calendar" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>`;
     return { calendarUrl, fragmentUrl, shortcode, iframeSnippet };
   }, [base, slug, view]);
 
