@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { MapPin, Ticket } from "lucide-react";
-import { fetchMyEvents, fmtTime, type CalendarEvent, type EventFilters } from "@/queries/events";
+import { fetchMyEvents, fmtTime, isMultiDay, type CalendarEvent, type EventFilters } from "@/queries/events";
 import { CategoryTag, EmptyState } from "./shared";
 import { Button } from "@/components/ui/button";
 
@@ -92,6 +92,12 @@ export function AgendaView({ signedIn, filters }: { signedIn: boolean; filters?:
                       <Ticket className="h-3 w-3" />
                       {e.rsvp_status}
                     </span>
+                    {isMultiDay(e) && (
+                      <span className="text-[11px] font-semibold text-slate-400">
+                        through{" "}
+                        {new Date(e.end_time).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      </span>
+                    )}
                   </div>
                   {e.location && (
                     <div className="mt-1 inline-flex items-center gap-1 text-xs text-slate-500">

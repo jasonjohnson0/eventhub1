@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import type { CalendarEvent } from "@/queries/events";
-import { fmtTime } from "@/queries/events";
+import { fmtTime, isMultiDay } from "@/queries/events";
 import { CategoryTag } from "@/components/CalendarViews/shared";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, MapPin, Users, X } from "lucide-react";
@@ -44,6 +44,8 @@ export function PhotoView({ events }: { events: CalendarEvent[] }) {
               <span className="block truncate text-[10px] text-white/80 sm:text-xs">
                 {new Date(e.start_time).toLocaleDateString(undefined, { month: "short", day: "numeric" })} ·{" "}
                 {fmtTime(e.start_time)}
+                {isMultiDay(e) &&
+                  ` – ${new Date(e.end_time).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}
               </span>
             </span>
           </button>
@@ -97,7 +99,10 @@ export function PhotoView({ events }: { events: CalendarEvent[] }) {
                     month: "long",
                     day: "numeric",
                   })}{" "}
-                  · {fmtTime(active.start_time)} – {fmtTime(active.end_time)}
+                  · {fmtTime(active.start_time)}
+                  {isMultiDay(active)
+                    ? ` – ${new Date(active.end_time).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })} · ${fmtTime(active.end_time)}`
+                    : ` – ${fmtTime(active.end_time)}`}
                 </p>
                 {active.location && (
                   <p className="flex items-center gap-2">

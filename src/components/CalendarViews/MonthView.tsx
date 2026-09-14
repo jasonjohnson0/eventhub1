@@ -1,23 +1,53 @@
 import { useMemo } from "react";
 import type { CalendarEvent } from "@/queries/events";
-import { addDays, sameDay, startOfDay } from "@/queries/events";
+import { addDays, occupiesDates, isMultiDay, sameDay, startOfDay } from "@/queries/events";
 import { EventChip } from "./shared";
 
+const MAX_LANES = 3;
+
+type Seg = { event: CalendarEvent; startCol: number; span: number; lane: number };
+
+/** Greedy interval-scheduling pack: events touching this week are laid into
+ *  the fewest lanes such that no two overlapping events share a lane.
+ *  Sorted by start column, then longest-first, which keeps multi-day bars
+ *  from fragmenting behind shorter events that start on the same day. */
+function packWeek(events: CalendarEvent[], week: Date[]): Seg[] {
+  const raw = events
+    .map((e) => {
+      const dates = occupiesDates(e);
+      let startCol = -1;
+      let endCol = -1;
+      week.forEach((d, i) => {
+        if (dates.some((od) => sameDay(od, d))) {
+          if (startCol === -1) startCol = i;
+          endCol = i;
+        }
+      });
+      if (startCol === -1) return null;
+      return { event: e, startCol, span: endCol - startCol + 1 };
+    })
+    .filter((x): x is { event: CalendarEvent; startCol: number; span: number } => x !== null)
+    .sort((a, b) => a.startCol - b.startCol || b.span - a.span);
+
+  const laneEnd: number[] = [];
+  return raw.map((iv) => {
+    let lane = laneEnd.findIndex((end) => end <= iv.startCol);
+    if (lane === -1) {
+      lane = laneEnd.length;
+      laneEnd.push(0);
+    }
+    laneEnd[lane] = iv.startCol + iv.span;
+    return { ...iv, lane };
+  });
+}
+
 export function MonthView({ cursor, events }: { cursor: Date; events: CalendarEvent[] }) {
-  const days = useMemo(() => {
+  const weeks = useMemo(() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
     const gridStart = addDays(startOfDay(first), -first.getDay());
-    return Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
+    const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
+    return Array.from({ length: 6 }, (_, i) => days.slice(i * 7, i * 7 + 7));
   }, [cursor]);
-
-  const byDay = useMemo(() => {
-    const map = new Map<string, CalendarEvent[]>();
-    for (const e of events) {
-      const k = new Date(e.start_time).toDateString();
-      map.set(k, [...(map.get(k) ?? []), e]);
-    }
-    return map;
-  }, [events]);
 
   const today = new Date();
 
@@ -30,34 +60,70 @@ export function MonthView({ cursor, events }: { cursor: Date; events: CalendarEv
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7">
-        {days.map((d) => {
-          const items = byDay.get(d.toDateString()) ?? [];
-          const inMonth = d.getMonth() === cursor.getMonth();
-          return (
-            <div
-              key={d.toISOString()}
-              className={`min-h-28 space-y-1 border-b border-r border-slate-100 p-1.5 ${
-                inMonth ? "" : "bg-slate-50/60"
-              }`}
-            >
-              <div
-                className={`ml-auto flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-                  sameDay(d, today) ? "bg-fuchsia-500 text-white" : inMonth ? "text-slate-700" : "text-slate-300"
-                }`}
-              >
-                {d.getDate()}
+      {weeks.map((week, wi) => {
+        const segs = packWeek(events, week);
+        return (
+          <div
+            key={wi}
+            className="grid"
+            style={{ gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gridAutoRows: "min-content" }}
+          >
+            {/* per-day background/border, spanning every row in this week so
+                cell boundaries stay correct regardless of how many lanes render */}
+            {week.map((d, ci) => {
+              const inMonth = d.getMonth() === cursor.getMonth();
+              return (
+                <div
+                  key={`bg-${d.toISOString()}`}
+                  style={{ gridColumn: ci + 1, gridRow: "1 / -1" }}
+                  className={`min-h-28 border-b border-r border-slate-100 ${inMonth ? "" : "bg-slate-50/60"}`}
+                />
+              );
+            })}
+            {week.map((d, ci) => (
+              <div key={`num-${d.toISOString()}`} style={{ gridColumn: ci + 1, gridRow: 1 }} className="p-1.5">
+                <div
+                  className={`ml-auto flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+                    sameDay(d, today)
+                      ? "bg-fuchsia-500 text-white"
+                      : d.getMonth() === cursor.getMonth()
+                        ? "text-slate-700"
+                        : "text-slate-300"
+                  }`}
+                >
+                  {d.getDate()}
+                </div>
               </div>
-              {items.slice(0, 3).map((e) => (
-                <EventChip key={e.id} event={e} compact />
+            ))}
+            {segs
+              .filter((s) => s.lane < MAX_LANES)
+              .map((s) => (
+                <div
+                  key={s.event.id}
+                  style={{ gridColumn: `${s.startCol + 1} / span ${s.span}`, gridRow: s.lane + 2 }}
+                  className="px-1.5 pb-1"
+                >
+                  <EventChip event={s.event} compact spanning={isMultiDay(s.event) && s.span > 1} />
+                </div>
               ))}
-              {items.length > 3 && (
-                <div className="px-2 text-[11px] font-semibold text-slate-400">+{items.length - 3} more</div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+            {week.map((d, ci) => {
+              const hidden = segs.filter(
+                (s) => s.lane >= MAX_LANES && ci >= s.startCol && ci < s.startCol + s.span,
+              ).length;
+              if (hidden === 0) return null;
+              return (
+                <div
+                  key={`more-${d.toISOString()}`}
+                  style={{ gridColumn: ci + 1, gridRow: MAX_LANES + 2 }}
+                  className="px-2 pb-1 text-[11px] font-semibold text-slate-400"
+                >
+                  +{hidden} more
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -87,6 +87,9 @@ const EVENTS = [
   { id: 'e2', coordinator_id: COORD, title: 'Farmers Market', description: 'Local growers and makers.', location: 'Riverfront Park', start_time: day(5, 9), end_time: day(5, 13), category: 'community', status: 'approved' },
   { id: 'e3', coordinator_id: COORD, title: 'Jazz on the Water', description: 'Live quartet at sunset.', location: 'The Landing', start_time: day(9, 19), end_time: day(9, 22), category: 'music', status: 'approved' },
   { id: 'e4', coordinator_id: COORD, title: '<img src=x onerror="window.__XSS=1">', description: 'hostile "quoted" & <b>markup</b>', location: "O'Brien Hall", start_time: day(12, 10), end_time: day(12, 12), category: 'other', status: 'approved' },
+  // Spans 3 calendar days (spec 02) -- same day-offset range as e1-e4, which
+  // is already proven to stay inside the visible month grid in this suite.
+  { id: 'e5', coordinator_id: COORD, title: 'River Bend Music Fest', description: 'A weekend of live music on the water.', location: 'Riverfront Park', start_time: day(2, 18), end_time: day(4, 14), category: 'music', status: 'approved' },
   // Belongs to a different coordinator: must never appear on /c/riverside.
   { id: 'x1', coordinator_id: OTHER, title: 'Somebody Else’s Gala', description: 'Not Riverside.', location: 'Elsewhere', start_time: day(3), end_time: day(3, 22), category: 'other', status: 'approved' },
   // getEvent (and the attendee functions it shares /manage and /checkin with)

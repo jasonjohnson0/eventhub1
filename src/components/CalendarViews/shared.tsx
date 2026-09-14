@@ -3,15 +3,26 @@ import { categoryClasses, categoryLabel } from "@/lib/categories";
 import type { CalendarEvent } from "@/queries/events";
 import { fmtTime } from "@/queries/events";
 
-export function EventChip({ event, compact = false }: { event: CalendarEvent; compact?: boolean }) {
+export function EventChip({
+  event,
+  compact = false,
+  spanning = false,
+}: {
+  event: CalendarEvent;
+  compact?: boolean;
+  /** A multi-day bar occupying more than one grid cell — squared-off ends
+   *  instead of a pill, so it reads as one continuous run across days
+   *  rather than a stretched single-day chip. */
+  spanning?: boolean;
+}) {
   return (
     <Link
       to="/events/$id"
       params={{ id: event.id }}
       title={`${event.title} · ${fmtTime(event.start_time)}`}
-      className={`block truncate rounded-lg px-2 py-1 text-xs font-semibold transition-transform hover:scale-[1.02] ${categoryClasses(
-        event.category,
-      )}`}
+      className={`block truncate px-2 py-1 text-xs font-semibold transition-transform hover:scale-[1.01] ${
+        spanning ? "rounded-md" : "rounded-lg"
+      } ${categoryClasses(event.category)}`}
     >
       {!compact && <span className="mr-1 opacity-70">{fmtTime(event.start_time)}</span>}
       {event.title}

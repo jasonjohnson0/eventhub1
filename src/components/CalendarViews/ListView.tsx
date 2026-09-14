@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { CalendarEvent } from "@/queries/events";
 import { CATEGORIES, categoryLabel } from "@/lib/categories";
-import { fmtTime } from "@/queries/events";
+import { fmtTime, isMultiDay } from "@/queries/events";
 import { CategoryTag, EmptyState } from "./shared";
 
 export function ListView({ events }: { events: CalendarEvent[] }) {
@@ -109,7 +109,11 @@ export function ListView({ events }: { events: CalendarEvent[] }) {
                   <CategoryTag category={e.category} />
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                  <span>{fmtTime(e.start_time)}</span>
+                  <span>
+                    {fmtTime(e.start_time)}
+                    {isMultiDay(e) &&
+                      ` – ${new Date(e.end_time).toLocaleDateString(undefined, { month: "short", day: "numeric" })}, ${fmtTime(e.end_time)}`}
+                  </span>
                   {e.location && (
                     <span className="inline-flex items-center gap-1">
                       <MapPin className="h-3 w-3" />

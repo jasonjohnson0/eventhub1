@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { CalendarEvent } from "@/queries/events";
-import { fmtTime } from "@/queries/events";
+import { fmtTime, isMultiDay } from "@/queries/events";
 import { CATEGORIES, categoryLabel, categoryClasses } from "@/lib/categories";
 import { useEventFilters } from "@/hooks/useEventFilters";
 import { Button } from "@/components/ui/button";
@@ -113,6 +113,8 @@ export function SummaryView({ events }: { events: CalendarEvent[] }) {
                         day: "numeric",
                       })}{" "}
                       · {fmtTime(e.start_time)}
+                      {isMultiDay(e) &&
+                        ` – ${new Date(e.end_time).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}
                     </span>
                     {e.location && (
                       <span className="inline-flex min-w-0 items-center gap-1">
