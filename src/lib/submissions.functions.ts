@@ -72,6 +72,19 @@ export const submitEvent = createServerFn({ method: "POST" })
       },
     });
     if (error) throw new Error(error.message);
+
+    // Spec 08: this claimed to already email the coordinator on submit
+    // (per the spec's own "verified current state") -- it did not, there
+    // was no coordinator-facing notification of any kind here before this.
+    // Fire-and-forget; never blocks the submitter's success response.
+    const { notifyCoordinator } = await import("@/lib/chat-notify.server");
+    const { siteOrigin } = await import("@/lib/site-url");
+    void notifyCoordinator(
+      coordinator.coordinator_id,
+      "submission_received",
+      `New event submission: "${data.title}" from ${data.submitted_by_email}. Review: ${siteOrigin() || "https://eventhub1-eight.vercel.app"}/submissions`,
+    );
+
     return { ok: true };
   });
 

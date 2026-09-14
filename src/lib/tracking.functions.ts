@@ -63,10 +63,11 @@ export const upsertRsvp = createServerFn({ method: "POST" })
     let waitlisted = false;
     let waitlistPosition: number | null = null;
 
-    // Load capacity settings
+    // Load capacity settings (coordinator_id/title too, for the spec 08
+    // Slack/Discord "going" notification fired below).
     const { data: ev } = await context.supabase
       .from("events")
-      .select("max_capacity, has_waitlist")
+      .select("max_capacity, has_waitlist, coordinator_id, title")
       .eq("id", data.event_id)
       .maybeSingle();
 
@@ -179,6 +180,21 @@ export const upsertRsvp = createServerFn({ method: "POST" })
       p_event_id: data.event_id,
     });
     const row = (finalCounts as { going: number; interested: number; declined: number }[] | null)?.[0];
+
+    // Spec 08: fires exactly on a genuine transition *into* going -- the
+    // toggle-off branch above returns before reaching here, so this can
+    // only run when the write just set status to going, never on
+    // interested/declined (per the spec) and never on a re-click that
+    // toggled someone already-going back off.
+    if (!waitlisted && data.status === "going" && ev?.coordinator_id) {
+      const { notifyCoordinator } = await import("@/lib/chat-notify.server");
+      void notifyCoordinator(
+        ev.coordinator_id as string,
+        "rsvp_going",
+        `${row?.going ?? 0} going on "${ev.title}" (just RSVP'd).`,
+      );
+    }
+
     return {
       myRsvp: newStatus,
       counts: {

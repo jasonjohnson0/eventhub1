@@ -60,6 +60,7 @@ if [ "$WHICH" = "all" ] || [ "$WHICH" = "browser" ]; then
   VITE_SUPABASE_URL="http://127.0.0.1:$MOCK_PORT" SUPABASE_URL="http://127.0.0.1:$MOCK_PORT" \
   VITE_SUPABASE_ANON_KEY=test SUPABASE_ANON_KEY=test SUPABASE_SERVICE_ROLE_KEY=test-service-key \
   PUBLIC_SITE_URL=https://events.example AD_STATS_SALT=test-salt \
+  PLATFORM_CONFIG_ENC_KEY=test-platform-config-enc-key CRON_SECRET=test-cron-secret \
     npx vite dev --port "$APP_PORT" --host 127.0.0.1 >/tmp/eh-dev.log 2>&1 &
   app_pid=$!
   trap 'kill $mock_pid $app_pid 2>/dev/null' EXIT

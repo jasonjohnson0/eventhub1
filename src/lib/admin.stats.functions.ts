@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { notifyEventCancelled } from "@/lib/events.functions";
 
 async function assertAdmin(context: { supabase: any; userId: string }) {
   const { data, error } = await context.supabase.rpc("has_role", {
@@ -77,7 +78,7 @@ export const adminRemoveEvent = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: ev, error: readErr } = await supabaseAdmin
       .from("events")
-      .select("title, start_time")
+      .select("title, start_time, coordinator_id")
       .eq("id", data.id)
       .single();
     if (readErr) throw new Error(readErr.message);
@@ -99,7 +100,8 @@ export const adminRemoveEvent = createServerFn({ method: "POST" })
       change_details: { reason: data.reason },
     });
     const { autoRefundConfirmedTickets } = await import("@/lib/monetization.functions");
-    await autoRefundConfirmedTickets(data.id, ev.title, ev.start_time);
+    const refundResult = await autoRefundConfirmedTickets(data.id, ev.title, ev.start_time);
+    await notifyEventCancelled(supabaseAdmin, data.id, ev, refundResult.refunded);
     return { ok: true };
   });
 

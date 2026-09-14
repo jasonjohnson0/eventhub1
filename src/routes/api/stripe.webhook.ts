@@ -43,6 +43,38 @@ async function upsertFromSubscription(admin: any, sub: Stripe.Subscription) {
   if (error) console.error(`[stripe webhook] upsert failed for ${sub.id}:`, error.message);
 }
 
+/** Spec 08: fired from confirmTicketCheckout once a purchase is genuinely
+ *  `confirmed`, not from the reservation step. Fire-and-forget, same as
+ *  every other notifyCoordinator call -- a coordinator's Slack being down
+ *  must never affect ticket confirmation. */
+// biome-ignore lint/suspicious/noExplicitAny: tables not in generated types yet
+async function notifyTicketSold(
+  admin: any,
+  purchase: { event_id: string; user_id: string; ticket_id: string; quantity: number; amount_cents: number },
+): Promise<void> {
+  try {
+    const [{ data: ev }, { data: tier }, { data: buyer }] = await Promise.all([
+      admin.from("events").select("title, coordinator_id").eq("id", purchase.event_id).maybeSingle(),
+      admin.from("event_tickets").select("name").eq("id", purchase.ticket_id).maybeSingle(),
+      admin.auth.admin.getUserById(purchase.user_id),
+    ]);
+    if (!ev?.coordinator_id) return;
+    const buyerName =
+      (buyer?.data?.user?.user_metadata?.full_name as string | undefined) ||
+      buyer?.data?.user?.email ||
+      "Someone";
+    const amount = (purchase.amount_cents / 100).toFixed(2);
+    const { notifyCoordinator } = await import("@/lib/chat-notify.server");
+    await notifyCoordinator(
+      ev.coordinator_id,
+      "ticket_sold",
+      `${buyerName} bought ${purchase.quantity}× ${tier?.name ?? "a ticket"} ($${amount}) for "${ev.title}".`,
+    );
+  } catch (err) {
+    console.error("[stripe webhook] notifyTicketSold failed:", err);
+  }
+}
+
 /** Confirms a ticket hold once Stripe reports the Checkout Session actually
  *  completed -- this is the only place a paid purchase ever gets marked
  *  confirmed, so a buyer redirected to Checkout can't get a ticket without
@@ -72,10 +104,13 @@ async function confirmTicketCheckout(admin: any, session: Stripe.Checkout.Sessio
   }
   const { data: purchase } = await admin
     .from("ticket_purchases")
-    .select("event_id, user_id")
+    .select("event_id, user_id, ticket_id, quantity, amount_cents")
     .eq("id", purchaseId)
     .maybeSingle();
   if (purchase) {
+    // Spec 08: only fires on a real confirmed charge -- never on the
+    // pending hold this same purchase started as, per the spec's own F3.
+    void notifyTicketSold(admin, purchase);
     // Buying a ticket doesn't otherwise RSVP you -- do that here so the
     // event's going count and the buyer's own "my events" list reflect it.
     await admin

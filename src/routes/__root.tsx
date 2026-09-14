@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { HolidayThemePicker } from "@/components/holiday-theme-picker";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -129,6 +130,13 @@ function RootComponent() {
       {/* Available everywhere, on purpose -- a personal display preference,
           not tied to any one page. */}
       <HolidayThemePicker />
+      {/* toast.success()/toast.error() are called from ~30 files across the
+          app, but nothing ever rendered the sonner <Toaster/> that actually
+          displays them -- every one of those calls has been a silent no-op.
+          Found while writing a browser test for spec 08 that asserted on a
+          toast's actual visible content, not just that the underlying
+          server call succeeded or failed. */}
+      <Toaster />
     </QueryClientProvider>
   );
 }

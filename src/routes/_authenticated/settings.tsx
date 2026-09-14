@@ -23,7 +23,8 @@ import { VenueManager } from "@/components/venue-manager";
 import { OrganizerManager } from "@/components/organizer-manager";
 import { CustomFieldManager } from "@/components/custom-field-manager";
 import { EmailLogTable } from "@/components/email-log-table";
-import { Mail } from "lucide-react";
+import { ChatHooksSettings } from "@/components/chat-hooks-settings";
+import { Mail, MessageSquare } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   getCoordinatorProfile,
@@ -510,6 +511,17 @@ function SettingsPage() {
           </CardHeader>
           <CardContent>
             <EmailLogTable />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" /> Slack / Discord notifications
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChatHooksSettings />
           </CardContent>
         </Card>
 

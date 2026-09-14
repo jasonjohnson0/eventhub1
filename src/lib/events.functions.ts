@@ -4,6 +4,27 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const isoDate = z.string().datetime({ offset: true });
 
+/** Spec 08: shared by deleteMyEvent and adminRemoveEvent -- both cancel an
+ *  event the same way, so both fire the same notification the same way. */
+export async function notifyEventCancelled(
+  supabase: import("@supabase/supabase-js").SupabaseClient,
+  eventId: string,
+  ev: { title: string; coordinator_id: string },
+  refundedCount: number,
+): Promise<void> {
+  // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+  const { data: counts } = await (supabase as any).rpc("get_event_rsvp_counts", {
+    p_event_id: eventId,
+  });
+  const going = (counts as { going: number }[] | null)?.[0]?.going ?? 0;
+  const { notifyCoordinator } = await import("@/lib/chat-notify.server");
+  void notifyCoordinator(
+    ev.coordinator_id,
+    "event_cancelled",
+    `"${ev.title}" was cancelled. ${going} RSVPs, ${refundedCount} paid tickets refunded.`,
+  );
+}
+
 export const listMyEvents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -225,7 +246,7 @@ export const deleteMyEvent = createServerFn({ method: "POST" })
     await assertEventAccess(context.supabase, context.userId, data.event_id);
     const { data: ev, error: readErr } = await context.supabase
       .from("events")
-      .select("title, start_time")
+      .select("title, start_time, coordinator_id")
       .eq("id", data.event_id)
       .single();
     if (readErr) throw new Error(readErr.message);
@@ -243,7 +264,8 @@ export const deleteMyEvent = createServerFn({ method: "POST" })
     // cancelled at this point and the coordinator shouldn't be blocked by
     // a Stripe hiccup on someone else's ticket.
     const { autoRefundConfirmedTickets } = await import("@/lib/monetization.functions");
-    await autoRefundConfirmedTickets(data.event_id, ev.title, ev.start_time);
+    const refundResult = await autoRefundConfirmedTickets(data.event_id, ev.title, ev.start_time);
+    await notifyEventCancelled(context.supabase, data.event_id, ev, refundResult.refunded);
     return { ok: true };
   });
 

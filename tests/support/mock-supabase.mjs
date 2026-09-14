@@ -150,6 +150,10 @@ const EMAIL_SENDS = [
   { id: 'f0000001-0000-4000-8000-000000000006', coordinator_id: OTHER, event_id: null, invitation_id: null, type: 'announcement', recipient_email: 'not-riversides@example.com', subject: 'Update', provider: 'sendgrid', status: 'sent', error: null, sent_at: day(-1), opened_at: null, clicked_at: null, created_at: day(-1) },
 ];
 
+// Spec 08 (Slack/Discord notifications). Empty by default -- COORD starts
+// with no row, same as any real coordinator who's never opened this section.
+const CHAT_HOOKS = [];
+
 function parseEq(search, field) {
   const v = new URLSearchParams(search).get(field);
   if (!v) return null;
@@ -268,6 +272,33 @@ function handle(req, res) {
     }
     return send(wantsObject ? row : row ? [row] : []);
   }
+  if (path === '/rest/v1/coordinator_chat_hooks') {
+    let body = {};
+    if (req.method === 'PATCH' || req.method === 'POST') {
+      try { body = JSON.parse(req.__body || '{}'); } catch {}
+    }
+    const coordinatorId = parseEq(url.search, 'coordinator_id') || body.coordinator_id || null;
+    let row = coordinatorId ? CHAT_HOOKS.find((r) => r.coordinator_id === coordinatorId) : null;
+    if ((req.method === 'PATCH' || req.method === 'POST') && coordinatorId) {
+      if (row) Object.assign(row, body);
+      else {
+        row = {
+          coordinator_id: coordinatorId,
+          slack_webhook_url: null,
+          discord_webhook_url: null,
+          notify_submission: true,
+          notify_rsvp_going: false,
+          notify_ticket_sold: true,
+          notify_event_cancelled: true,
+          updated_at: new Date().toISOString(),
+          ...body,
+        };
+        CHAT_HOOKS.push(row);
+      }
+    }
+    return send(wantsObject ? (row ?? null) : row ? [row] : []);
+  }
+
   // No fixture is workspace staff anywhere in this mock; made explicit rather
   // than left to the generic fallback at the bottom of this file, so it reads
   // as a deliberate "nobody is staff" rather than an unhandled route.
