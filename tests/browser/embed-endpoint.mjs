@@ -85,6 +85,26 @@ for (const view of ['month', 'week', 'list', 'agenda']) {
   const v = await get(`${EMBED}?view=${view}`);
   check(`view=${view} renders`, v.status === 200 && v.html.includes('class="ehx"'), String(v.status));
 }
+
+// ---- multi-day events (spec 02): the e5 fixture spans 3 days -----------------
+const monthWithMulti = await get(`${EMBED}?view=month`);
+const multiChipCount = (monthWithMulti.html.match(/River Bend Music Fest/g) || []).length;
+check('the multi-day event appears more than once in month view (once per occupied day)',
+  multiChipCount >= 2, `found ${multiChipCount}`);
+check('a continuation day is marked distinctly, not as a coincidentally-identical second event',
+  monthWithMulti.html.includes('ehx-chip-cont'), 'no continuation marker found');
+check('the continuation label references the same event, not a duplicate title standing alone',
+  /→ River Bend Music Fest/.test(monthWithMulti.html), 'no "→" continuation label found');
+
+const listWithMulti = await get(`${EMBED}?view=list`);
+const listTitleCount = (listWithMulti.html.match(/River Bend Music Fest/g) || []).length;
+check('list view shows the multi-day event exactly once, not once per day',
+  listTitleCount === 1, `found ${listTitleCount}`);
+const multiListItem = /<li class="ehx-item">(?:(?!<\/li>).)*River Bend Music Fest(?:(?!<\/li>).)*<\/li>/s.exec(
+  listWithMulti.html,
+);
+check('list view shows a date range for the multi-day event, not just the start date',
+  !!multiListItem && multiListItem[0].includes('–'), 'no range dash found in the item');
 const next = /href="[^"]*view=month&amp;on=(\d{4}-\d{2}-\d{2})"/.exec(r.html);
 check('month nav exposes a real anchored URL', !!next, 'no ?on= link found');
 if (next) {

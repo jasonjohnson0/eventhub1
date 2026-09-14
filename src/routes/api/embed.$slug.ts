@@ -1,6 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getPublicCoordinator } from "@/lib/coordinator.functions";
-import { fetchEvents, addDays, startOfWeek, type CalendarEvent } from "@/queries/events";
+import {
+  fetchEvents,
+  addDays,
+  startOfWeek,
+  occupiesDates,
+  sameDay,
+  type CalendarEvent,
+} from "@/queries/events";
 import { supabase } from "@/integrations/supabase/client";
 import { siteOrigin } from "@/lib/site-url";
 import { brandWash, findPresetByColor } from "@/lib/organizer-presets";
@@ -129,6 +136,7 @@ const STYLE = armour(`
 .ehx-daynum{font-size:12px;font-weight:600;color:#71717a}
 .ehx-chip{display:block;max-width:100%;margin-top:4px;padding:3px 6px;border-radius:6px;background:#f4f4f5;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ehx-chip:hover{background:#e4e4e7}
+.ehx-chip-cont{opacity:.72;border-left:3px solid var(--ehx-brand)}
 .ehx-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
 .ehx-item{display:flex;gap:12px;border:1px solid #e4e4e7;border-radius:12px;padding:12px}
 .ehx-when{min-width:96px;font-size:12px;font-weight:700;color:var(--ehx-brand);text-transform:uppercase}
@@ -151,10 +159,20 @@ const STYLE = armour(`
 function renderMonth(cursor: Date, events: CalendarEvent[], appUrl: string): string {
   const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
   const start = startOfWeek(first);
+  // Bucket by every date a (possibly multi-day) event occupies, not just its
+  // start date -- otherwise a 3-day festival only ever showed on day one.
+  // No CSS grid-column spanning here (the way the React MonthView does it):
+  // this grid's 42 cells rely on plain document-order auto-placement, and
+  // this fragment has to stay crawlable/indexable with no JS, so a repeated
+  // chip per occupied day -- visually marked as a continuation, not a
+  // coincidentally-same-titled second event -- is the honest fit for this
+  // renderer rather than reworking cell placement to match React's approach.
   const byDay = new Map<string, CalendarEvent[]>();
   for (const e of events) {
-    const k = anchor(new Date(e.start_time));
-    byDay.set(k, [...(byDay.get(k) ?? []), e]);
+    for (const d of occupiesDates(e)) {
+      const k = anchor(d);
+      byDay.set(k, [...(byDay.get(k) ?? []), e]);
+    }
   }
   const dows = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     .map((d) => `<div class="ehx-dow">${d}</div>`)
@@ -166,10 +184,12 @@ function renderMonth(cursor: Date, events: CalendarEvent[], appUrl: string): str
     const inMonth = d.getMonth() === cursor.getMonth();
     const items = byDay.get(anchor(d)) ?? [];
     const chips = items
-      .map(
-        (e) =>
-          `<a class="ehx-chip" href="${esc(appUrl)}/events/${esc(e.id)}" target="_blank" rel="noopener">${esc(e.title)}</a>`,
-      )
+      .map((e) => {
+        const dates = occupiesDates(e);
+        const isContinuation = dates.length > 1 && !sameDay(dates[0], d);
+        const label = isContinuation ? `→ ${e.title}` : e.title;
+        return `<a class="ehx-chip${isContinuation ? " ehx-chip-cont" : ""}" href="${esc(appUrl)}/events/${esc(e.id)}" target="_blank" rel="noopener">${esc(label)}</a>`;
+      })
       .join("");
     cells.push(
       `<div class="ehx-cell${inMonth ? "" : " ehx-dim"}"><div class="ehx-daynum">${d.getDate()}</div>${chips}</div>`,
@@ -184,8 +204,12 @@ function renderList(events: CalendarEvent[], appUrl: string): string {
   const items = events
     .map((e) => {
       const d = new Date(e.start_time);
+      const isMulti = occupiesDates(e).length > 1;
+      const when = isMulti
+        ? `${esc(fmtDay(d))}, ${esc(fmtTime(e.start_time))}<br>– ${esc(fmtDay(new Date(e.end_time)))}, ${esc(fmtTime(e.end_time))}`
+        : `${esc(fmtDay(d))}<br>${esc(fmtTime(e.start_time))}`;
       return `<li class="ehx-item">
-        <div class="ehx-when">${esc(fmtDay(d))}<br>${esc(fmtTime(e.start_time))}</div>
+        <div class="ehx-when">${when}</div>
         <div>
           <p class="ehx-title"><a href="${esc(appUrl)}/events/${esc(e.id)}" target="_blank" rel="noopener">${esc(e.title)}</a></p>
           ${e.location ? `<p class="ehx-meta">${esc(e.location)}</p>` : ""}
@@ -288,10 +312,11 @@ export const Route = createFileRoute("/api/embed/$slug")({
         if (view === "week") {
           const s = startOfWeek(cursor).getTime();
           const e = addDays(startOfWeek(cursor), 7).getTime();
-          shown = events.filter((x) => {
-            const t = +new Date(x.start_time);
-            return t >= s && t < e;
-          });
+          // Overlap test (occupies any part of the week), not just "starts
+          // in the week" -- a multi-day event that started last week but
+          // runs into this one was previously dropped entirely from the
+          // week view once its start_time fell before the window.
+          shown = events.filter((x) => +new Date(x.end_time) >= s && +new Date(x.start_time) < e);
         } else if (view === "list" || view === "agenda") {
           const now = Date.now();
           shown = events.filter((x) => +new Date(x.end_time) >= now).slice(0, 25);
