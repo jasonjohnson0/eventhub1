@@ -245,3 +245,71 @@ export function sameDay(a: Date, b: Date) {
 export function fmtTime(iso: string | Date) {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
+
+/** Local calendar dates (each a Date at local midnight) this event occupies,
+ *  for calendar-view rendering. A short overnight event that just spills
+ *  past midnight (a 10pm-1am show) still reads as one night's event, not
+ *  two days on the calendar: "genuinely multi-day" here means either the
+ *  event runs 12+ hours, or its end date lands 2+ calendar days after its
+ *  start -- anything shorter that merely crosses one midnight boundary
+ *  collapses back to its single start date. An end that falls at exactly
+ *  local midnight is treated as ending "at the start of" that date, not
+ *  spilling into it (typical calendar-app exclusive-end convention).
+ *
+ *  Spec 02's own F2 write-up is internally inconsistent: it states the
+ *  answer to "does a 10pm-1am event paint two days?" is "No", but then
+ *  separately recommends a literal rule ("exclude the end date only if
+ *  it's exactly midnight") that would actually paint that same event
+ *  across two days, contradicting its own stated answer and acceptance
+ *  criterion. This implements the stated answer, not the contradictory
+ *  literal rule -- see TEAMWORK.md. */
+export function occupiesDates(event: { start_time: string; end_time: string }): Date[] {
+  const start = startOfDay(new Date(event.start_time));
+  const endRaw = new Date(event.end_time);
+  const endIsExactMidnight =
+    endRaw.getHours() === 0 &&
+    endRaw.getMinutes() === 0 &&
+    endRaw.getSeconds() === 0 &&
+    endRaw.getMilliseconds() === 0;
+  let end = startOfDay(endRaw);
+  if (endIsExactMidnight && end.getTime() > start.getTime()) {
+    end = addDays(end, -1);
+  }
+  if (end.getTime() <= start.getTime()) return [start];
+
+  const durationHours =
+    (new Date(event.end_time).getTime() - new Date(event.start_time).getTime()) / 3_600_000;
+  const dayGap = Math.round((end.getTime() - start.getTime()) / 86_400_000);
+  if (durationHours < 12 && dayGap < 2) return [start];
+
+  const dates: Date[] = [];
+  let cur = start;
+  while (cur.getTime() <= end.getTime()) {
+    dates.push(cur);
+    cur = addDays(cur, 1);
+  }
+  return dates;
+}
+
+export function occupiesDay(event: { start_time: string; end_time: string }, day: Date): boolean {
+  return occupiesDates(event).some((d) => sameDay(d, day));
+}
+
+export function isMultiDay(event: { start_time: string; end_time: string }): boolean {
+  return occupiesDates(event).length > 1;
+}
+
+/** "Fri 3, 6:00 PM" for a single day, "Fri 3 – Sun 5" for a range with no
+ *  meaningful start/end clock times to show, "Fri 3, 6:00 PM – Sun 5, 2:00 PM"
+ *  when both matter. Used by List/Agenda/Summary/Photo so a multi-day event
+ *  gets one row with a range, not one row per occupied day. */
+export function fmtDateRange(event: { start_time: string; end_time: string }): string {
+  const dates = occupiesDates(event);
+  const start = new Date(event.start_time);
+  const dateOpts: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" };
+  if (dates.length === 1) {
+    return `${start.toLocaleDateString(undefined, dateOpts)}, ${fmtTime(start)}`;
+  }
+  const end = new Date(event.end_time);
+  return `${start.toLocaleDateString(undefined, dateOpts)}, ${fmtTime(start)} – ${end.toLocaleDateString(undefined, dateOpts)}, ${fmtTime(end)}`;
+}
