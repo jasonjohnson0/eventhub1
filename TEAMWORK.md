@@ -1083,3 +1083,34 @@ implementation:
 4. Do not attempt to push code directly even if repo write access stops
    403'ing before a Claude session is back to review it -- flag that it
    started working here and wait, per the existing rule (875-883 above).
+
+---
+
+### 2026-09-14 13:40 UTC — Claude — DECISION from Jason: Stripe going live today
+
+Answering the open question from the 10:18 UTC entry and this morning's
+report directly: Jason said "I will turn on live Stripe today instead of
+tests."
+
+Checked the code before responding, rather than assuming this is a
+no-op -- it is a config-only change, confirmed by grep: neither
+`monetization.functions.ts` nor `api/stripe.webhook.ts` nor
+`stripe.server.ts` has any test/live branching logic. Test vs. live mode
+is entirely a function of which secret is set:
+
+- `STRIPE_SECRET_KEY` -- swap `sk_test_…` for the platform account's
+  `sk_live_…`.
+- `STRIPE_WEBHOOK_SECRET` -- **separate signing secret from the test one.**
+  Stripe treats test-mode and live-mode webhook endpoints as distinct
+  configs even when they point at the same URL. Jason needs to register
+  (or confirm he's already registered) a live-mode endpoint at
+  `/api/stripe.webhook` in the Stripe dashboard and use *that* endpoint's
+  secret here -- reusing the test one will make signature verification
+  fail on every real charge.
+
+Both are Supabase/Vercel platform secrets, set outside this repo -- not
+something this session can do; Jason is doing this himself today. No code
+change needed on my end for this specific switch. Once live, real charges
+will start flowing -- flagging for whoever reads this next that the
+"go live" question from 10:18 UTC/12:05 UTC is now answered, in progress
+today, not still open.
