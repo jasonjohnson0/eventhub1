@@ -36,6 +36,20 @@ const COORDINATORS = [{
   // A finished coordinator, for tests that sign in as COORD and expect the
   // full coordinator dashboard rather than the "not a coordinator yet" one.
   setup_completed_at: '2026-01-01T00:00:00.000Z',
+}, {
+  // A second, unrelated live coordinator -- so "is this slug taken by
+  // someone else" has a real someone else to be taken by, distinct from a
+  // coordinator re-checking their own current (and therefore available to
+  // them) address.
+  coordinator_id: OTHER,
+  slug: 'obrien',
+  company_name: "O'Brien & Sons Events",
+  description: null,
+  logo_url: null,
+  favicon_url: null,
+  primary_color: '#0f766e',
+  secondary_color: '#f97316',
+  setup_completed_at: '2026-01-01T00:00:00.000Z',
 }];
 
 // A coordinator who reached the Review step without ever choosing a calendar
@@ -90,7 +104,12 @@ function parseEq(search, field) {
 }
 
 const server = createServer((req, res) => {
-  if (req.method === 'POST') {
+  // A plain PATCH (an update, as opposed to the POST-with-on_conflict every
+  // upsert in this app used until updateCalendarSlug's real .update() call)
+  // never had its body read at all -- every "PATCH" handler below silently
+  // saw an empty body and applied a no-op, which nothing before this had a
+  // reason to trip over.
+  if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') {
     let body = '';
     req.on('data', (c) => { body += c; });
     req.on('end', () => { req.__body = body; handle(req, res); });
@@ -347,6 +366,22 @@ function handle(req, res) {
         .map((c) => ({ slug: c.slug, company_name: c.company_name, logo_url: c.logo_url })),
     );
   }
+
+  // Backs both the onboarding Address step and the Settings "Change address"
+  // dialog's live availability check. Mirrors is_slug_available(): taken by
+  // some OTHER coordinator is refused; the caller's own current slug (or
+  // anything unused) reads as available.
+  if (path === '/rest/v1/rpc/is_slug_available') {
+    let b = {};
+    try { b = JSON.parse(req.__body || '{}'); } catch {}
+    const holder = COORDINATORS.find((c) => c.slug === b._slug);
+    const available = !holder || holder.coordinator_id === b._coordinator_id;
+    return send(available);
+  }
+
+  // Change-address itself is a plain PATCH on coordinator_profiles, not a
+  // bespoke RPC -- the generic handler below already applies it to the
+  // matching fixture, same as any other profile edit.
 
   // The admin "delete my calendar" danger zone. Mirrors delete_own_calendar():
   // wrong confirmation is refused, a match "deletes" (just reports success --

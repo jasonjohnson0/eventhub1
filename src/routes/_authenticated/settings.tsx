@@ -23,7 +23,13 @@ import { VenueManager } from "@/components/venue-manager";
 import { OrganizerManager } from "@/components/organizer-manager";
 import { CustomFieldManager } from "@/components/custom-field-manager";
 import { Switch } from "@/components/ui/switch";
-import { getCoordinatorProfile, saveCoordinatorProfile, deleteMyCalendar } from "@/lib/onboarding.functions";
+import {
+  getCoordinatorProfile,
+  saveCoordinatorProfile,
+  deleteMyCalendar,
+  checkSlugAvailable,
+  updateCalendarSlug,
+} from "@/lib/onboarding.functions";
 import { AnnualPlanCard } from "@/components/annual-plan-card";
 import {
   Dialog,
@@ -33,7 +39,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Globe } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -61,6 +67,12 @@ function SettingsPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [slugEditOpen, setSlugEditOpen] = useState(false);
+  const [newSlug, setNewSlug] = useState("");
+  const [newSlugState, setNewSlugState] = useState<
+    "idle" | "checking" | "ok" | "taken" | "invalid" | "error"
+  >("idle");
+  const [savingSlug, setSavingSlug] = useState(false);
   const [staff, setStaff] = useState<StaffRow[]>([]);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -183,6 +195,48 @@ function SettingsPage() {
       toast.error(e instanceof Error ? e.message : "Could not delete calendar");
     } finally {
       setDeleting(false);
+    }
+  }
+
+  function openSlugEdit() {
+    setNewSlug("");
+    setNewSlugState("idle");
+    setSlugEditOpen(true);
+  }
+
+  // Live availability check as the new address is typed, same pattern (and
+  // same is_slug_available RPC, via checkSlugAvailable) as onboarding's own
+  // Address step -- it already excludes the caller's current slug, so typing
+  // your own unchanged address doesn't falsely read as "taken".
+  useEffect(() => {
+    if (!slugEditOpen) return;
+    if (!newSlug) return setNewSlugState("idle");
+    if (!/^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/.test(newSlug)) return setNewSlugState("invalid");
+    if (newSlug === calendarSlug) return setNewSlugState("invalid");
+    setNewSlugState("checking");
+    const t = setTimeout(async () => {
+      try {
+        const { available } = await checkSlugAvailable({ data: { slug: newSlug } });
+        setNewSlugState(available ? "ok" : "taken");
+      } catch {
+        setNewSlugState("error");
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [newSlug, slugEditOpen, calendarSlug]);
+
+  async function confirmSlugEdit() {
+    if (newSlugState !== "ok") return;
+    setSavingSlug(true);
+    try {
+      const { slug } = await updateCalendarSlug({ data: { new_slug: newSlug } });
+      setCalendarSlug(slug);
+      toast.success(`Calendar address changed to ${slug}.lovable.app`);
+      setSlugEditOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not change the address");
+    } finally {
+      setSavingSlug(false);
     }
   }
 
@@ -483,6 +537,31 @@ function SettingsPage() {
         </Card>
 
         {isAdmin && coordinatorState === "complete" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-4 w-4" /> Calendar address
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Your calendar is at{" "}
+                  <span className="font-mono font-medium text-foreground">
+                    {calendarSlug ? `${calendarSlug}.lovable.app` : "—"}
+                  </span>
+                  . Changing it frees the old address immediately for anyone else to claim, and
+                  breaks any link, QR code or embed still pointing at it.
+                </p>
+                <Button variant="outline" onClick={openSlugEdit} className="shrink-0">
+                  Change address
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {isAdmin && coordinatorState === "complete" && (
           <Card className="border-destructive/40">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">
@@ -536,6 +615,55 @@ function SettingsPage() {
               disabled={deleting || deleteConfirmText.trim() !== calendarSlug}
             >
               {deleting ? "Deleting…" : "Delete calendar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={slugEditOpen} onOpenChange={(o) => !savingSlug && setSlugEditOpen(o)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change calendar address</DialogTitle>
+            <DialogDescription>
+              {calendarSlug ? `${calendarSlug}.lovable.app` : "Your current address"} will stop
+              working the moment you confirm — anyone with the old link, QR code or embed will
+              need the new one. Everything else on the calendar stays exactly as it is.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="new-slug">New address</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="new-slug"
+                value={newSlug}
+                onChange={(e) => setNewSlug(e.target.value.toLowerCase().trim())}
+                autoComplete="off"
+                placeholder="my-community"
+              />
+              <span className="whitespace-nowrap text-sm text-muted-foreground">.lovable.app</span>
+            </div>
+            <div className="text-sm">
+              {newSlugState === "checking" && <span className="text-muted-foreground">Checking…</span>}
+              {newSlugState === "ok" && <span className="text-primary">✅ {newSlug} is available</span>}
+              {newSlugState === "taken" && <span className="text-destructive">Already taken</span>}
+              {newSlugState === "invalid" && (
+                <span className="text-destructive">
+                  {newSlug === calendarSlug
+                    ? "That's already your current address"
+                    : "3–40 characters, lowercase letters, numbers and hyphens"}
+                </span>
+              )}
+              {newSlugState === "error" && (
+                <span className="text-destructive">Could not check availability. Try again in a moment.</span>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSlugEditOpen(false)} disabled={savingSlug}>
+              Cancel
+            </Button>
+            <Button onClick={confirmSlugEdit} disabled={savingSlug || newSlugState !== "ok"}>
+              {savingSlug ? "Saving…" : "Change address"}
             </Button>
           </DialogFooter>
         </DialogContent>

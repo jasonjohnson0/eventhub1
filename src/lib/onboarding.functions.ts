@@ -193,3 +193,51 @@ export const deleteMyCalendar = createServerFn({ method: "POST" })
     const row = (result as { deleted_slug: string; deleted_events: number }[] | null)?.[0];
     return { ok: true, deleted_slug: row?.deleted_slug ?? null };
   });
+
+/**
+ * Changes a live calendar's address without touching anything else it owns
+ * -- the lighter-weight sibling of deleteMyCalendar for the same "a slug is
+ * stuck on a stale calendar" problem: re-slug it instead of deleting all its
+ * data. The old address stops resolving the moment this commits (nothing
+ * points at it anymore) and is immediately available for anyone else to
+ * claim; the embed/WordPress snippets and /c/$slug link pick up the new one
+ * on their next load, since they all read the profile live rather than
+ * caching the slug anywhere. Admin-only, matching deleteMyCalendar's scope.
+ */
+export const updateCalendarSlug = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ new_slug: z.string().trim().toLowerCase().min(3).max(40) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin, error: roleErr } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (roleErr) throw new Error(roleErr.message);
+    if (!isAdmin) throw new Error("Forbidden");
+
+    if (!SLUG_RE.test(data.new_slug)) {
+      throw new Error("3–40 characters, lowercase letters, numbers and hyphens");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+    const sb = supabaseAdmin as any;
+    const { data: available, error: availErr } = await sb.rpc("is_slug_available", {
+      _slug: data.new_slug,
+      _coordinator_id: context.userId,
+    });
+    if (availErr) throw new Error(availErr.message);
+    if (!available) throw new Error("That address is already taken");
+
+    const { data: row, error } = await sb
+      .from("coordinator_profiles")
+      .update({ slug: data.new_slug })
+      .eq("coordinator_id", context.userId)
+      .select("slug")
+      .single();
+    if (error) {
+      if (error.code === "23505") throw new Error("That address is already taken");
+      throw new Error(error.message);
+    }
+    return { ok: true, slug: row.slug as string };
+  });
