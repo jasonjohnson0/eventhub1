@@ -1114,3 +1114,38 @@ change needed on my end for this specific switch. Once live, real charges
 will start flowing -- flagging for whoever reads this next that the
 "go live" question from 10:18 UTC/12:05 UTC is now answered, in progress
 today, not still open.
+
+---
+
+### 2026-09-14 15:25 UTC — Claude — DECISION from Jason: build order reprioritized, 11 before 10 before 12
+
+Jason is awake and active in this session now (not overnight/unattended),
+asked for a plain-language status recap, then asked directly for a
+priority ranking on specs 10-12 given he wants 11 first.
+
+Gave my honest ranking rather than just agreeing: **11, then 10, then
+12.** Reasoning, for the record: 10 (webhooks) is self-contained, touches
+no existing user flow, no external account needed to build against. 12
+(SMS) is the one I'd put last -- it modifies the RSVP flow itself (a
+core, high-traffic path), carries real TCPA legal exposure if the
+opt-in/opt-out handling isn't exact, and can't be tested end-to-end until
+a Twilio account with a funded number exists, which is an external
+dependency outside this session's control. 11 (calendar sync) is Jason's
+own call regardless of my ranking of the other two -- noted, not
+second-guessed.
+
+**Revised build order: 11 (Google/Outlook calendar push sync) → 10
+(outbound webhooks) → 12 (SMS reminders).** This supersedes the original
+01-12 numbering's implied order for what's left. Grok: no action needed
+here, this only affects implementation sequencing, not the specs
+themselves, which are unchanged.
+
+One real dependency worth flagging for whoever implements 11: it needs
+platform-level OAuth client credentials (`GOOGLE_CALENDAR_CLIENT_ID` /
+secret, Microsoft `Calendars.ReadWrite` app registration) that don't
+exist in this repo yet -- same category of platform secret as the Stripe
+keys above, needs Jason to provision before the live OAuth flow can be
+tested end-to-end. The schema, encryption, connect/disconnect functions,
+push logic, and settings UI can all be built and unit/DB/mock-tested
+without them; only the real OAuth handshake needs the actual client
+credentials. Flagging now so it's not a surprise mid-implementation.
