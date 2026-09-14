@@ -402,7 +402,7 @@ function OnboardingWizard() {
                   <Input
                     value={(value("company_name") ?? "") as string}
                     onChange={(e) => set("company_name", e.target.value)}
-                    placeholder="Jackson County Chamber of Commerce"
+                    placeholder="Riverside Chamber of Commerce"
                   />
                 </Field>
                 <Field label="Description" hint="A short intro for visitors (optional)">
@@ -410,7 +410,7 @@ function OnboardingWizard() {
                     rows={4}
                     value={(value("description") ?? "") as string}
                     onChange={(e) => set("description", e.target.value)}
-                    placeholder="Community events across Jackson County, Florida."
+                    placeholder="Community events across our area."
                   />
                 </Field>
                 <label className="flex items-start gap-3 rounded-lg border p-3">

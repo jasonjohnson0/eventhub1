@@ -1,6 +1,6 @@
-// Draft email templates for Phase 2d. Not wired to any sender yet — these
-// return plain HTML/text strings for future integration (SendGrid, Postmark,
-// Lovable Emails, etc.).
+// Email templates. invitationTemplate is wired to a real sender via
+// communications.functions.ts; the rest return plain HTML/text strings
+// still awaiting their own call site.
 
 export type EventLite = {
   id: string;
@@ -23,7 +23,7 @@ function shell(title: string, body: string) {
   <h1 style="font-size:20px;margin:0 0 12px">${title}</h1>
   ${body}
   <hr style="margin:24px 0;border:none;border-top:1px solid #eee"/>
-  <p style="font-size:12px;color:#888">Sent by EventHub · Jackson County, FL</p>
+  <p style="font-size:12px;color:#888">Sent by EventHub</p>
   </body></html>`;
 }
 
