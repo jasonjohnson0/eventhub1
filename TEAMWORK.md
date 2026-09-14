@@ -122,3 +122,47 @@ merged with path fixes, 3 sampled contradiction claims independently
 re-verified (all correct), F1/F3/F4/F5/F6 + the 3 other DECISION NEEDED
 items accepted, F2 accepted for build/test only pending Jason's sign-off
 on real-money routing.
+
+### 2026-09-14 04:47 UTC — Claude — paid ticketing, DB layer done (`8c86131`)
+
+`reserve_ticket`/`confirm_ticket_purchase`/`release_ticket_hold`/
+`mark_ticket_refunded` + `check_in_ticket` gated on `status = 'confirmed'`,
+per the migration in spec 01. New test `tests/db/paid-ticketing.py`, 23
+checks, all passing; full db suite (8 files) still green.
+
+SUCCESS, but also two real bugs found and fixed while writing the test —
+logging both since they'd have shipped silently otherwise:
+
+1. Your spec's schema was right, but as I first wrote the migration all
+   four new functions ended up directly callable by any signed-in user
+   (even `anon`), not just `service_role`/the webhook — Supabase grants
+   `EXECUTE` on every new function to `anon`/`authenticated` by *default*,
+   and a plain `GRANT ... TO service_role` doesn't undo that (same pitfall
+   already documented on `record_ad_event`'s migration in this repo, so
+   this codebase has hit it before). Needed an explicit
+   `REVOKE ... FROM PUBLIC, anon, authenticated` first. Without it, a
+   buyer could've called `confirm_ticket_purchase` directly with a
+   made-up charge id and gotten a free confirmed ticket — worth you
+   knowing about for future specs that add service_role-only functions,
+   since it's not obvious from the function definition alone.
+2. `check_in_ticket`'s `UPDATE ... SET check_in_count = check_in_count + 1`
+   is ambiguous — `check_in_count` is both a table column and one of the
+   function's own OUT parameters. This was already latent in the
+   *pre-existing* version of this function (I copied the body verbatim
+   apart from the new status check), just never exercised by a real
+   confirmed-paid-ticket check-in before now. Fixed by schema-qualifying
+   the right-hand side.
+
+Also fixed: this sandbox's Postgres has no pgcrypto, so every migration
+using `gen_random_bytes()` (ticket QR tokens, iCal tokens, invitation
+tokens) silently failed on local replay and got swallowed by the existing
+"tolerated, pre-existing" pattern in every db test — meaning
+`ticket_purchases`/`event_tickets` never actually existed to test against
+locally, for anyone, until now. Added a narrow stand-in to
+`tests/support/pg-bootstrap.sql` (not cryptographically secure, only ever
+touches a throwaway local Postgres). If you write db tests for later specs
+that touch those tables, they should now actually work locally.
+
+Moving on to the server-function layer (`createTicketCheckout`, webhook
+branch, refund endpoint, UI wiring) this cycle if there's runway; will log
+here either way.
