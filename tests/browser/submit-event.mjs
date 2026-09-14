@@ -91,10 +91,31 @@ check(
 
 // ---- an unknown slug is a hard error, never a silent fallback -----------------
 await resetSubmissions();
-await go('/submit-event?c=does-not-exist');
-await fillAndSubmit();
+body = await go('/submit-event?c=does-not-exist');
+// Previously getPublicCoordinator() returning null (not an error, for an
+// unknown slug) fell through to displaying the raw slug text as if it were
+// a real, locked-in coordinator -- "Submitting to does-not-exist's
+// calendar" -- with nothing telling the visitor the address was invalid
+// until the submit itself failed server-side.
+check('an unknown slug is shown as not found, not as a fake locked-in coordinator',
+  body.includes('could not be found'), body.slice(0, 400));
+check('...and specifically not displayed as though it were real',
+  !body.includes("Submitting to does-not-exist's calendar"), body.slice(0, 400));
+// No coordinator was ever actually chosen, so Submit stays disabled from the
+// start -- not just "fails after you click it".
+const disabledSubmit = page.getByRole('button', { name: 'Submit for review' });
+check('Submit is disabled outright, not just doomed to fail server-side',
+  await disabledSubmit.isDisabled());
+await fieldByLabel('Your email').fill('visitor@example.com');
+await fieldByLabel('Event title').fill('Probe Event');
+await fieldByLabel('Date').fill('2027-05-01');
+await fieldByLabel('Start time').fill('18:00');
+await fieldByLabel('End time').fill('20:00');
+await disabledSubmit.click({ force: true }).catch(() => {});
+await page.waitForTimeout(400);
 subs = await readSubmissions();
-check('an unresolvable coordinator slug inserts nothing', subs.length === 0, JSON.stringify(subs));
+check('...and even forcing the click server-side rejects it, inserting nothing',
+  subs.length === 0, JSON.stringify(subs));
 
 // ---- the coordinator's own page links here, scoped to itself -----------------
 await go('/c/riverside');

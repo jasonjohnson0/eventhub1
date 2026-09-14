@@ -9,7 +9,18 @@ import { listMyEvents, rescheduleEvent, listEventCounts } from "@/lib/events.fun
 import { colorForEvent } from "@/lib/event-colors";
 import { EventModal } from "@/components/event-modal";
 
-const searchSchema = z.object({ new: z.union([z.literal("1"), z.boolean()]).optional() });
+// TanStack Router's own URL parser coerces a numeric-looking query value --
+// ?new=1 becomes the number 1, not the string "1" -- confirmed by actually
+// reproducing this against a real Cloudflare Workers build of the app
+// (npx wrangler dev on the production bundle): a fresh page load of
+// /calendar?new=1 hit an uncaught ZodError from exactly this schema only
+// accepting the string literal, and the route rendered nothing but "This
+// page didn't load." A client-side Link click never round-trips the value
+// through the URL string first, so that path never surfaced it -- only a
+// fresh load (a bookmark, a shared link, a browser back/forward) did.
+const searchSchema = z.object({
+  new: z.union([z.literal(1), z.literal("1"), z.literal(true)]).optional(),
+});
 
 export const Route = createFileRoute("/_authenticated/calendar")({
   component: CalendarPage,

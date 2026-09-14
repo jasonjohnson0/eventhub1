@@ -90,6 +90,23 @@ await page.waitForTimeout(400);
 check('the new-event dialog opens on its own', await page.isVisible('text="New event"'));
 check('the ?new param is cleared once it has done its job', !page.url().includes('new='), page.url());
 
+// A click-through SPA transition never round-trips ?new=1 through the URL
+// string, so it can't catch what a fresh load does: TanStack Router's own
+// parser reads a bare numeric query value as the *number* 1, not the string
+// "1". calendar.tsx's searchSchema only accepted the string literal, so
+// every fresh load of this exact URL (a bookmark, a shared link, hitting
+// Enter in the address bar) hit an uncaught ZodError and rendered nothing
+// but "This page didn't load" -- confirmed by building this app for real
+// (npx wrangler dev on the production Cloudflare Workers bundle, not vite
+// dev) and loading the URL cold, which is the only way this ever surfaced.
+const freshErrs = [];
+page.once('pageerror', (e) => freshErrs.push(String(e)));
+await page.goto(`${BASE}/calendar?new=1`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+check('a fresh load of the same URL also works, not just the click-through', page.url().includes('/calendar'), page.url());
+check('...and the dialog still opens on a cold load', await page.isVisible('text="New event"'));
+check('...with no uncaught error', freshErrs.length === 0, freshErrs.join('; '));
+
 // ---- the same dashboard, for accounts that are not a completed coordinator ---
 //
 // Every signed-in account used to land on this exact console -- billing nags,

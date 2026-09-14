@@ -45,8 +45,16 @@ export const Route = createFileRoute("/submit-event")({
 
 function SubmitEventPage() {
   const { c } = Route.useSearch();
-  const [coordinatorSlug, setCoordinatorSlug] = useState<string | null>(c ?? null);
+  // Not seeded from `c` directly: an unresolved slug must never look like a
+  // locked-in, submittable coordinator just because a query param was
+  // present. Previously it was -- getPublicCoordinator() returns null (not
+  // an error) for an unknown slug, so `p?.company_name ?? p?.slug ?? c` fell
+  // through to the raw, invalid slug text and displayed it as though it were
+  // a real, chosen coordinator, with nothing telling the visitor otherwise
+  // until the submit itself failed.
+  const [coordinatorSlug, setCoordinatorSlug] = useState<string | null>(null);
   const [coordinatorName, setCoordinatorName] = useState<string | null>(null);
+  const [coordinatorNotFound, setCoordinatorNotFound] = useState(false);
   const [coordinators, setCoordinators] = useState<{ slug: string; company_name: string | null }[]>([]);
   const [loadingCoordinators, setLoadingCoordinators] = useState(true);
 
@@ -56,8 +64,15 @@ function SubmitEventPage() {
       // event" button) -- resolve it for display, but the server re-validates
       // it independently rather than trusting this round-trip.
       getPublicCoordinator({ data: { slug: c } })
-        .then((p) => setCoordinatorName(p?.company_name ?? p?.slug ?? c))
-        .catch(() => setCoordinatorName(c));
+        .then((p) => {
+          if (p) {
+            setCoordinatorSlug(p.slug);
+            setCoordinatorName(p.company_name ?? p.slug);
+          } else {
+            setCoordinatorNotFound(true);
+          }
+        })
+        .catch(() => setCoordinatorNotFound(true));
       setLoadingCoordinators(false);
     } else {
       listLiveCoordinators()
@@ -158,7 +173,12 @@ function SubmitEventPage() {
         </div>
         <Card>
           <CardContent className="space-y-4 p-6">
-            {c && coordinatorName ? (
+            {c && coordinatorNotFound ? (
+              <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                That community calendar could not be found. Double-check the link, or ask the
+                organizer for a fresh one.
+              </p>
+            ) : c && coordinatorName ? (
               <p className="rounded-md border bg-muted/40 p-3 text-sm">
                 Submitting to <span className="font-medium">{coordinatorName}</span>'s calendar.
               </p>
