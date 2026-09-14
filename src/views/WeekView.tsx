@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import type { CalendarEvent } from "@/queries/events";
-import { fmtTime } from "@/queries/events";
+import { fmtTime, isMultiDay, occupiesDay } from "@/queries/events";
 import { categoryClasses } from "@/lib/categories";
 import { useWeekView, WEEK_START_HOUR, WEEK_END_HOUR } from "@/hooks/useWeekView";
+import { packWeek } from "@/components/CalendarViews/shared";
 
 /**
  * 7-day grid with hourly slots. Mobile-first: stacks into day columns
@@ -21,25 +22,39 @@ export function WeekView({
   const week = useWeekView(cursor);
   const days = week.days;
 
+  // Multi-day events live in an all-day lane (desktop) / their own tagged
+  // entry on every occupied day (mobile), rather than an hour cell they
+  // don't have a single meaningful hour for -- same approach as
+  // components/CalendarViews/WeekView.tsx.
+  const [allDayEvents, timedEvents] = useMemo(() => {
+    const multi: CalendarEvent[] = [];
+    const single: CalendarEvent[] = [];
+    for (const e of events) (isMultiDay(e) ? multi : single).push(e);
+    return [multi, single];
+  }, [events]);
+
+  const allDaySegs = useMemo(() => packWeek(allDayEvents, days), [allDayEvents, days]);
+
   const byCell = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
-    for (const e of events) {
+    for (const e of timedEvents) {
       const d = new Date(e.start_time);
       const hour = Math.min(Math.max(d.getHours(), WEEK_START_HOUR), WEEK_END_HOUR);
       const key = `${d.toDateString()}|${hour}`;
       map.set(key, [...(map.get(key) ?? []), e]);
     }
     return map;
-  }, [events]);
+  }, [timedEvents]);
 
   const byDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     for (const e of events) {
-      const key = new Date(e.start_time).toDateString();
-      map.set(key, [...(map.get(key) ?? []), e]);
+      for (const d of days) {
+        if (occupiesDay(e, d)) map.set(d.toDateString(), [...(map.get(d.toDateString()) ?? []), e]);
+      }
     }
     return map;
-  }, [events]);
+  }, [events, days]);
 
   function move(delta: number) {
     const next = new Date(week.start);
@@ -97,7 +112,7 @@ export function WeekView({
                 <ul className="space-y-1">
                   {items.map((e) => (
                     <li key={e.id}>
-                      <Slot event={e} />
+                      <Slot event={e} note={isMultiDay(e) ? "multi-day" : undefined} />
                     </li>
                   ))}
                 </ul>
@@ -128,6 +143,28 @@ export function WeekView({
             ))}
           </div>
 
+          {allDaySegs.length > 0 && (
+            <div
+              className="grid border-b border-slate-200 bg-slate-50/60 py-1"
+              style={{ gridTemplateColumns: "64px repeat(7, minmax(0, 1fr))" }}
+            >
+              <div className="px-2 py-1 text-right text-[10px] font-semibold uppercase text-slate-400">
+                All day
+              </div>
+              <div className="col-span-7 grid gap-y-1" style={{ gridTemplateColumns: "repeat(7, minmax(0, 1fr))" }}>
+                {allDaySegs.map((s) => (
+                  <div
+                    key={s.event.id}
+                    style={{ gridColumn: `${s.startCol + 1} / span ${s.span}`, gridRow: s.lane + 1 }}
+                    className="px-1"
+                  >
+                    <Slot event={s.event} compact spanning />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {week.hours.map((h) => (
             <div
               key={h}
@@ -157,16 +194,32 @@ export function WeekView({
   );
 }
 
-function Slot({ event, compact = false }: { event: CalendarEvent; compact?: boolean }) {
+function Slot({
+  event,
+  compact = false,
+  spanning = false,
+  note,
+}: {
+  event: CalendarEvent;
+  compact?: boolean;
+  /** A multi-day bar occupying more than one grid cell -- squared-off ends
+   *  instead of a pill, matching components/CalendarViews/shared.tsx's
+   *  EventChip so the two week implementations read consistently. */
+  spanning?: boolean;
+  note?: string;
+}) {
   return (
     <Link
       to="/events/$id"
       params={{ id: event.id }}
       title={`${event.title} · ${fmtTime(event.start_time)}`}
-      className={`block truncate rounded-lg px-2 py-1 text-xs font-semibold transition-transform hover:scale-[1.02] ${categoryClasses(event.category)}`}
+      className={`block truncate px-2 py-1 text-xs font-semibold transition-transform hover:scale-[1.01] ${
+        spanning ? "rounded-md" : "rounded-lg"
+      } ${categoryClasses(event.category)}`}
     >
       {!compact && <span className="mr-1 opacity-70">{fmtTime(event.start_time)}</span>}
       {event.title}
+      {note && <span className="ml-1 opacity-60">· {note}</span>}
     </Link>
   );
 }

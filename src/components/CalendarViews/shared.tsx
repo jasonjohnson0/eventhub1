@@ -1,7 +1,44 @@
 import { Link } from "@tanstack/react-router";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
 import type { CalendarEvent } from "@/queries/events";
-import { fmtTime } from "@/queries/events";
+import { fmtTime, occupiesDates, sameDay } from "@/queries/events";
+
+export type WeekSeg = { event: CalendarEvent; startCol: number; span: number; lane: number };
+
+/** Greedy interval-scheduling pack: events touching this 7-day window are
+ *  laid into the fewest lanes such that no two overlapping events share a
+ *  lane. Sorted by start column, then longest-first, which keeps multi-day
+ *  bars from fragmenting behind shorter events starting the same day. Used
+ *  by MonthView (every event) and WeekView (its all-day lane only). */
+export function packWeek(events: CalendarEvent[], week: Date[]): WeekSeg[] {
+  const raw = events
+    .map((e) => {
+      const dates = occupiesDates(e);
+      let startCol = -1;
+      let endCol = -1;
+      week.forEach((d, i) => {
+        if (dates.some((od) => sameDay(od, d))) {
+          if (startCol === -1) startCol = i;
+          endCol = i;
+        }
+      });
+      if (startCol === -1) return null;
+      return { event: e, startCol, span: endCol - startCol + 1 };
+    })
+    .filter((x): x is { event: CalendarEvent; startCol: number; span: number } => x !== null)
+    .sort((a, b) => a.startCol - b.startCol || b.span - a.span);
+
+  const laneEnd: number[] = [];
+  return raw.map((iv) => {
+    let lane = laneEnd.findIndex((end) => end <= iv.startCol);
+    if (lane === -1) {
+      lane = laneEnd.length;
+      laneEnd.push(0);
+    }
+    laneEnd[lane] = iv.startCol + iv.span;
+    return { ...iv, lane };
+  });
+}
 
 export function EventChip({
   event,

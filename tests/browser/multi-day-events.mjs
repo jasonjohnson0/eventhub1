@@ -53,14 +53,25 @@ await first.click();
 await page.waitForLoadState('networkidle');
 check('clicking a segment navigates to the event page', page.url().includes('/events/e5'), page.url());
 
-// ---- week view: same event id present, still one continuous run ---------------
-await go('/c/riverside?view=week');
-// The fixture is only 2 days out from "now", so it may or may not be in the
-// currently-displayed week depending on the day of the test run -- only
-// assert structure (no duplicate unrelated ids), not presence, to avoid
-// flaking around a week boundary.
-const weekAnchors = await page.$$eval('a[href^="/events/"]', (as) => as.map((a) => a.getAttribute('href')));
-check('week view rendered without throwing', !(await page.innerText('body')).match(/Unexpected|Cannot read|is not a function/i));
+// ---- week view: the all-day lane shows a spanning bar --------------------------
+// Deep-link with ?on=<the fixture's start date> so the right week is shown
+// regardless of what day of the week this test happens to run on.
+const fixtureStart = new Date();
+fixtureStart.setDate(fixtureStart.getDate() + 2);
+const onParam = fixtureStart.toISOString().slice(0, 10);
+await go(`/c/riverside?view=week&on=${onParam}`);
+check('week view rendered without throwing',
+  !(await page.innerText('body')).match(/Unexpected|Cannot read|is not a function/i));
+const weekSpans = await page.$$eval('a[href="/events/e5"]', (as) =>
+  as.map((a) => {
+    const cell = a.closest('[style*="grid-column"]');
+    return cell ? cell.getAttribute('style') : null;
+  }),
+);
+check('the multi-day event appears in the week\'s all-day lane', weekSpans.length >= 1, weekSpans.length);
+check('...spanning more than one day column there too',
+  weekSpans.some((s) => s && /span\s*[2-9]/.test(s)), JSON.stringify(weekSpans));
+await page.screenshot({ path: 'multi-day-week.png', fullPage: false });
 
 // ---- list / agenda / summary / photo: exactly one row per event, range label --
 for (const view of ['list', 'agenda', 'summary', 'photo']) {

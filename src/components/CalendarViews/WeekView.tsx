@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { CalendarEvent } from "@/queries/events";
-import { addDays, sameDay, startOfWeek } from "@/queries/events";
-import { EventChip } from "./shared";
+import { addDays, isMultiDay, sameDay, startOfWeek } from "@/queries/events";
+import { EventChip, packWeek } from "./shared";
 
 const START_HOUR = 8;
 const END_HOUR = 22; // 10pm
@@ -13,16 +13,28 @@ export function WeekView({ cursor, events }: { cursor: Date; events: CalendarEve
     return Array.from({ length: 7 }, (_, i) => addDays(s, i));
   }, [cursor]);
 
+  // Multi-day events live in the all-day lane at the top -- start/end/middle
+  // days alike, same as Google/Outlook/Apple week views -- rather than being
+  // forced into an hour cell they don't have a single meaningful hour for.
+  const [allDayEvents, timedEvents] = useMemo(() => {
+    const multi: CalendarEvent[] = [];
+    const single: CalendarEvent[] = [];
+    for (const e of events) (isMultiDay(e) ? multi : single).push(e);
+    return [multi, single];
+  }, [events]);
+
+  const allDaySegs = useMemo(() => packWeek(allDayEvents, days), [allDayEvents, days]);
+
   const byCell = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
-    for (const e of events) {
+    for (const e of timedEvents) {
       const d = new Date(e.start_time);
       const hour = Math.min(Math.max(d.getHours(), START_HOUR), END_HOUR);
       const key = `${d.toDateString()}|${hour}`;
       map.set(key, [...(map.get(key) ?? []), e]);
     }
     return map;
-  }, [events]);
+  }, [timedEvents]);
 
   const today = new Date();
 
@@ -46,6 +58,29 @@ export function WeekView({ cursor, events }: { cursor: Date; events: CalendarEve
             </div>
           ))}
         </div>
+
+        {allDaySegs.length > 0 && (
+          <div
+            className="grid border-b border-slate-200 bg-slate-50/60 py-1"
+            style={{ gridTemplateColumns: "64px repeat(7, minmax(0, 1fr))" }}
+          >
+            <div className="px-2 py-1 text-right text-[10px] font-semibold uppercase text-slate-400">All day</div>
+            <div
+              className="col-span-7 grid gap-y-1"
+              style={{ gridTemplateColumns: "repeat(7, minmax(0, 1fr))" }}
+            >
+              {allDaySegs.map((s) => (
+                <div
+                  key={s.event.id}
+                  style={{ gridColumn: `${s.startCol + 1} / span ${s.span}`, gridRow: s.lane + 1 }}
+                  className="px-1"
+                >
+                  <EventChip event={s.event} compact spanning />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {HOURS.map((h) => (
           <div key={h} className="grid grid-cols-[64px_repeat(7,1fr)] border-b border-slate-100 last:border-0">

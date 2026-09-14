@@ -1,45 +1,9 @@
 import { useMemo } from "react";
 import type { CalendarEvent } from "@/queries/events";
-import { addDays, occupiesDates, isMultiDay, sameDay, startOfDay } from "@/queries/events";
-import { EventChip } from "./shared";
+import { addDays, isMultiDay, sameDay, startOfDay } from "@/queries/events";
+import { EventChip, packWeek } from "./shared";
 
 const MAX_LANES = 3;
-
-type Seg = { event: CalendarEvent; startCol: number; span: number; lane: number };
-
-/** Greedy interval-scheduling pack: events touching this week are laid into
- *  the fewest lanes such that no two overlapping events share a lane.
- *  Sorted by start column, then longest-first, which keeps multi-day bars
- *  from fragmenting behind shorter events that start on the same day. */
-function packWeek(events: CalendarEvent[], week: Date[]): Seg[] {
-  const raw = events
-    .map((e) => {
-      const dates = occupiesDates(e);
-      let startCol = -1;
-      let endCol = -1;
-      week.forEach((d, i) => {
-        if (dates.some((od) => sameDay(od, d))) {
-          if (startCol === -1) startCol = i;
-          endCol = i;
-        }
-      });
-      if (startCol === -1) return null;
-      return { event: e, startCol, span: endCol - startCol + 1 };
-    })
-    .filter((x): x is { event: CalendarEvent; startCol: number; span: number } => x !== null)
-    .sort((a, b) => a.startCol - b.startCol || b.span - a.span);
-
-  const laneEnd: number[] = [];
-  return raw.map((iv) => {
-    let lane = laneEnd.findIndex((end) => end <= iv.startCol);
-    if (lane === -1) {
-      lane = laneEnd.length;
-      laneEnd.push(0);
-    }
-    laneEnd[lane] = iv.startCol + iv.span;
-    return { ...iv, lane };
-  });
-}
 
 export function MonthView({ cursor, events }: { cursor: Date; events: CalendarEvent[] }) {
   const weeks = useMemo(() => {
