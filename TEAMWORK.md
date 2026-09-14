@@ -404,3 +404,78 @@ Next up per the build order: spec 04 (private events).
 SUCCESS: spec 03 fully done and verified, one real bug in the spec's own
 SQL caught and fixed before it shipped (not invented busywork), full test
 suite green (bar one confirmed-pre-existing flake).
+
+### 2026-09-14 07:23 UTC — Claude — spec 04 (private events) DONE
+
+Read `docs/specs/04-private-events.md`. Nothing new to answer first.
+
+`events.visibility` (`public`/`unlisted`, migration `20260914070315`).
+Adopted your F1-F4 defaults as written -- unlisted-but-linkable, RLS
+untouched, public analytics excluded, `/submit-event` can never create
+unlisted. The "don't lock the row" instruction was the right call: it kept
+this to an application-layer filter added in ~8 places rather than a
+policy rewrite, and it's exactly why a direct `/events/$id` link and MCP
+`get_event`-by-owner both still work with zero extra plumbing.
+
+Filtered every surface your spec named: `fetchEvents` (covers every
+calendar view + `/c/$slug` + `/events` + the embed, since they all share
+that one function), `get_ical_feed_events` and `search_events_nearby`
+(both `CREATE OR REPLACE`d in the migration), `search.functions.ts`'s
+platform search/category-counts/map-events, and MCP `list_events`. Two
+things your spec didn't call out by name but are the same class of leak:
+the tour page's public "N events live, platform-wide" stat (this *is* the
+"public/platform totals" your F2 meant, just under a page named `tour.tsx`
+not `stats`), and MCP `get_event` -- RLS lets it return an unlisted-but-
+approved row to anyone by UUID (RLS only checks status), so a generic
+agent token could otherwise read one a stranger has no link to. Added an
+ownership check on top of the RLS-permitted row for that one specifically,
+per your own "don't leak unlisted events to a generic agent token" line.
+
+Manage page: Unlisted badge, "Make public"/"Make unlisted" toggle. Going
+public flips instantly with just a toast when there are 0 RSVPs; both
+directions confirm otherwise, exactly your F3 copy. Verifying the
+zero-RSVP fast path with a real Playwright run surfaced an unrelated
+pre-existing mock bug: `tests/support/mock-supabase.mjs`'s `event_rsvps`
+count stub hardcoded `content-range: 0-0/7` for *every* count query
+regardless of event or filter, so `getEvent()`'s `counts.going +
+counts.interested` read as a fake nonzero 14 for any event -- the confirm
+dialog would always have appeared, meaning nothing in this suite could
+ever have proven the "skip when actually zero" behavior worked. Fixed to
+`0-0/0` (there's no real RSVP fixture data backing this stub anyway, so 0
+is honestly what it should report) -- verified no other test depended on
+the old fake value first.
+
+Deliberately not touched, both flagged rather than silently skipped: (1)
+`search_events_nearby`'s new `visibility` filter is unverifiable in this
+sandbox -- it needs PostGIS, which isn't installed here, the exact same
+pre-existing gap that already blocks its *original* definition in every
+other db test in this suite. `tests/db/private-events.py` documents this
+explicitly (tolerates the known failure signature, still hard-fails on
+anything else) rather than pretending it's covered. (2) `event_series`
+itself has no `visibility` column -- a recurring series' generated event
+rows each get the picked visibility at creation time (`createSeries` now
+takes it), which covers spec 04's stated scope, but there's no
+all-occurrences visibility toggle the way title/category propagate via
+`updateSeriesInstance(scope: "all")`. Wasn't asked for; flagging in case a
+future spec wants it.
+
+Test coverage: 8 DB checks (`tests/db/private-events.py`), 16 browser
+checks (`tests/browser/private-events.mjs` -- hidden from `/c/$slug` and
+both embed views, still opens direct with the quiet chip, RSVP still
+offered, the manage-page badge/toggle/confirm-dialog round trip in both
+directions). Typecheck clean (every new `.eq()`/`.select()` call against
+`visibility` needed a scoped `as any` on just that argument, same
+established pattern as the `timezone` column before generated types catch
+up), correctness lint clean, full `tests/run.sh` green except the
+pre-existing `browser/dashboard.mjs` flake (recurred once, absent on
+immediate re-run, same as every other time it's shown up this session).
+
+`docs/ROADMAP.md` updated: private events moves Not built → Live.
+
+Next up per the build order: spec 05 (timeline view).
+
+SUCCESS: spec 04 fully done and verified. One real, previously-invisible
+test-infra bug found and fixed (the fake-nonzero RSVP count stub) that
+would have silently defeated the zero-RSVP confirm-skip test forever if
+left alone -- not invented busywork, a genuine "this test could never
+have failed even if the feature were broken" gap.
