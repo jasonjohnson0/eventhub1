@@ -1,10 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { getEvent, updateEventCoverImage } from "@/lib/events.functions";
+import {
+  getEvent,
+  updateEvent,
+  deleteMyEvent,
+  updateEventCoverImage,
+} from "@/lib/events.functions";
 import { recordShare, recordClick, upsertRsvp } from "@/lib/tracking.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { colorForEvent } from "@/lib/event-colors";
 import {
@@ -21,9 +35,9 @@ import {
   Download,
   ExternalLink,
 } from "lucide-react";
-import { categoryClasses, categoryLabel } from "@/lib/categories";
+import { CATEGORIES, categoryClasses, categoryLabel, type EventCategory } from "@/lib/categories";
 import { deleteSeriesInstance } from "@/lib/series.functions";
-import { Repeat, ClipboardCheck, UserCheck, ImageIcon, Pencil } from "lucide-react";
+import { Repeat, ClipboardCheck, UserCheck, ImageIcon, Pencil, Trash2 } from "lucide-react";
 import { leaveWaitlist } from "@/lib/attendee.functions";
 import { useNavigate } from "@tanstack/react-router";
 import { InviteAttendeesModal } from "@/components/invite-attendees-modal";
@@ -53,6 +67,12 @@ export const Route = createFileRoute("/_authenticated/events/$id/manage")({
 });
 
 type Data = Awaited<ReturnType<typeof getEvent>>;
+
+function toLocalInput(d: Date): string {
+  const off = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - off * 60_000);
+  return local.toISOString().slice(0, 16);
+}
 
 function EventFormatEditor({
   eventId,
@@ -223,6 +243,17 @@ function EventPage() {
   } | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [commsBusy, setCommsBusy] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [eTitle, setETitle] = useState("");
+  const [eDescription, setEDescription] = useState("");
+  const [eLocation, setELocation] = useState("");
+  const [eCategory, setECategory] = useState<EventCategory>("other");
+  const [eTagsText, setETagsText] = useState("");
+  const [eStart, setEStart] = useState("");
+  const [eEnd, setEEnd] = useState("");
+  const [eSaving, setESaving] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     getEvent({ data: { id } })
@@ -390,6 +421,64 @@ function EventPage() {
     }
   }
 
+  function openEdit() {
+    setETitle(event.title);
+    setEDescription(event.description ?? "");
+    setELocation(event.location ?? "");
+    setECategory((event.category as EventCategory | null) ?? "other");
+    setETagsText((event.tags ?? []).join(", "));
+    setEStart(toLocalInput(new Date(event.start_time)));
+    setEEnd(toLocalInput(new Date(event.end_time)));
+    setEditOpen(true);
+  }
+
+  async function handleSaveEdit() {
+    const startIso = new Date(eStart).toISOString();
+    const endIso = new Date(eEnd).toISOString();
+    if (new Date(endIso) <= new Date(startIso)) {
+      toast.error("End time must be after the start time");
+      return;
+    }
+    setESaving(true);
+    try {
+      await updateEvent({
+        data: {
+          event_id: id,
+          title: eTitle,
+          description: eDescription || null,
+          location: eLocation || null,
+          category: eCategory,
+          tags: eTagsText
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
+          start_time: startIso,
+          end_time: endIso,
+        },
+      });
+      const fresh = await getEvent({ data: { id } });
+      setData(fresh);
+      setEditOpen(false);
+      toast.success("Event updated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save changes");
+    } finally {
+      setESaving(false);
+    }
+  }
+
+  async function handleDeleteEvent() {
+    setDeleting(true);
+    try {
+      await deleteMyEvent({ data: { event_id: id } });
+      toast.success("Event deleted");
+      navigate({ to: "/calendar" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete event");
+      setDeleting(false);
+    }
+  }
+
   async function handleDeleteSeries(scope: "this" | "future" | "all") {
     if (
       !confirm(
@@ -492,9 +581,16 @@ function EventPage() {
             </div>
           )}
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link to="/calendar">Back to calendar</Link>
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          {isCoordinator && (
+            <Button variant="outline" size="sm" onClick={openEdit}>
+              <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
+            </Button>
+          )}
+          <Button asChild variant="outline" size="sm">
+            <Link to="/calendar">Back to calendar</Link>
+          </Button>
+        </div>
       </div>
 
       {event.description && (
@@ -720,6 +816,116 @@ function EventPage() {
           </CardContent>
         </Card>
       )}
+
+      {isCoordinator && !series && (
+        <Card className="border-destructive/40">
+          <CardHeader>
+            <CardTitle className="text-base text-destructive">Danger zone</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Deleting removes this event from the calendar and from everyone's RSVPs. This cannot
+              be undone.
+            </p>
+            <Button variant="destructive" size="sm" onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="mr-1 h-4 w-4" /> Delete event
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit event</DialogTitle>
+            <DialogDescription>
+              Correct a typo or update the details — nothing else changes.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Title</Label>
+              <Input value={eTitle} onChange={(e) => setETitle(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Description</Label>
+              <Textarea
+                rows={3}
+                value={eDescription}
+                onChange={(e) => setEDescription(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Location</Label>
+              <Input value={eLocation} onChange={(e) => setELocation(e.target.value)} />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Starts</Label>
+                <Input
+                  type="datetime-local"
+                  value={eStart}
+                  onChange={(e) => setEStart(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Ends</Label>
+                <Input
+                  type="datetime-local"
+                  value={eEnd}
+                  onChange={(e) => setEEnd(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Category</Label>
+              <Select value={eCategory} onValueChange={(v) => setECategory(v as EventCategory)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {categoryLabel(c)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Tags (comma separated)</Label>
+              <Input value={eTagsText} onChange={(e) => setETagsText(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditOpen(false)} disabled={eSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={eSaving || !eTitle.trim()}>
+              {eSaving ? "Saving…" : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this event?</DialogTitle>
+            <DialogDescription>
+              This removes "{event.title}" from the calendar for everyone. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteEvent} disabled={deleting}>
+              {deleting ? "Deleting…" : "Delete event"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -61,7 +61,7 @@ type EventRow = Awaited<ReturnType<typeof listMyEvents>>[number] & {
 };
 
 function SettingsPage() {
-  const { isAdmin, coordinatorState } = Route.useRouteContext();
+  const { coordinatorState } = Route.useRouteContext();
   const navigate = useNavigate();
   const [calendarSlug, setCalendarSlug] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -536,7 +536,7 @@ function SettingsPage() {
           </CardContent>
         </Card>
 
-        {isAdmin && coordinatorState === "complete" && (
+        {coordinatorState === "complete" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -561,7 +561,7 @@ function SettingsPage() {
           </Card>
         )}
 
-        {isAdmin && coordinatorState === "complete" && (
+        {coordinatorState === "complete" && (
           <Card className="border-destructive/40">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">
@@ -591,7 +591,7 @@ function SettingsPage() {
             <DialogDescription>
               This permanently deletes every event, venue, organizer, series, billing record and
               pending submission on this calendar, and releases its address for anyone to claim.
-              This cannot be undone. Your account keeps its sign-in and admin access.
+              This cannot be undone. Your account and sign-in are not affected.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">

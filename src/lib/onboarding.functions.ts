@@ -163,26 +163,20 @@ export const completeOnboarding = createServerFn({ method: "POST" })
  * Deletes the caller's own calendar (coordinator workspace) -- every event,
  * venue, organizer, series, billing record and submission queue entry
  * belonging to it, releasing its slug -- without touching the caller's
- * account. They keep their login and admin role; they just stop being a
- * coordinator. Admin-only for now (not every coordinator), and requires the
- * calendar's own address typed back as confirmation.
+ * account. They keep their login; they just stop being a coordinator.
+ * Requires the calendar's own address typed back as confirmation.
  *
- * Authorization happens here, before delete_own_calendar() (a
- * SECURITY DEFINER function granted only to service_role) is ever called
- * with the caller's own id -- there is no path for one account to delete
- * another's calendar through this function.
+ * A coordinator is the authority over their own calendar -- this does not
+ * require the platform-wide admin role. The _coordinator_id passed to
+ * delete_own_calendar() (a SECURITY DEFINER function granted only to
+ * service_role) is always the caller's own id, never client-supplied, so
+ * there is no path for one account to delete another's calendar through
+ * this function regardless of role.
  */
 export const deleteMyCalendar = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ confirm_slug: z.string().trim().min(1) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: isAdmin, error: roleErr } = await context.supabase.rpc("has_role", {
-      _user_id: context.userId,
-      _role: "admin",
-    });
-    if (roleErr) throw new Error(roleErr.message);
-    if (!isAdmin) throw new Error("Forbidden");
-
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
     const { data: result, error } = await (supabaseAdmin as any).rpc("delete_own_calendar", {
@@ -202,19 +196,14 @@ export const deleteMyCalendar = createServerFn({ method: "POST" })
  * points at it anymore) and is immediately available for anyone else to
  * claim; the embed/WordPress snippets and /c/$slug link pick up the new one
  * on their next load, since they all read the profile live rather than
- * caching the slug anywhere. Admin-only, matching deleteMyCalendar's scope.
+ * caching the slug anywhere. Same ownership scope as deleteMyCalendar -- a
+ * coordinator is the authority over their own calendar's address, admin
+ * role or not.
  */
 export const updateCalendarSlug = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ new_slug: z.string().trim().toLowerCase().min(3).max(40) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: isAdmin, error: roleErr } = await context.supabase.rpc("has_role", {
-      _user_id: context.userId,
-      _role: "admin",
-    });
-    if (roleErr) throw new Error(roleErr.message);
-    if (!isAdmin) throw new Error("Forbidden");
-
     if (!SLUG_RE.test(data.new_slug)) {
       throw new Error("3–40 characters, lowercase letters, numbers and hyphens");
     }

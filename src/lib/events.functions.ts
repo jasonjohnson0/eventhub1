@@ -128,23 +128,95 @@ export const updateEventCoverImage = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
-    const { data: event, error: eventErr } = await context.supabase
-      .from("events")
-      .select("coordinator_id")
-      .eq("id", data.event_id)
-      .maybeSingle();
-    if (eventErr) throw new Error(eventErr.message);
-    if (!event) throw new Error("Event not found");
-    const { data: isMember } = await context.supabase.rpc("is_workspace_member", {
-      _user_id: context.userId,
-      _coord_id: event.coordinator_id,
-    });
-    if (!isMember) throw new Error("Not authorized to manage this event");
-
+    await assertEventAccess(context.supabase, context.userId, data.event_id);
     const { error } = await context.supabase.from("event_details").upsert(
       { event_id: data.event_id, landscape_image_url: data.landscape_image_url ?? null },
       { onConflict: "event_id" },
     );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Confirms the caller owns (or staffs) the event's coordinator workspace,
+ *  and returns its coordinator_id. Shared by every event mutation below that
+ *  isn't already scoped some other way. */
+async function assertEventAccess(
+  // biome-ignore lint/suspicious/noExplicitAny: context.supabase's generic client type
+  supabase: any,
+  userId: string,
+  eventId: string,
+): Promise<string> {
+  const { data: event, error } = await supabase
+    .from("events")
+    .select("coordinator_id")
+    .eq("id", eventId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!event) throw new Error("Event not found");
+  const { data: isMember } = await supabase.rpc("is_workspace_member", {
+    _user_id: userId,
+    _coord_id: event.coordinator_id,
+  });
+  if (!isMember) throw new Error("Not authorized to manage this event");
+  return event.coordinator_id as string;
+}
+
+/** Corrects a mistake on an already-created event -- a typo in the title, a
+ *  wrong address, the wrong category. Anything not passed is left alone. */
+export const updateEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z
+      .object({
+        event_id: z.string().uuid(),
+        title: z.string().min(1).max(200).optional(),
+        description: z.string().max(4000).optional().nullable(),
+        location: z.string().max(300).optional().nullable(),
+        category: z
+          .enum(["sports", "networking", "education", "social", "fundraiser", "workshop", "other"])
+          .optional(),
+        tags: z.array(z.string().min(1).max(40)).max(20).optional(),
+        start_time: isoDate.optional(),
+        end_time: isoDate.optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { event_id, ...patch } = data;
+    await assertEventAccess(context.supabase, context.userId, event_id);
+    if (
+      patch.start_time &&
+      patch.end_time &&
+      new Date(patch.end_time) <= new Date(patch.start_time)
+    ) {
+      throw new Error("End time must be after the start time");
+    }
+    if (Object.keys(patch).length === 0) return { ok: true };
+    const { error } = await context.supabase.from("events").update(patch).eq("id", event_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** A coordinator removing their own event -- the self-service equivalent of
+ *  adminRemoveEvent, without a reason or an audit-log entry (there is no one
+ *  to explain yourself to when it's your own calendar). Soft delete: status
+ *  flips to "removed" rather than a hard DELETE, so it drops out of every
+ *  public and "my events" listing (both already filter it out) without
+ *  breaking submissions, tickets or RSVPs that reference it. */
+export const deleteMyEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ event_id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    await assertEventAccess(context.supabase, context.userId, data.event_id);
+    const { error } = await context.supabase
+      .from("events")
+      // biome-ignore lint/suspicious/noExplicitAny: removed_* columns not yet in generated types
+      .update({
+        status: "removed",
+        removed_by: context.userId,
+        removed_at: new Date().toISOString(),
+      } as any)
+      .eq("id", data.event_id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
