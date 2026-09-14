@@ -12,6 +12,7 @@ import {
   listMyPurchases,
   listTicketTiers,
   purchaseTicket,
+  createTicketCheckout,
   generateQrCode,
 } from "@/lib/monetization.functions";
 
@@ -83,9 +84,22 @@ export function TicketManager({
 
   async function buy(tier: Tier) {
     try {
-      const res = await purchaseTicket({ data: { ticket_id: tier.id, quantity: 1 } });
-      toast.success(res.message);
-      void refresh();
+      // A tier is only ever definitely free with no active early-bird window
+      // -- anything else (a nonzero price, or an early-bird tier that could
+      // currently be $0) goes through real checkout; the server is the
+      // actual authority on which price applies right now either way.
+      if (tier.price_cents === 0 && !tier.early_bird) {
+        const res = await purchaseTicket({ data: { ticket_id: tier.id, quantity: 1 } });
+        if (res.checkout_url) {
+          window.location.href = res.checkout_url;
+          return;
+        }
+        toast.success("You're confirmed — see your ticket below");
+        void refresh();
+        return;
+      }
+      const res = await createTicketCheckout({ data: { ticket_id: tier.id, quantity: 1 } });
+      window.location.href = res.checkout_url;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
     }

@@ -75,6 +75,12 @@ export const adminRemoveEvent = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: ev, error: readErr } = await supabaseAdmin
+      .from("events")
+      .select("title, start_time")
+      .eq("id", data.id)
+      .single();
+    if (readErr) throw new Error(readErr.message);
     const { error } = await supabaseAdmin
       .from("events")
       .update({
@@ -92,6 +98,8 @@ export const adminRemoveEvent = createServerFn({ method: "POST" })
       record_id: data.id,
       change_details: { reason: data.reason },
     });
+    const { autoRefundConfirmedTickets } = await import("@/lib/monetization.functions");
+    await autoRefundConfirmedTickets(data.id, ev.title, ev.start_time);
     return { ok: true };
   });
 

@@ -1,6 +1,38 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { siteOrigin } from "@/lib/site-url";
+import { getStripe } from "@/lib/stripe.server";
+
+/** Confirms the caller owns (or staffs) the ticket's event, for the refund
+ *  endpoint. Same is_workspace_member pattern events.functions.ts uses. */
+async function assertOwnsTicketEvent(
+  // biome-ignore lint/suspicious/noExplicitAny: context.supabase's generic client type
+  supabase: any,
+  userId: string,
+  purchaseId: string,
+): Promise<{ eventId: string; coordinatorId: string }> {
+  const { data: purchase, error } = await supabase
+    .from("ticket_purchases")
+    .select("event_id")
+    .eq("id", purchaseId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!purchase) throw new Error("Purchase not found");
+  const { data: event, error: evErr } = await supabase
+    .from("events")
+    .select("coordinator_id")
+    .eq("id", purchase.event_id)
+    .maybeSingle();
+  if (evErr) throw new Error(evErr.message);
+  if (!event) throw new Error("Event not found");
+  const { data: isMember } = await supabase.rpc("is_workspace_member", {
+    _user_id: userId,
+    _coord_id: event.coordinator_id,
+  });
+  if (!isMember) throw new Error("Not authorized to manage this event's tickets");
+  return { eventId: purchase.event_id as string, coordinatorId: event.coordinator_id as string };
+}
 
 /* ============================== TICKET TIERS ============================== */
 
@@ -83,6 +115,22 @@ export const deleteTicketTier = createServerFn({ method: "POST" })
 
 /* ================================ PURCHASE ================================ */
 
+// biome-ignore lint/suspicious/noExplicitAny: event_tickets row shape, types regenerate post-migration
+function effectiveUnitCents(tier: any): number {
+  const now = new Date();
+  const useEarlyBird =
+    tier.early_bird &&
+    tier.early_bird_price_cents != null &&
+    (!tier.valid_from || new Date(tier.valid_from) <= now) &&
+    (!tier.valid_until || new Date(tier.valid_until) >= now);
+  return useEarlyBird ? tier.early_bird_price_cents : tier.price_cents;
+}
+
+/** Free tiers only (price_cents effectively 0, including an active
+ *  early-bird price of 0). Paid tiers go through createTicketCheckout --
+ *  this used to silently "confirm" a paid purchase with no Stripe charge
+ *  behind it whenever the platform key wasn't configured; that demo path
+ *  is gone. */
 export const purchaseTicket = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
@@ -102,33 +150,12 @@ export const purchaseTicket = createServerFn({ method: "POST" })
       .eq("id", data.ticket_id)
       .single();
     if (tErr || !tier) throw new Error(tErr?.message ?? "Ticket not found");
+    const unit = effectiveUnitCents(tier);
+    if (unit > 0) {
+      throw new Error("This ticket requires payment — use checkout, not purchaseTicket");
+    }
     if (tier.quantity_sold + data.quantity > tier.quantity_available) {
       throw new Error("Sold out");
-    }
-    const now = new Date();
-    const useEarlyBird =
-      tier.early_bird &&
-      tier.early_bird_price_cents != null &&
-      (!tier.valid_from || new Date(tier.valid_from) <= now) &&
-      (!tier.valid_until || new Date(tier.valid_until) >= now);
-    const unit = useEarlyBird ? tier.early_bird_price_cents : tier.price_cents;
-    const amount = unit * data.quantity;
-    // Gate on the platform Stripe Connect account configured in admin setup.
-    // platform_config is admin-RLS'd; use the admin client for this read-only status check.
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: cfg } = await (supabaseAdmin as unknown as typeof sb)
-      .from("platform_config")
-      .select("use_custom_stripe, stripe_secret_key")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    // Payments run on buyer-supplied keys when present, otherwise on the
-    // platform's built-in Stripe account (STRIPE_SECRET_KEY).
-    const hasStripe =
-      Boolean(cfg?.use_custom_stripe && cfg?.stripe_secret_key) ||
-      Boolean(process.env.STRIPE_SECRET_KEY);
-    if (amount > 0 && !hasStripe) {
-      throw new Error("Stripe not configured. Please complete setup first.");
     }
     const { data: purchase, error } = await sb
       .from("ticket_purchases")
@@ -137,8 +164,8 @@ export const purchaseTicket = createServerFn({ method: "POST" })
         event_id: tier.event_id,
         user_id: context.userId,
         quantity: data.quantity,
-        amount_cents: amount,
-        status: hasStripe ? "pending" : "confirmed",
+        amount_cents: 0,
+        status: "confirmed",
       })
       .select()
       .single();
@@ -147,13 +174,179 @@ export const purchaseTicket = createServerFn({ method: "POST" })
       .from("event_tickets")
       .update({ quantity_sold: tier.quantity_sold + data.quantity })
       .eq("id", tier.id);
-    return {
-      purchase,
-      stripe_configured: hasStripe,
-      message: hasStripe
-        ? "Purchase pending — Stripe charge would happen here"
-        : "Stripe not configured. Purchase recorded as demo.",
-    };
+    return { purchase, checkout_url: null as string | null };
+  });
+
+/** Paid tiers. Reserves inventory (a 30-minute hold, race-safe against
+ *  concurrent buyers via reserve_ticket's row lock), then starts a Stripe
+ *  Checkout Session -- the webhook confirms the hold once Stripe reports
+ *  payment succeeded (see api/stripe.webhook.ts). No charge happens on
+ *  this page; the buyer is redirected to Stripe's hosted Checkout.
+ *
+ *  v1 uses the platform's own Stripe account (STRIPE_SECRET_KEY) for
+ *  every coordinator -- there is no per-coordinator Stripe Connect account
+ *  yet, so every dollar lands in the platform's Stripe, not the
+ *  coordinator's. That's a real payout/business decision, not an
+ *  implementation detail -- flagged in TEAMWORK.md, needs explicit
+ *  sign-off before this runs with real (non-test-mode) cards. */
+export const createTicketCheckout = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        ticket_id: z.string().uuid(),
+        quantity: z.number().int().min(1).max(10).default(1),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
+    const sb = context.supabase as any;
+    const { data: tier, error: tErr } = await sb
+      .from("event_tickets")
+      .select("*, events!inner(id, title, coordinator_id, status)")
+      .eq("id", data.ticket_id)
+      .single();
+    if (tErr || !tier) throw new Error(tErr?.message ?? "Ticket not found");
+    if (tier.events.status !== "approved") {
+      throw new Error("This event isn't open for ticket sales");
+    }
+    const unit = effectiveUnitCents(tier);
+    if (unit <= 0) {
+      throw new Error("This ticket is free — use purchaseTicket, not checkout");
+    }
+    const amount = unit * data.quantity;
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as unknown as typeof sb;
+
+    // Idempotent per (user, ticket): reuse an unexpired hold's session
+    // rather than creating a second one on a duplicate click.
+    const { data: existing } = await admin
+      .from("ticket_purchases")
+      .select("id, stripe_checkout_session_id, reserved_until")
+      .eq("ticket_id", data.ticket_id)
+      .eq("user_id", context.userId)
+      .eq("status", "pending")
+      .gt("reserved_until", new Date().toISOString())
+      .order("purchased_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existing?.stripe_checkout_session_id) {
+      const session = await getStripe().checkout.sessions.retrieve(
+        existing.stripe_checkout_session_id,
+      );
+      if (session.status === "open" && session.url) {
+        return { checkout_url: session.url };
+      }
+      // Session expired/completed server-side but our row hasn't caught up
+      // yet (webhook lag) -- fall through and reserve a fresh hold.
+    }
+
+    const HOLD_MINUTES = 30;
+    const { data: hold, error: holdErr } = await admin.rpc("reserve_ticket", {
+      _ticket_id: data.ticket_id,
+      _user_id: context.userId,
+      _quantity: data.quantity,
+      _amount_cents: amount,
+      _hold_minutes: HOLD_MINUTES,
+    });
+    if (holdErr) throw new Error(holdErr.message);
+    const purchase = Array.isArray(hold) ? hold[0] : hold;
+
+    const { data: profile } = await admin
+      .from("coordinator_profiles")
+      .select("currency")
+      .eq("coordinator_id", tier.events.coordinator_id)
+      .maybeSingle();
+    const currency = (profile?.currency ?? "USD").toLowerCase();
+
+    const email = (context.claims as { email?: string } | null)?.email ?? undefined;
+    let session: Awaited<ReturnType<ReturnType<typeof getStripe>["checkout"]["sessions"]["create"]>>;
+    try {
+      session = await getStripe().checkout.sessions.create({
+        mode: "payment",
+        customer_email: email,
+        client_reference_id: context.userId,
+        expires_at: Math.floor(Date.now() / 1000) + HOLD_MINUTES * 60,
+        line_items: [
+          {
+            quantity: data.quantity,
+            price_data: {
+              currency,
+              unit_amount: unit,
+              product_data: {
+                name: `${tier.events.title} — ${tier.name}`,
+                description: tier.description ?? undefined,
+              },
+            },
+          },
+        ],
+        metadata: {
+          kind: "ticket_purchase",
+          purchase_id: purchase.id,
+          event_id: tier.events.id,
+          coordinator_id: tier.events.coordinator_id,
+        },
+        success_url: `${siteOrigin()}/events/${tier.events.id}?purchase=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${siteOrigin()}/events/${tier.events.id}?purchase=canceled`,
+      });
+    } catch (err) {
+      // Session creation failed -- release the hold rather than leaving a
+      // pending row with no Checkout behind it eating inventory for 30 min.
+      await admin.rpc("release_ticket_hold", { _purchase_id: purchase.id });
+      throw err instanceof Error ? err : new Error("Could not start checkout");
+    }
+
+    if (!session.url) {
+      await admin.rpc("release_ticket_hold", { _purchase_id: purchase.id });
+      throw new Error("Stripe did not return a checkout URL");
+    }
+
+    await admin
+      .from("ticket_purchases")
+      .update({ stripe_checkout_session_id: session.id })
+      .eq("id", purchase.id);
+
+    return { checkout_url: session.url };
+  });
+
+/** Coordinator-initiated refund of a single confirmed purchase. Calls
+ *  Stripe first (the source of truth for whether money actually moved),
+ *  only marks the DB row refunded once Stripe confirms it -- the reverse
+ *  order would let a refund "succeed" in our own records while the buyer
+ *  never actually got their money back. */
+export const refundTicketPurchase = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ purchase_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertOwnsTicketEvent(context.supabase, context.userId, data.purchase_id);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
+    const admin = supabaseAdmin as any;
+    const { data: purchase, error } = await admin
+      .from("ticket_purchases")
+      .select("status, stripe_charge_id")
+      .eq("id", data.purchase_id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!purchase) throw new Error("Purchase not found");
+    if (purchase.status === "refunded") return { ok: true, already_refunded: true };
+    if (purchase.status !== "confirmed") {
+      throw new Error(`Cannot refund a purchase that is ${purchase.status}`);
+    }
+    if (!purchase.stripe_charge_id) {
+      throw new Error("No charge on record for this purchase — nothing to refund via Stripe");
+    }
+    const refund = await getStripe().refunds.create({
+      payment_intent: purchase.stripe_charge_id,
+    });
+    const { error: markErr } = await admin.rpc("mark_ticket_refunded", {
+      _purchase_id: data.purchase_id,
+      _refund_stripe_id: refund.id,
+    });
+    if (markErr) throw new Error(markErr.message);
+    return { ok: true, already_refunded: false };
   });
 
 export const listMyPurchases = createServerFn({ method: "GET" })
@@ -375,3 +568,82 @@ export const getCoordinatorAnalytics = createServerFn({ method: "GET" })
       most_viewed,
     };
   });
+
+/* ============================ EVENT-CANCEL REFUNDS ========================= */
+
+/** Called from deleteMyEvent and adminRemoveEvent when an event with sold
+ *  tickets gets cancelled/removed -- EventHub shouldn't hold money for an
+ *  event that isn't happening. Paid confirmed purchases get a real Stripe
+ *  refund + an email; free confirmed "purchases" just cancel, no Stripe
+ *  call needed since no money moved. Never throws -- a refund failure
+ *  here shouldn't block the coordinator from actually cancelling their
+ *  event; failures are logged for follow-up instead, same tradeoff the
+ *  webhook handler already makes. */
+export async function autoRefundConfirmedTickets(
+  eventId: string,
+  eventTitle: string,
+  eventStartTime: string,
+): Promise<{ refunded: number; cancelled: number; failed: number }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
+  const admin = supabaseAdmin as any;
+  const { data: purchases, error } = await admin
+    .from("ticket_purchases")
+    .select("id, user_id, amount_cents, stripe_charge_id")
+    .eq("event_id", eventId)
+    .eq("status", "confirmed");
+  if (error) {
+    console.error(`[auto-refund] could not list purchases for event ${eventId}:`, error.message);
+    return { refunded: 0, cancelled: 0, failed: 0 };
+  }
+
+  let refunded = 0;
+  let cancelled = 0;
+  let failed = 0;
+  const { sendPlatformEmails } = await import("@/lib/platform-mailer.server");
+  const { ticketRefundTemplate } = await import("@/lib/email-templates");
+
+  for (const p of purchases ?? []) {
+    if (p.amount_cents > 0) {
+      if (!p.stripe_charge_id) {
+        console.error(`[auto-refund] purchase ${p.id} is paid/confirmed but has no charge id`);
+        failed++;
+        continue;
+      }
+      try {
+        const refund = await getStripe().refunds.create({ payment_intent: p.stripe_charge_id });
+        const { error: markErr } = await admin.rpc("mark_ticket_refunded", {
+          _purchase_id: p.id,
+          _refund_stripe_id: refund.id,
+        });
+        if (markErr) throw new Error(markErr.message);
+        refunded++;
+        const { data: userRes } = await admin.auth.admin.getUserById(p.user_id);
+        const email = userRes?.user?.email;
+        if (email) {
+          const tpl = ticketRefundTemplate({
+            event: { id: eventId, title: eventTitle, start_time: eventStartTime, location: null },
+            amountCents: p.amount_cents,
+            reason: "event_cancelled",
+          });
+          await sendPlatformEmails([{ to: email, subject: tpl.subject, html: tpl.html, text: tpl.text }]);
+        }
+      } catch (err) {
+        console.error(`[auto-refund] refund failed for purchase ${p.id}:`, err);
+        failed++;
+      }
+    } else {
+      const { error: cancelErr } = await admin
+        .from("ticket_purchases")
+        .update({ status: "cancelled" })
+        .eq("id", p.id);
+      if (cancelErr) {
+        console.error(`[auto-refund] could not cancel free purchase ${p.id}:`, cancelErr.message);
+        failed++;
+      } else {
+        cancelled++;
+      }
+    }
+  }
+  return { refunded, cancelled, failed };
+}

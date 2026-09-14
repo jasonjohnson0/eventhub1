@@ -93,6 +93,22 @@ export function thankYouTemplate(opts: { event: EventLite }) {
   return { subject, html, text: subject };
 }
 
+export function ticketRefundTemplate(opts: { event: EventLite; amountCents: number; reason: "event_cancelled" | "coordinator_refund" }) {
+  const amount = `$${(opts.amountCents / 100).toFixed(2)}`;
+  const subject =
+    opts.reason === "event_cancelled"
+      ? `${opts.event.title} was cancelled — you've been refunded`
+      : `Your ticket for ${opts.event.title} was refunded`;
+  const body =
+    opts.reason === "event_cancelled"
+      ? `<p>The event <strong>${escape(opts.event.title)}</strong> (${fmtDate(opts.event.start_time)}) has been cancelled by its organizer.</p>
+         <p>You've been refunded <strong>${amount}</strong>. It should appear on your original payment method within 5–10 business days.</p>`
+      : `<p>Your ticket for <strong>${escape(opts.event.title)}</strong> has been refunded.</p>
+         <p>Amount refunded: <strong>${amount}</strong>. It should appear on your original payment method within 5–10 business days.</p>`;
+  const html = shell(subject, body);
+  return { subject, html, text: `${subject}\n${amount} refunded.` };
+}
+
 function escape(s: string) {
   return s
     .replace(/&/g, "&amp;")

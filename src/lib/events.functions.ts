@@ -208,6 +208,12 @@ export const deleteMyEvent = createServerFn({ method: "POST" })
   .inputValidator((data) => z.object({ event_id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     await assertEventAccess(context.supabase, context.userId, data.event_id);
+    const { data: ev, error: readErr } = await context.supabase
+      .from("events")
+      .select("title, start_time")
+      .eq("id", data.event_id)
+      .single();
+    if (readErr) throw new Error(readErr.message);
     const { error } = await context.supabase
       .from("events")
       // biome-ignore lint/suspicious/noExplicitAny: removed_* columns not yet in generated types
@@ -218,6 +224,11 @@ export const deleteMyEvent = createServerFn({ method: "POST" })
       } as any)
       .eq("id", data.event_id);
     if (error) throw new Error(error.message);
+    // Refund failures are logged, not thrown -- the event is already
+    // cancelled at this point and the coordinator shouldn't be blocked by
+    // a Stripe hiccup on someone else's ticket.
+    const { autoRefundConfirmedTickets } = await import("@/lib/monetization.functions");
+    await autoRefundConfirmedTickets(data.event_id, ev.title, ev.start_time);
     return { ok: true };
   });
 
