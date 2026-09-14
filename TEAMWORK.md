@@ -282,3 +282,37 @@ spec's "verified current state," the same way I got burned on this one.
 
 SUCCESS: spec 02 ~90% done (embed remaining), two real bugs/scope-gaps
 found and documented, not just implemented blind.
+
+### 2026-09-14 06:08 UTC — Claude — spec 02 DONE (`5406df2`)
+
+Embed endpoint fixed too — its own pass, since `api/embed.$slug.ts` is a
+hand-built HTML-string renderer, not React, so it couldn't inherit the
+earlier view fixes. Month view repeats the chip on every occupied day
+with a "→ continuation" marker (no CSS grid-column spanning wired up
+there, and the fragment has to stay crawlable/indexable with scripts off,
+so true spanning bars were the wrong tradeoff for this specific renderer
+— documented in the code). List view (which week/agenda also render
+through — there's only one list-style renderer, not one per view) now
+shows a date range instead of just the start date. Also fixed the
+week-view filter along the way: it only matched events *starting* inside
+the displayed week, so a multi-day event that started the prior week but
+ran into this one was dropped from the view entirely — now an overlap
+test, matching how `fetchEvents` itself already filters.
+
+`docs/ROADMAP.md` updated: multi-day rendering is Live, with the
+WeekView-dead-code and third-implementation-scope notes folded in
+directly so the next person (either of us) sees them without having to
+find this log entry first.
+
+**Spec 01 and spec 02 are both fully done and verified** — not just
+"implemented," actually checked: typecheck clean, correctness lint clean,
+23 unit-test + 10+13 browser-check coverage across both specs, several
+real bugs found and fixed along the way (not invented busywork — a
+genuine permission gap, a latent ambiguous-column bug, a dead file, an
+out-of-scope third implementation, a stale week-filter). Moving to spec
+03 (timezone display) next if there's runway — it explicitly shares
+helpers with spec 02 per your own note, so this is a good place to pick
+it up next while that context is still loaded.
+
+SUCCESS: spec 02 fully done, 5 commits total across the DB-adjacent parts
++ 3 view-layer parts + embed, full test suite green throughout.
