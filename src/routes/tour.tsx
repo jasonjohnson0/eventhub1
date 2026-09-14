@@ -230,19 +230,20 @@ function TourPage() {
       <section className="mx-auto max-w-5xl px-6 py-20">
         <div className="overflow-hidden rounded-3xl bg-slate-900 p-10 text-white">
           <div className="text-xs font-bold uppercase tracking-widest text-fuchsia-300">Built with EventHub</div>
-          <h2 className="mt-3 text-3xl font-black">Jacksonville, Florida community calendar</h2>
+          <h2 className="mt-3 text-3xl font-black">Real communities, already running on EventHub</h2>
           <p className="mt-3 max-w-2xl text-white/70">
-            A single coordinator workspace running real, upcoming events from Riverside Arts Market, the Florida
-            Theatre, VyStar Veterans Memorial Arena, 121 Financial Ballpark, local tech meetups and civic groups —
-            with a public submission queue open to the whole community.
+            Jacksonville, FL is one flagship deployment: real, upcoming events from Riverside Arts Market, the
+            Florida Theatre, VyStar Veterans Memorial Arena, 121 Financial Ballpark, local tech meetups and civic
+            groups, with a public submission queue open to the whole community — one of several community calendars
+            live on the platform today.
           </p>
           <div className="mt-8 grid gap-6 sm:grid-cols-3">
-            <Stat value={stats ? String(stats.events) : "—"} label="Approved events live" />
-            <Stat value={stats ? String(stats.categories) : "—"} label="Categories represented" />
+            <Stat value={stats ? String(stats.events) : "—"} label="Approved events live, platform-wide" />
+            <Stat value={stats ? String(stats.categories) : "—"} label="Categories represented, platform-wide" />
             <Stat value="$0" label="Paid in platform fees" />
           </div>
           <Button asChild size="lg" className="mt-8 rounded-full bg-white text-slate-900 hover:bg-white/90">
-            <Link to="/events">Explore the Jacksonville calendar</Link>
+            <Link to="/events">Explore the live calendar</Link>
           </Button>
         </div>
       </section>
