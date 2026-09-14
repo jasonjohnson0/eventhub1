@@ -112,6 +112,30 @@ const EVENTS = [
 // venue_id: 'venue-1'.
 const VENUES = [{ id: 'venue-1', name: 'Riverfront Park' }];
 
+// Spec 06 (speaker workflows). Attached to the UUID-id Harvest Festival
+// fixture, not 'e1' -- getEventOrganizers/getPublicPerson validate their id
+// inputs as real uuids, same as every other server fn touching event ids.
+const HARVEST_UUID = 'aaaaaaaa-1111-4111-8111-111111111111';
+const UNLISTED_ID = 'bbbbbbbb-2222-4222-8222-222222222222';
+export const ORG_SPEAKER = 'eeeeeeee-1111-4111-8111-111111111111';
+export const ORG_ORGANIZER = 'eeeeeeee-2222-4222-8222-222222222222';
+export const ORG_BOTH = 'eeeeeeee-3333-4333-8333-333333333333';
+
+const ORGANIZERS = [
+  { id: ORG_SPEAKER, coordinator_id: COORD, name: 'Jamie Speaker', bio: 'Keynote on river ecology.', photo_url: null, title: 'Ecologist', credentials: 'PhD, State University', social_links: { website: 'https://example.com/jamie' }, kind: 'speaker', created_at: '2026-01-01T00:00:00.000Z' },
+  { id: ORG_ORGANIZER, coordinator_id: COORD, name: 'Riley Organizer', bio: null, photo_url: null, title: 'Festival Director', credentials: null, social_links: {}, kind: 'organizer', created_at: '2026-01-01T00:00:00.000Z' },
+  { id: ORG_BOTH, coordinator_id: COORD, name: 'Sam Both', bio: 'Runs the show and speaks too.', photo_url: null, title: 'Co-founder', credentials: null, social_links: {}, kind: 'both', created_at: '2026-01-01T00:00:00.000Z' },
+];
+
+const EVENT_ORGANIZERS = [
+  { event_id: HARVEST_UUID, organizer_id: ORG_ORGANIZER, role: 'organizer', display_order: 0 },
+  { event_id: HARVEST_UUID, organizer_id: ORG_SPEAKER, role: 'speaker', display_order: 1 },
+  { event_id: HARVEST_UUID, organizer_id: ORG_BOTH, role: 'both', display_order: 2 },
+  // Jamie also "speaks" at the unlisted event -- getPublicPerson must not
+  // let this leak onto /c/riverside/p/$id's upcoming-events list.
+  { event_id: UNLISTED_ID, organizer_id: ORG_SPEAKER, role: 'speaker', display_order: 0 },
+];
+
 function parseEq(search, field) {
   const v = new URLSearchParams(search).get(field);
   if (!v) return null;
@@ -453,10 +477,67 @@ function handle(req, res) {
   if (path === '/__submissions') return send(SUBMISSIONS);
   if (path === '/__submissions/reset') { SUBMISSIONS.length = 0; return send([]); }
 
+  // get_coordinator_slug() returns text (scalar), same wire shape as
+  // is_slug_available()'s boolean above -- not wrapped in an array.
+  if (path === '/rest/v1/rpc/get_coordinator_slug') {
+    let b = {};
+    try { b = JSON.parse(req.__body || '{}'); } catch {}
+    const row = COORDINATORS.find((c) => c.coordinator_id === b.p_coordinator_id) ?? null;
+    return send(row?.slug ?? null);
+  }
+
   if (path.startsWith('/rest/v1/rpc/')) return send([]);
 
-  // event_details, event_photos, event_organizers, organizers, event_locations,
-  // venues, profiles: empty is a valid answer for all of them.
+  // Spec 06: getEventOrganizers (event_id=eq.*, embeds organizers(*)) and
+  // getPublicPerson's event-lookup (organizer_id=eq.*, embeds events!inner)
+  // both hit this table but with different filters, so the query params
+  // themselves disambiguate which caller this is.
+  if (path === '/rest/v1/event_organizers') {
+    const eventId = parseEq(url.search, 'event_id');
+    if (eventId) {
+      const rows = EVENT_ORGANIZERS
+        .filter((r) => r.event_id === eventId)
+        .sort((a, b) => a.display_order - b.display_order)
+        .map((r) => ({
+          display_order: r.display_order,
+          role: r.role,
+          organizers: ORGANIZERS.find((o) => o.id === r.organizer_id) ?? null,
+        }));
+      return send(rows);
+    }
+    const organizerId = parseEq(url.search, 'organizer_id');
+    if (organizerId) {
+      const nowIso = new Date().toISOString();
+      const rows = EVENT_ORGANIZERS
+        .filter((r) => r.organizer_id === organizerId)
+        .map((r) => ({ role: r.role, events: EVENTS.find((e) => e.id === r.event_id) ?? null }))
+        .filter((r) => r.events && r.events.status === 'approved' && (r.events.visibility ?? 'public') === 'public' && r.events.end_time >= nowIso)
+        .sort((a, b) => a.events.start_time.localeCompare(b.events.start_time));
+      return send(rows);
+    }
+    return send([]);
+  }
+
+  if (path === '/rest/v1/organizers') {
+    const id = parseEq(url.search, 'id');
+    if (id) {
+      const row = ORGANIZERS.find((o) => o.id === id) ?? null;
+      return send(wantsObject ? row : row ? [row] : []);
+    }
+    const coordinatorId = parseEq(url.search, 'coordinator_id');
+    if (coordinatorId) {
+      const kindFilter = new URLSearchParams(url.search).get('kind');
+      const kinds = kindFilter?.startsWith('in.(') ? kindFilter.slice(4, -1).split(',') : null;
+      const rows = ORGANIZERS.filter(
+        (o) => o.coordinator_id === coordinatorId && (!kinds || kinds.includes(o.kind)),
+      );
+      return send(rows);
+    }
+    return send([]);
+  }
+
+  // event_details, event_photos, event_locations, venues, profiles: empty is
+  // a valid answer for all of them.
   return send(wantsObject ? null : []);
 }
 

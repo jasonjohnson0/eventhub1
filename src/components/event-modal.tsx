@@ -21,6 +21,7 @@ import {
   listOrganizers,
   MAX_ORGANIZERS_PER_EVENT,
   type Organizer,
+  type PersonKind,
 } from "@/lib/organizers.functions";
 import {
   listCustomFields,
@@ -29,6 +30,7 @@ import {
 } from "@/lib/custom-fields.functions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -72,7 +74,9 @@ export function EventModal({
   const [suggestions, setSuggestions] = useState<Venue[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [organizers, setOrganizers] = useState<Organizer[]>([]);
-  const [selectedOrganizers, setSelectedOrganizers] = useState<string[]>([]);
+  // organizer_id -> role for THIS event (spec 06). Defaults from the
+  // profile's own kind on select; a coordinator can override per event.
+  const [selectedOrganizers, setSelectedOrganizers] = useState<Record<string, PersonKind>>({});
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
@@ -154,14 +158,32 @@ export function EventModal({
     return () => clearTimeout(t);
   }, [location, venueId]);
 
-  function toggleOrganizer(id: string) {
+  function selectOrganizer(id: string) {
     setSelectedOrganizers((prev) => {
-      if (prev.includes(id)) return prev.filter((p) => p !== id);
-      if (prev.length >= MAX_ORGANIZERS_PER_EVENT) {
-        toast.error(`Up to ${MAX_ORGANIZERS_PER_EVENT} organizers per event`);
+      if (Object.keys(prev).length >= MAX_ORGANIZERS_PER_EVENT) {
+        toast.error(`Up to ${MAX_ORGANIZERS_PER_EVENT} people per event`);
         return prev;
       }
-      return [...prev, id];
+      const person = organizers.find((o) => o.id === id);
+      return { ...prev, [id]: person?.kind ?? "organizer" };
+    });
+  }
+
+  function removeOrganizer(id: string) {
+    setSelectedOrganizers((prev) => {
+      const { [id]: _removed, ...rest } = prev;
+      return rest;
+    });
+  }
+
+  /** Cycles a selected person's role for this event: Organizer -> Speaker ->
+   *  Both -> Organizer. Only meaningful once selected. */
+  function cycleOrganizerRole(id: string) {
+    setSelectedOrganizers((prev) => {
+      const cur = prev[id];
+      if (!cur) return prev;
+      const next: PersonKind = cur === "organizer" ? "speaker" : cur === "speaker" ? "both" : "organizer";
+      return { ...prev, [id]: next };
     });
   }
 
@@ -213,10 +235,12 @@ export function EventModal({
             visibility,
           },
         });
-        if (selectedOrganizers.length > 0) {
-          await assignToEvent({
-            data: { event_id: created.id, organizer_ids: selectedOrganizers },
-          });
+        const assignments = Object.entries(selectedOrganizers).map(([organizer_id, role]) => ({
+          organizer_id,
+          role,
+        }));
+        if (assignments.length > 0) {
+          await assignToEvent({ data: { event_id: created.id, assignments } });
         }
         const values = Object.entries(fieldValues)
           .filter(([, v]) => v !== "")
@@ -277,7 +301,7 @@ export function EventModal({
       setVirtualLink("");
       setProvider("none");
       setVenueId("custom");
-      setSelectedOrganizers([]);
+      setSelectedOrganizers({});
       setFieldValues({});
       onCreated?.();
       onOpenChange(false);
@@ -549,27 +573,43 @@ export function EventModal({
               <Label className="mb-2 block">
                 Organizers & speakers{" "}
                 <span className="text-xs font-normal text-muted-foreground">
-                  ({selectedOrganizers.length}/{MAX_ORGANIZERS_PER_EVENT})
+                  ({Object.keys(selectedOrganizers).length}/{MAX_ORGANIZERS_PER_EVENT})
                 </span>
               </Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {organizers.map((o) => {
-                  const on = selectedOrganizers.includes(o.id);
+                  const role = selectedOrganizers[o.id];
+                  const on = role !== undefined;
                   return (
-                    <button
-                      key={o.id}
-                      type="button"
-                      onClick={() => toggleOrganizer(o.id)}
-                      className="focus:outline-none"
-                    >
-                      <Badge variant={on ? "default" : "outline"} className="cursor-pointer">
-                        {o.name}
-                        {o.title ? ` · ${o.title}` : ""}
-                      </Badge>
-                    </button>
+                    <div key={o.id} className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => (on ? cycleOrganizerRole(o.id) : selectOrganizer(o.id))}
+                        className="focus:outline-none"
+                        title={on ? "Click to change their role for this event" : undefined}
+                      >
+                        <Badge variant={on ? "default" : "outline"} className="cursor-pointer capitalize">
+                          {o.name}
+                          {on ? ` · ${role}` : o.title ? ` · ${o.title}` : ""}
+                        </Badge>
+                      </button>
+                      {on && (
+                        <button
+                          type="button"
+                          onClick={() => removeOrganizer(o.id)}
+                          aria-label={`Remove ${o.name}`}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
               </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Click a selected person to cycle their role for this event: Organizer → Speaker → Both.
+              </p>
             </div>
           )}
           {customFields.length > 0 && (

@@ -2,6 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+/** A profile's default -- what it says on the coordinator's directory list.
+ *  Per-event assignment (`event_organizers.role`) can differ: someone
+ *  organizes event A and speaks at event B (spec 06). */
+export type PersonKind = "organizer" | "speaker" | "both";
+const personKind = z.enum(["organizer", "speaker", "both"]);
+
 export type Organizer = {
   id: string;
   coordinator_id: string;
@@ -11,10 +17,13 @@ export type Organizer = {
   title: string | null;
   credentials: string | null;
   social_links: Record<string, string>;
+  kind: PersonKind;
   created_at: string;
 };
 
-export const MAX_ORGANIZERS_PER_EVENT = 5;
+// Raised from 5 (spec 06, F3): speakers now share this cap with organizers,
+// and 5 was already tight for organizers alone.
+export const MAX_ORGANIZERS_PER_EVENT = 12;
 
 const organizerInput = z.object({
   name: z.string().trim().min(2).max(160),
@@ -23,7 +32,30 @@ const organizerInput = z.object({
   title: z.string().trim().max(160).optional().nullable(),
   credentials: z.string().trim().max(300).optional().nullable(),
   social_links: z.record(z.string(), z.string().trim().max(300)).optional(),
+  kind: personKind.default("organizer"),
 });
+
+/** Public (unauthenticated) reads of organizer / event_organizers data --
+ *  both tables are fully public-readable (`USING (true)` RLS), same pattern
+ *  getEventOrganizers already used below, factored out so the speakers
+ *  directory and person page (spec 06) don't each re-inline the
+ *  service-role-bypass client construction. */
+async function anonClient() {
+  const { createClient } = await import("@supabase/supabase-js");
+  const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
+  return createClient(process.env["SUPABASE_URL"]!, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: (input, init) => {
+        const h = new Headers(init?.headers);
+        if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`) h.delete("Authorization");
+        h.set("apikey", key);
+        return fetch(input, { ...init, headers: h });
+      },
+    },
+    // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
+  }) as any;
+}
 
 export const listOrganizers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -87,14 +119,20 @@ export const deleteOrganizer = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Replace the organizer lineup for an event (max 5). */
+/** Replace the organizer/speaker lineup for an event (max
+ *  MAX_ORGANIZERS_PER_EVENT). Each assignment carries its own role for this
+ *  event -- the picker UI defaults it from the profile's own `kind`, but a
+ *  coordinator can override per event (spec 06: "organizes event A, speaks
+ *  at event B"). */
 export const assignToEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
     z
       .object({
         event_id: z.string().uuid(),
-        organizer_ids: z.array(z.string().uuid()).max(MAX_ORGANIZERS_PER_EVENT),
+        assignments: z
+          .array(z.object({ organizer_id: z.string().uuid(), role: personKind }))
+          .max(MAX_ORGANIZERS_PER_EVENT),
       })
       .parse(d),
   )
@@ -115,43 +153,92 @@ export const assignToEvent = createServerFn({ method: "POST" })
       .eq("event_id", data.event_id);
     if (delErr) throw new Error(delErr.message);
 
-    if (data.organizer_ids.length) {
-      const rows = data.organizer_ids.map((organizer_id, i) => ({
+    if (data.assignments.length) {
+      const rows = data.assignments.map((a, i) => ({
         event_id: data.event_id,
-        organizer_id,
+        organizer_id: a.organizer_id,
+        role: a.role,
         display_order: i,
       }));
       const { error } = await sb.from("event_organizers").insert(rows);
       if (error) throw new Error(error.message);
     }
-    return { ok: true, count: data.organizer_ids.length };
+    return { ok: true, count: data.assignments.length };
   });
 
-/** Public: organizers shown on an event detail page. */
+/** Public: organizers/speakers shown on an event detail page, with the
+ *  per-event role that decides which block (Organized by / Speakers) each
+ *  one lands in. */
 export const getEventOrganizers = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ event_id: z.string().uuid() }).parse(d))
-  .handler(async ({ data }): Promise<Organizer[]> => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const key = process.env["SUPABASE_PUBLISHABLE_KEY"]!;
-    const sb = createClient(process.env["SUPABASE_URL"]!, key, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: {
-        fetch: (input, init) => {
-          const h = new Headers(init?.headers);
-          if (key.startsWith("sb_") && h.get("Authorization") === `Bearer ${key}`)
-            h.delete("Authorization");
-          h.set("apikey", key);
-          return fetch(input, { ...init, headers: h });
-        },
-      },
-      // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
-    }) as any;
+  .handler(async ({ data }): Promise<(Organizer & { role: PersonKind })[]> => {
+    const sb = await anonClient();
     const { data: rows, error } = await sb
       .from("event_organizers")
-      .select("display_order, organizers(*)")
+      .select("display_order, role, organizers(*)")
       .eq("event_id", data.event_id)
       .order("display_order");
     if (error) throw new Error(error.message);
     // biome-ignore lint/suspicious/noExplicitAny: nested select shape
-    return ((rows ?? []) as any[]).map((r) => r.organizers).filter(Boolean) as Organizer[];
+    return ((rows ?? []) as any[])
+      .filter((r) => r.organizers)
+      .map((r) => ({ ...r.organizers, role: r.role as PersonKind }));
+  });
+
+/** Public: one person's profile plus their upcoming public events for a
+ *  coordinator (spec 06's `/c/$slug/p/$id` person page). Unlisted events
+ *  are excluded -- same `visibility = 'public'` filter as every other
+ *  listing surface (spec 04). */
+export const getPublicPerson = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const sb = await anonClient();
+    const { data: person, error } = await sb
+      .from("organizers")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!person) return null;
+
+    const nowIso = new Date().toISOString();
+    const { data: rows } = await sb
+      .from("event_organizers")
+      .select("role, events!inner(id, title, start_time, end_time, category, status, visibility)")
+      .eq("organizer_id", data.id)
+      .eq("events.status", "approved")
+      .eq("events.visibility", "public")
+      .gte("events.end_time", nowIso)
+      .order("events.start_time");
+
+    // biome-ignore lint/suspicious/noExplicitAny: nested select shape
+    const events = ((rows ?? []) as any[])
+      .filter((r) => r.events)
+      .map((r) => ({ ...r.events, role: r.role as PersonKind }));
+
+    return { person: person as Organizer, events };
+  });
+
+/** Public: directory of speakers (kind speaker/both) or organizers (kind
+ *  organizer/both) for one coordinator (spec 06's `/c/$slug/speakers`). */
+export const listPublicPeople = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        coordinator_id: z.string().uuid(),
+        kind: z.enum(["speaker", "organizer"]).default("speaker"),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }): Promise<Organizer[]> => {
+    const sb = await anonClient();
+    const kinds = data.kind === "speaker" ? ["speaker", "both"] : ["organizer", "both"];
+    const { data: rows, error } = await sb
+      .from("organizers")
+      .select("*")
+      .eq("coordinator_id", data.coordinator_id)
+      .in("kind", kinds)
+      .order("name");
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as Organizer[];
   });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,12 +8,26 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   createOrganizer,
   deleteOrganizer,
   listOrganizers,
   updateOrganizer,
   type Organizer,
+  type PersonKind,
 } from "@/lib/organizers.functions";
+
+const KIND_LABEL: Record<PersonKind, string> = {
+  organizer: "Organizer",
+  speaker: "Speaker",
+  both: "Both",
+};
 
 const EMPTY = {
   name: "",
@@ -24,6 +38,7 @@ const EMPTY = {
   linkedin: "",
   twitter: "",
   website: "",
+  kind: "organizer" as PersonKind,
 };
 
 export function OrganizerManager() {
@@ -32,6 +47,12 @@ export function OrganizerManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [filter, setFilter] = useState<"all" | PersonKind>("all");
+
+  const filtered = useMemo(
+    () => (filter === "all" ? rows : rows.filter((o) => o.kind === filter)),
+    [rows, filter],
+  );
 
   const load = async () => {
     try {
@@ -59,6 +80,7 @@ export function OrganizerManager() {
         credentials: form.credentials || null,
         photo_url: form.photo_url || null,
         social_links: social,
+        kind: form.kind,
       };
       if (editingId) await updateOrganizer({ data: { id: editingId, ...payload } as never });
       else await createOrganizer({ data: payload as never });
@@ -86,6 +108,7 @@ export function OrganizerManager() {
       linkedin: o.social_links?.linkedin ?? "",
       twitter: o.social_links?.twitter ?? "",
       website: o.social_links?.website ?? "",
+      kind: o.kind,
     });
   };
 
@@ -117,6 +140,25 @@ export function OrganizerManager() {
               <div className="space-y-1.5">
                 <Label>Title / role</Label>
                 <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Kind</Label>
+                <Select
+                  value={form.kind}
+                  onValueChange={(v) => setForm({ ...form, kind: v as PersonKind })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="organizer">Organizer</SelectItem>
+                    <SelectItem value="speaker">Speaker</SelectItem>
+                    <SelectItem value="both">Both</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Default when assigning to an event -- overridable per event.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label>Credentials</Label>
@@ -162,16 +204,40 @@ export function OrganizerManager() {
           </div>
         )}
 
+        <div className="flex gap-1 rounded-full bg-muted p-1 text-xs font-medium w-fit">
+          {(["all", "organizer", "speaker", "both"] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className={`rounded-full px-3 py-1 capitalize transition-colors ${
+                filter === f ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
         <div className="divide-y rounded-lg border">
-          {rows.length === 0 && <p className="p-4 text-sm text-muted-foreground">No organizers yet.</p>}
-          {rows.map((o) => (
+          {filtered.length === 0 && (
+            <p className="p-4 text-sm text-muted-foreground">
+              {rows.length === 0 ? "No organizers yet." : "No profiles match this filter."}
+            </p>
+          )}
+          {filtered.map((o) => (
             <div key={o.id} className="flex items-center gap-3 p-3">
               <Avatar className="h-9 w-9">
                 {o.photo_url ? <AvatarImage src={o.photo_url} alt={o.name} /> : null}
                 <AvatarFallback>{o.name.slice(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <div className="truncate font-medium">{o.name}</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="truncate font-medium">{o.name}</span>
+                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {KIND_LABEL[o.kind]}
+                  </span>
+                </div>
                 <p className="truncate text-xs text-muted-foreground">
                   {[o.title, o.credentials].filter(Boolean).join(" · ") || "—"}
                 </p>

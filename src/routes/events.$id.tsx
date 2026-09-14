@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { upsertRsvp } from "@/lib/tracking.functions";
 import { purchaseTicket, createTicketCheckout, listMyPurchases } from "@/lib/monetization.functions";
+import { getEventOrganizers, type Organizer, type PersonKind } from "@/lib/organizers.functions";
 import { Button } from "@/components/ui/button";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
 import { fmtTime } from "@/queries/events";
@@ -76,6 +77,10 @@ type Detail = {
   photos: { id: string; photo_url: string; caption: string | null }[];
   goingCount: number;
   coordinatorName: string | null;
+  /** null when the coordinator's own profile isn't public yet (setup
+   *  incomplete) -- people still render, just without a link to /c/$slug. */
+  coordinatorSlug: string | null;
+  people: (Organizer & { role: PersonKind })[];
   moreFromCoordinator: { id: string; title: string; start_time: string; category: string | null }[];
   tickets: {
     id: string;
@@ -120,6 +125,66 @@ function safeHttps(url: string | null): string | null {
   } catch {
     return null;
   }
+}
+
+/** Organized-by / Speakers block on the event page. Each person links to
+ *  their /c/$slug/p/$id profile when the coordinator's own calendar is
+ *  public (`coordinatorSlug` set); otherwise renders as plain text rather
+ *  than a dead link. */
+function PeopleBlock({
+  title,
+  people,
+  coordinatorSlug,
+}: {
+  title: string;
+  people: Organizer[];
+  coordinatorSlug: string | null;
+}) {
+  return (
+    <div className="pt-2">
+      <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
+      <div className="mt-2 flex flex-wrap gap-3">
+        {people.map((p) => {
+          const inner = (
+            <>
+              {p.photo_url ? (
+                <img
+                  src={p.photo_url}
+                  alt=""
+                  className="h-9 w-9 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600">
+                  {p.name.slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium text-slate-800">{p.name}</div>
+                {p.title && <div className="truncate text-xs text-slate-500">{p.title}</div>}
+              </div>
+            </>
+          );
+          return coordinatorSlug ? (
+            <Link
+              key={p.id}
+              to="/c/$slug/p/$id"
+              params={{ slug: coordinatorSlug, id: p.id }}
+              className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-3 hover:border-fuchsia-300"
+            >
+              {inner}
+            </Link>
+          ) : (
+            <div
+              key={p.id}
+              className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-3"
+            >
+              {inner}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 const DEMO_SPONSOR_SLOTS = [
@@ -201,8 +266,17 @@ function PublicEventDetail() {
         }
         return;
       }
-      const [detailsRes, photosRes, rsvpCountsRes, profileRes, ticketsRes, slotsRes, adsRes] =
-        await Promise.all([
+      const [
+        detailsRes,
+        photosRes,
+        rsvpCountsRes,
+        profileRes,
+        ticketsRes,
+        slotsRes,
+        adsRes,
+        slugRes,
+        people,
+      ] = await Promise.all([
           supabase
             .from("event_details")
             .select("landscape_image_url, portrait_image_url")
@@ -239,6 +313,9 @@ function PublicEventDetail() {
             .order("position"),
           // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
           (supabase as any).rpc("get_public_sponsors", { p_event_id: id }),
+          // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+          (supabase as any).rpc("get_coordinator_slug", { p_coordinator_id: ev.coordinator_id }),
+          getEventOrganizers({ data: { event_id: id } }).catch(() => []),
         ]);
       const nowIso = new Date().toISOString();
       const { data: more } = await supabase
@@ -259,6 +336,8 @@ function PublicEventDetail() {
           goingCount: (rsvpCountsRes.data?.[0]?.going as number | undefined) ?? 0,
           // biome-ignore lint/suspicious/noExplicitAny: profile may not exist
           coordinatorName: (profileRes.data as any)?.display_name ?? null,
+          coordinatorSlug: (slugRes.data as string | null) ?? null,
+          people,
           moreFromCoordinator: more ?? [],
           // biome-ignore lint/suspicious/noExplicitAny: extended types
           tickets: (ticketsRes.data as any) ?? [],
@@ -385,6 +464,8 @@ function PublicEventDetail() {
     photos,
     goingCount,
     coordinatorName,
+    coordinatorSlug,
+    people,
     moreFromCoordinator,
     tickets,
     sponsors,
@@ -595,6 +676,22 @@ function PublicEventDetail() {
                 <div className="pt-2 text-sm text-slate-500">
                   Hosted by <span className="font-semibold text-slate-800">{coordinatorName}</span>
                 </div>
+              )}
+
+              {people.some((p) => p.role === "organizer" || p.role === "both") && (
+                <PeopleBlock
+                  title="Organized by"
+                  people={people.filter((p) => p.role === "organizer" || p.role === "both")}
+                  coordinatorSlug={coordinatorSlug}
+                />
+              )}
+
+              {people.some((p) => p.role === "speaker" || p.role === "both") && (
+                <PeopleBlock
+                  title="Speakers"
+                  people={people.filter((p) => p.role === "speaker" || p.role === "both")}
+                  coordinatorSlug={coordinatorSlug}
+                />
               )}
             </div>
 

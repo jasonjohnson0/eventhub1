@@ -34,6 +34,7 @@ import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as CSlugSpeakersRouteImport } from './routes/c.$slug_.speakers'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
 import { Route as ApiEmbedSlugRouteImport } from './routes/api/embed.$slug'
 import { Route as AuthenticatedCoordinatorSubmissionsRouteImport } from './routes/_authenticated/coordinator.submissions'
@@ -44,6 +45,7 @@ import { Route as AuthenticatedAdminModerationRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated/admin.billing'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as CSlugPIdRouteImport } from './routes/c.$slug_.p.$id'
 import { Route as ApiPublicIcalTokenRouteImport } from './routes/api/public/ical.$token'
 import { Route as ApiAdISlotIdRouteImport } from './routes/api/ad.i.$slotId'
 import { Route as ApiAdCSlotIdRouteImport } from './routes/api/ad.c.$slotId'
@@ -183,6 +185,11 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const CSlugSpeakersRoute = CSlugSpeakersRouteImport.update({
+  id: '/c/$slug_/speakers',
+  path: '/c/$slug/speakers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   id: '/api/stripe/webhook',
   path: '/api/stripe/webhook',
@@ -235,6 +242,11 @@ const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   id: '/.lovable/oauth/consent',
   path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CSlugPIdRoute = CSlugPIdRouteImport.update({
+  id: '/c/$slug_/p/$id',
+  path: '/c/$slug/p/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicIcalTokenRoute = ApiPublicIcalTokenRouteImport.update({
@@ -341,6 +353,7 @@ export interface FileRoutesByFullPath {
   '/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/c/$slug/speakers': typeof CSlugSpeakersRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
@@ -354,6 +367,7 @@ export interface FileRoutesByFullPath {
   '/api/ad/c/$slotId': typeof ApiAdCSlotIdRoute
   '/api/ad/i/$slotId': typeof ApiAdISlotIdRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
+  '/c/$slug/p/$id': typeof CSlugPIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -388,6 +402,7 @@ export interface FileRoutesByTo {
   '/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/c/$slug/speakers': typeof CSlugSpeakersRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
@@ -401,6 +416,7 @@ export interface FileRoutesByTo {
   '/api/ad/c/$slotId': typeof ApiAdCSlotIdRoute
   '/api/ad/i/$slotId': typeof ApiAdISlotIdRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
+  '/c/$slug/p/$id': typeof CSlugPIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -438,6 +454,7 @@ export interface FileRoutesById {
   '/_authenticated/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/c/$slug_/speakers': typeof CSlugSpeakersRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/_authenticated/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
@@ -451,6 +468,7 @@ export interface FileRoutesById {
   '/api/ad/c/$slotId': typeof ApiAdCSlotIdRoute
   '/api/ad/i/$slotId': typeof ApiAdISlotIdRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
+  '/c/$slug_/p/$id': typeof CSlugPIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -488,6 +506,7 @@ export interface FileRouteTypes {
     | '/coordinator/submissions'
     | '/api/embed/$slug'
     | '/api/stripe/webhook'
+    | '/c/$slug/speakers'
     | '/admin/'
     | '/coordinator/settings/custom-fields'
     | '/coordinator/settings/embed'
@@ -501,6 +520,7 @@ export interface FileRouteTypes {
     | '/api/ad/c/$slotId'
     | '/api/ad/i/$slotId'
     | '/api/public/ical/$token'
+    | '/c/$slug/p/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -535,6 +555,7 @@ export interface FileRouteTypes {
     | '/coordinator/submissions'
     | '/api/embed/$slug'
     | '/api/stripe/webhook'
+    | '/c/$slug/speakers'
     | '/admin'
     | '/coordinator/settings/custom-fields'
     | '/coordinator/settings/embed'
@@ -548,6 +569,7 @@ export interface FileRouteTypes {
     | '/api/ad/c/$slotId'
     | '/api/ad/i/$slotId'
     | '/api/public/ical/$token'
+    | '/c/$slug/p/$id'
   id:
     | '__root__'
     | '/'
@@ -584,6 +606,7 @@ export interface FileRouteTypes {
     | '/_authenticated/coordinator/submissions'
     | '/api/embed/$slug'
     | '/api/stripe/webhook'
+    | '/c/$slug_/speakers'
     | '/_authenticated/admin/'
     | '/_authenticated/coordinator/settings/custom-fields'
     | '/_authenticated/coordinator/settings/embed'
@@ -597,6 +620,7 @@ export interface FileRouteTypes {
     | '/api/ad/c/$slotId'
     | '/api/ad/i/$slotId'
     | '/api/public/ical/$token'
+    | '/c/$slug_/p/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -618,9 +642,11 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiEmbedSlugRoute: typeof ApiEmbedSlugRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  CSlugSpeakersRoute: typeof CSlugSpeakersRoute
   ApiAdCSlotIdRoute: typeof ApiAdCSlotIdRoute
   ApiAdISlotIdRoute: typeof ApiAdISlotIdRoute
   ApiPublicIcalTokenRoute: typeof ApiPublicIcalTokenRoute
+  CSlugPIdRoute: typeof CSlugPIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -800,6 +826,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/c/$slug_/speakers': {
+      id: '/c/$slug_/speakers'
+      path: '/c/$slug/speakers'
+      fullPath: '/c/$slug/speakers'
+      preLoaderRoute: typeof CSlugSpeakersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/stripe/webhook': {
       id: '/api/stripe/webhook'
       path: '/api/stripe/webhook'
@@ -868,6 +901,13 @@ declare module '@tanstack/react-router' {
       path: '/.lovable/oauth/consent'
       fullPath: '/.lovable/oauth/consent'
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/c/$slug_/p/$id': {
+      id: '/c/$slug_/p/$id'
+      path: '/c/$slug/p/$id'
+      fullPath: '/c/$slug/p/$id'
+      preLoaderRoute: typeof CSlugPIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/ical/$token': {
@@ -1071,9 +1111,11 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiEmbedSlugRoute: ApiEmbedSlugRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  CSlugSpeakersRoute: CSlugSpeakersRoute,
   ApiAdCSlotIdRoute: ApiAdCSlotIdRoute,
   ApiAdISlotIdRoute: ApiAdISlotIdRoute,
   ApiPublicIcalTokenRoute: ApiPublicIcalTokenRoute,
+  CSlugPIdRoute: CSlugPIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
