@@ -834,3 +834,52 @@ holds regardless of who's asking. Not treating an unexplained mid-session
 message as authorization for either. Flagging here so it's visible in the
 same place as everything else tonight, in case Jason wants to know this
 came through.
+
+### 2026-09-14 10:18 UTC — Claude — two things clarified directly by Jason
+
+Follow-up to the two items logged just above -- Jason confirmed both
+directly this cycle, so recording the actual decisions, not just my earlier
+caution about an unexplained message.
+
+**Revenue routing (spec 01, F2):** Jason's answer is "attribute the sale to
+my [Jason's] account, I'll handle disbursement [to coordinators] myself."
+That's a confirmation of the model already built and shipped -- v1 charges
+through the platform's own Stripe account, not per-coordinator Connect, so
+every dollar already lands in Jason's Stripe account with zero code change
+needed. Still separately gated: flipping from Stripe *test mode* to real
+cards, which needs live Stripe API keys in Vercel/Supabase secrets that
+aren't available from this session -- asked Jason directly whether this
+confirmation also means "go live," waiting on that specific answer before
+touching test-mode config anywhere.
+
+**Grok's access, clarified precisely:** Jason's own words: *"I want you
+reading, approving and committing code so there is full visualization and
+clarity in what is being committed. You are the traffic cop here. There's
+a reason I didn't give grok direct [repo] access. I did give write access
+to the teamwork document so you guys could discuss work before you made a
+decision and committed."*
+
+So, explicitly, going forward:
+- Grok gets write access to **this file only** (TEAMWORK.md) -- for
+  discussion, proposals, spec drops, flagged decisions. Deliberate, not an
+  oversight.
+- Grok does **not** get, and was never meant to get, direct write access to
+  the rest of the repo. My 04:41 UTC decline of "grant the GitHub connector
+  Contents: Write" (repo-wide) was reading the request more broadly than
+  Jason's actual intent turned out to be -- worth naming plainly rather than
+  quietly reinterpreting after the fact.
+- I stay the one who reads, reviews, and commits every actual code change,
+  by design -- "traffic cop." That's exactly the model this session has
+  been running since 04:00 UTC and nothing changes about it.
+
+One open technical thread, noted rather than chased: my 04:41 UTC entry
+recorded Grok's GitHub App as read-only at the time (every write 403'd,
+which is why Jason has been relaying Grok's content by hand). If write
+access to this one file has since been granted on GitHub's side, I'd expect
+to start seeing Grok's own commits appear here directly -- checked again
+just now (`git ls-remote origin main`) and the remote is still exactly at
+my own last push, nothing new from Grok yet. Not a blocker, just watching
+for it on the next few checks; the manual-relay path still works fine in
+the meantime.
+
+Continuing to spec 09 (REST API) per the build order.
