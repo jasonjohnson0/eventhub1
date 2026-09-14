@@ -479,3 +479,66 @@ test-infra bug found and fixed (the fake-nonzero RSVP count stub) that
 would have silently defeated the zero-RSVP confirm-skip test forever if
 left alone -- not invented busywork, a genuine "this test could never
 have failed even if the feature were broken" gap.
+
+### 2026-09-14 07:43 UTC — Claude — spec 05 (timeline view) DONE
+
+Read `docs/specs/05-timeline-view.md`. Nothing new to answer first.
+
+New `src/views/TimelineView.tsx`, matching Photo/Summary's location per
+your own implementation note rather than `CalendarViews/`. Adopted F1/F2
+as written: horizontal date axis is the view itself (one row per event,
+deliberately NOT lane-packed the way Month is -- packing rows would hide
+the exact thing this view exists to show, two events' durations sitting
+next to each other), group-by-venue is a toggle default off, not shipped
+in the embed.
+
+Reused `occupiesDates` from #2 exactly as instructed rather than
+reimplementing start-date-only -- a genuinely multi-day event gets a bar
+spanning full day columns; a same-day timed event gets a short bar
+positioned at its actual time-of-day *within* that one column (computed
+as a fraction of the 24h day, clamped to a 3% minimum width so a 5-minute
+event doesn't render as an unclickable sliver). This is the one place in
+the codebase doing sub-day fractional positioning, so I unit-tested the
+fraction math directly rather than trusting a visual check alone --
+`tests/unit/timeline-layout.mjs` asserts exact fracStart/fracEnd numbers
+for a 6-8pm event, not just "it's shorter than a full day."
+
+`fetchEvents`/`CalendarEvent` gained `venue_id` + `venue_name` per your
+data-model note -- a new bulk lookup keyed by venue id (not event id,
+since several events routinely share one venue), same shape as the
+existing images/counts/organizers/coords enrichment already there. The
+toggle only renders once at least one event in view actually has a venue,
+so a coordinator with no venues set up never sees a dead control.
+
+Added `"timeline"` to `VIEWS` in both `c.$slug.tsx` and `events.tsx`, not
+the embed's own `VIEWS` (your F2). Both pages' period-label and
+prev/next-month step logic now treat `timeline` exactly like `month`,
+since the spec says the axis defaults to the same cursor.
+
+Verifying "multi-day bar is wider than same-day bar" with a text-presence
+check alone would have been a weak test (a bug that changed *what* rendered
+without changing pixel width could still pass), so
+`tests/browser/timeline-view.mjs` measures real `getBoundingClientRect()`
+widths in the browser and asserts the multi-day bar is >2x a single day
+column while the same-day bar is <0.6x -- an actual geometric proof, not
+just "both titles are somewhere in the page." Also added a `venues`
+fixture + handler to `tests/support/mock-supabase.mjs` (it had no venue
+support at all before this) so the group-by-venue toggle had something
+real to group.
+
+Test coverage: 14 unit checks, 15 browser checks (axis renders, bar-width
+geometry for both bar types, group-by-venue toggle shows the real venue
+name and a "No venue" bucket, click-through, both `/c/$slug` and
+`/events` carry the tab). Typecheck clean, correctness lint clean, full
+`tests/run.sh` green (bar the pre-existing `dashboard.mjs` flake, which
+did not even recur on the very next run).
+
+`docs/ROADMAP.md` updated: Timeline view moves Not built → Live; the
+"Calendar views" Live row corrected from 7 to 8.
+
+Next up per the build order: spec 06 (speaker workflows).
+
+SUCCESS: spec 05 fully done and verified, with real geometric browser
+assertions (not just text-presence checks) for the one part of this view
+that's genuinely novel math in this codebase -- sub-day fractional bar
+positioning.
