@@ -542,3 +542,93 @@ SUCCESS: spec 05 fully done and verified, with real geometric browser
 assertions (not just text-presence checks) for the one part of this view
 that's genuinely novel math in this codebase -- sub-day fractional bar
 positioning.
+
+### 2026-09-14 08:48 UTC — Claude — spec 06 (speaker workflows) DONE, marked Partial not Live
+
+Read `docs/specs/06-speaker-workflows.md`. Nothing new to answer first.
+
+Adopted F1/F2/F3 as written: same `organizers`/`event_organizers` entity, no
+new `speakers` table (F1) -- migration `20260914074833_speaker_workflows.sql`
+adds `person_kind` enum + `organizers.kind` (profile default) +
+`event_organizers.role` (per-event, can differ from the profile default --
+"organizes event A, speaks at event B"). Shared assignment cap raised 5 -> 12
+(F3). No session/track schedule (F2) -- this is the one that keeps this
+**Partial, not Live** in `docs/ROADMAP.md`, per your own instruction not to
+round up.
+
+`organizers.functions.ts`: `assignToEvent` now takes `assignments: {
+organizer_id, role }[]` instead of a bare id array; `getEventOrganizers`
+returns each person's per-event `role` alongside their profile; two new
+public server fns, `getPublicPerson` (profile + upcoming public events,
+unlisted excluded -- same `status='approved' AND visibility='public'` filter
+spec 04 established everywhere else) and `listPublicPeople` (directory by
+kind). Extracted the inline anon-client construction `getEventOrganizers`
+already had into a shared `anonClient()` helper rather than triplicating it
+across the three public fns.
+
+UI: `event-modal.tsx`'s organizer picker now shows a per-chip role that
+cycles Organizer -> Speaker -> Both on click, defaulting from the profile's
+own kind when first selected. `organizer-manager.tsx` gets a Kind select on
+the profile form plus an All/Organizer/Speaker/Both filter tab row.
+`events.$id.tsx` splits "Organized by"/"Speakers" blocks, each person linking
+to their new person page.
+
+Two real things worth flagging, not just "it works":
+
+1. **Person pages needed a `coordinator_id -> slug` reverse lookup that
+   didn't exist.** `get_public_coordinator_profile` only resolves slug ->
+   profile (forward), and `coordinator_profiles` isn't anon-readable
+   directly (revoked in two migrations back in August -- same reason that
+   function exists at all). Added `get_coordinator_slug(p_coordinator_id)`,
+   same `SECURITY DEFINER` + explicit `search_path` + `REVOKE ... FROM
+   PUBLIC` + `GRANT ... TO anon, authenticated` shape as its sibling, in the
+   spec 06 migration.
+2. **The new routes are flat sibling files, not nested under `c.$slug.tsx`,
+   and that distinction actually mattered.** My first pass named them
+   `c.$slug.speakers.tsx` / `c.$slug.p.$id.tsx`, which TanStack's file-based
+   router treats as *children* of `c.$slug.tsx` (parent/child by filename
+   prefix, regardless of directory vs. flat-dot style -- I'd generalized too
+   far from the `events.$id.manage.tsx` example in an earlier spec, which is
+   actually independent for a different reason: it lives under
+   `_authenticated/`, a different pathless layout branch entirely, not
+   because flat-dot siblings are always independent). `CoordinatorCalendar`
+   renders no `<Outlet/>`, so a real child route's content silently never
+   appears -- the page keeps showing the plain calendar, with no error, no
+   console warning, nothing. A raw `curl` even looked fine, because the
+   route's `head()` (page `<title>`) still applies regardless of whether the
+   Outlet renders. Only the *browser* tests caught it, because they check
+   rendered body content, not headers. Fixed by renaming to
+   `c.$slug_.speakers.tsx` / `c.$slug_.p.$id.tsx` -- TanStack's trailing-
+   underscore-on-a-segment convention, which keeps the URL (`/c/$slug/speakers`)
+   identical but detaches the route from `c.$slug` as its parent. `/c/$slug`
+   itself is untouched, still a leaf, still the same file -- no risk to any
+   of the existing tests that hit it.
+
+Test coverage: 11 DB checks (`tests/db/speaker-workflows.py` -- enum/columns/
+defaults, no `speakers` table, per-event role overriding profile kind,
+`get_coordinator_slug()` anon-callable while the table itself stays blocked,
+unknown-coordinator returns empty not an error), 22 browser checks
+(`tests/browser/speaker-workflows.mjs` -- Organized-by/Speakers split on the
+event page with working person-page links, directory filtering strictly by
+kind, person-page bio/credentials/upcoming-events, and specifically that a
+speaker's assignment to an *unlisted* event does not leak onto their public
+person page -- the spec's own acceptance criterion, actually exercised, not
+just asserted true by inspection). Added `organizers`/`event_organizers`
+fixtures to `tests/support/mock-supabase.mjs`, which had none before this
+(both tables previously fell through to the generic empty-array fallback).
+Typecheck clean, correctness lint clean, full `tests/run.sh` green (the
+pre-existing `dashboard.mjs` flake showed up once across several full runs
+this cycle, gone on immediate re-run, same signature as every other time
+it's been logged -- not chased further, per established pattern).
+
+`docs/ROADMAP.md` updated: Speaker workflows Not built -> **Partial**
+(explicitly not Live -- F2 is the reason, spelled out in the table so the
+next person doesn't have to find this entry to know why).
+
+Next up per the build order: spec 07 (unified email logs).
+
+SUCCESS: spec 06 fully done and verified. One real gap in the app's own data
+access (no slug reverse-lookup) and one real routing bug (silently-non-
+rendering nested routes) caught and fixed before shipping, not invented
+busywork -- the routing one specifically would not have been caught without
+real browser assertions on rendered body content.
