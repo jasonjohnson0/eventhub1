@@ -24,7 +24,8 @@ import { OrganizerManager } from "@/components/organizer-manager";
 import { CustomFieldManager } from "@/components/custom-field-manager";
 import { EmailLogTable } from "@/components/email-log-table";
 import { ChatHooksSettings } from "@/components/chat-hooks-settings";
-import { Mail, MessageSquare } from "lucide-react";
+import { ApiKeysSettings } from "@/components/api-keys-settings";
+import { Mail, MessageSquare, Key } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   getCoordinatorProfile,
@@ -522,6 +523,17 @@ function SettingsPage() {
           </CardHeader>
           <CardContent>
             <ChatHooksSettings />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Key className="h-4 w-4" /> API keys
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ApiKeysSettings />
           </CardContent>
         </Card>
 

@@ -154,6 +154,17 @@ const EMAIL_SENDS = [
 // with no row, same as any real coordinator who's never opened this section.
 const CHAT_HOOKS = [];
 
+// Spec 09 (REST API). All empty by default -- populated per-test via the
+// real create/list/insert paths (API keys created through the settings UI,
+// events/venues/tickets created through /api/v1 itself), same "prove the
+// write round-trips" posture as everything else in this mock.
+export const API_KEYS = [];
+export const EVENT_TICKETS = [];
+const API_RATE_BUCKETS = [];
+let nextEventId = 1;
+let nextVenueId = 1;
+let nextTicketId = 1;
+
 function parseEq(search, field) {
   const v = new URLSearchParams(search).get(field);
   if (!v) return null;
@@ -299,6 +310,86 @@ function handle(req, res) {
     return send(wantsObject ? (row ?? null) : row ? [row] : []);
   }
 
+  // Spec 09: coordinator API keys. GET lists/looks-up (by coordinator_id,
+  // by id, or by secret_hash -- the last is how authenticateApiRequest()
+  // looks a Bearer token up), POST inserts, PATCH-by-id revokes.
+  if (path === '/rest/v1/coordinator_api_keys') {
+    const id = parseEq(url.search, 'id');
+    const secretHash = parseEq(url.search, 'secret_hash');
+    if (req.method === 'PATCH' && id) {
+      const row = API_KEYS.find((k) => k.id === id);
+      if (row) {
+        let body = {};
+        try { body = JSON.parse(req.__body || '{}'); } catch {}
+        Object.assign(row, body);
+      }
+      return send(wantsObject ? (row ?? null) : row ? [row] : []);
+    }
+    if (req.method === 'POST') {
+      let body = {};
+      try { body = JSON.parse(req.__body || '{}'); } catch {}
+      const row = {
+        id: `92000000-0000-4000-8000-${String(API_KEYS.length + 1).padStart(12, '0')}`,
+        last_used_at: null,
+        revoked_at: null,
+        created_at: new Date().toISOString(),
+        ...body,
+      };
+      API_KEYS.push(row);
+      return send(wantsObject ? row : [row]);
+    }
+    if (secretHash) {
+      const row = API_KEYS.find((k) => k.secret_hash === secretHash) ?? null;
+      return send(wantsObject ? row : row ? [row] : []);
+    }
+    const coordinatorId = parseEq(url.search, 'coordinator_id');
+    let rows = coordinatorId ? API_KEYS.filter((k) => k.coordinator_id === coordinatorId) : API_KEYS;
+    if (id) rows = rows.filter((k) => k.id === id);
+    return send(wantsObject ? (rows[0] ?? null) : rows);
+  }
+
+  if (path === '/rest/v1/api_rate_buckets') {
+    if (req.method === 'POST') {
+      let body = {};
+      try { body = JSON.parse(req.__body || '{}'); } catch {}
+      const existing = API_RATE_BUCKETS.find(
+        (b) => b.key_id === body.key_id && b.window_start === body.window_start,
+      );
+      if (existing) Object.assign(existing, body);
+      else API_RATE_BUCKETS.push({ ...body });
+      return send(wantsObject ? body : [body]);
+    }
+    const keyId = parseEq(url.search, 'key_id');
+    const windowStart = parseEq(url.search, 'window_start');
+    let rows = keyId ? API_RATE_BUCKETS.filter((b) => b.key_id === keyId) : API_RATE_BUCKETS;
+    if (windowStart) rows = rows.filter((b) => b.window_start === windowStart);
+    return send(wantsObject ? (rows[0] ?? null) : rows);
+  }
+
+  if (path === '/rest/v1/event_tickets') {
+    const id = parseEq(url.search, 'id');
+    if (req.method === 'DELETE' && id) {
+      const idx = EVENT_TICKETS.findIndex((t) => t.id === id);
+      if (idx >= 0) EVENT_TICKETS.splice(idx, 1);
+      return send([]);
+    }
+    if (req.method === 'POST') {
+      let body = {};
+      try { body = JSON.parse(req.__body || '{}'); } catch {}
+      const row = {
+        id: `93000000-0000-4000-8000-${String(nextTicketId++).padStart(12, '0')}`,
+        quantity_sold: 0,
+        ...body,
+      };
+      EVENT_TICKETS.push(row);
+      return send(wantsObject ? row : [row]);
+    }
+    const eventId = parseEq(url.search, 'event_id');
+    let rows = eventId ? EVENT_TICKETS.filter((t) => t.event_id === eventId) : EVENT_TICKETS;
+    if (id) rows = rows.filter((t) => t.id === id);
+    return send(wantsObject ? (rows[0] ?? null) : rows);
+  }
+
   // No fixture is workspace staff anywhere in this mock; made explicit rather
   // than left to the generic fallback at the bottom of this file, so it reads
   // as a deliberate "nobody is staff" rather than an unhandled route.
@@ -320,6 +411,22 @@ function handle(req, res) {
         Object.assign(row, body);
       }
       return send(wantsObject ? (row ?? null) : row ? [row] : []);
+    }
+    // Spec 09: POST /api/v1/events (and the coordinator dashboard's own
+    // createEvent) both insert here. A real UUID, not an 'e1'-style short
+    // id, since /api/v1/events/$id validates :id shape-free but downstream
+    // getEvent-style lookups elsewhere in the app expect a real uuid.
+    if (req.method === 'POST') {
+      let body = {};
+      try { body = JSON.parse(req.__body || '{}'); } catch {}
+      const row = {
+        id: `90000000-0000-4000-8000-${String(nextEventId++).padStart(12, '0')}`,
+        status: 'approved',
+        tags: [],
+        ...body,
+      };
+      EVENTS.push(row);
+      return send(wantsObject ? row : [row]);
     }
     // Only filter on visibility when the caller actually asked for it (spec
     // 04's public-listing queries do; a direct single-event fetch, e.g. the
@@ -343,7 +450,39 @@ function handle(req, res) {
   // `in.()` parsing here -- this fixture set is small enough that returning
   // the full list unfiltered is harmless, same laissez-faire approach as
   // every other bulk lookup in this mock.
-  if (path === '/rest/v1/venues') return send(VENUES);
+  if (path === '/rest/v1/venues') {
+    const id = parseEq(url.search, 'id');
+    if (req.method === 'DELETE' && id) {
+      const idx = VENUES.findIndex((v) => v.id === id);
+      if (idx >= 0) VENUES.splice(idx, 1);
+      return send([]);
+    }
+    if ((req.method === 'PATCH' || req.method === 'POST') && id) {
+      const row = VENUES.find((v) => v.id === id);
+      if (row) {
+        let body = {};
+        try { body = JSON.parse(req.__body || '{}'); } catch {}
+        Object.assign(row, body);
+      }
+      return send(wantsObject ? (row ?? null) : row ? [row] : []);
+    }
+    // Spec 09: POST /api/v1/venues inserts a real row here.
+    if (req.method === 'POST') {
+      let body = {};
+      try { body = JSON.parse(req.__body || '{}'); } catch {}
+      const row = { id: `91000000-0000-4000-8000-${String(nextVenueId++).padStart(12, '0')}`, ...body };
+      VENUES.push(row);
+      return send(wantsObject ? row : [row]);
+    }
+    // Spec 05's bulk group-by-venue lookup deliberately asks for everything,
+    // no coordinator filter -- only filter when a caller actually passes
+    // one (spec 09's /api/v1/venues does), so that existing unfiltered use
+    // stays exactly as harmless-and-unfiltered as its own comment says.
+    const coordinator = parseEq(url.search, 'coordinator_id');
+    let rows = coordinator ? VENUES.filter((v) => v.coordinator_id === coordinator) : VENUES;
+    if (id) rows = rows.filter((v) => v.id === id);
+    return send(wantsObject ? (rows[0] ?? null) : rows);
+  }
 
   if (path === '/rest/v1/event_rsvps') return send([], { 'content-range': '0-0/0' });
   // The public going/interested/declined aggregate. e1 gets a deliberately

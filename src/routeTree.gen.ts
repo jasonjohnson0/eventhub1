@@ -33,8 +33,12 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as ApiV1IndexRouteImport } from './routes/api/v1/index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as CSlugSpeakersRouteImport } from './routes/c.$slug_.speakers'
+import { Route as ApiV1VenuesRouteImport } from './routes/api/v1/venues'
+import { Route as ApiV1MeRouteImport } from './routes/api/v1/me'
+import { Route as ApiV1EventsRouteImport } from './routes/api/v1/events'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
 import { Route as ApiEmbedSlugRouteImport } from './routes/api/embed.$slug'
 import { Route as ApiCronEmailRemindersRouteImport } from './routes/api/cron.email-reminders'
@@ -47,6 +51,8 @@ import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as CSlugPIdRouteImport } from './routes/c.$slug_.p.$id'
+import { Route as ApiV1VenuesIdRouteImport } from './routes/api/v1/venues.$id'
+import { Route as ApiV1EventsIdRouteImport } from './routes/api/v1/events.$id'
 import { Route as ApiPublicIcalTokenRouteImport } from './routes/api/public/ical.$token'
 import { Route as ApiAdISlotIdRouteImport } from './routes/api/ad.i.$slotId'
 import { Route as ApiAdCSlotIdRouteImport } from './routes/api/ad.c.$slotId'
@@ -59,6 +65,9 @@ import { Route as AuthenticatedCoordinatorSettingsStylingRouteImport } from './r
 import { Route as AuthenticatedCoordinatorSettingsOrganizersRouteImport } from './routes/_authenticated/coordinator.settings.organizers'
 import { Route as AuthenticatedCoordinatorSettingsEmbedRouteImport } from './routes/_authenticated/coordinator.settings.embed'
 import { Route as AuthenticatedCoordinatorSettingsCustomFieldsRouteImport } from './routes/_authenticated/coordinator.settings.custom-fields'
+import { Route as ApiV1EventsIdTicketsRouteImport } from './routes/api/v1/events.$id.tickets'
+import { Route as ApiV1EventsIdRsvpsRouteImport } from './routes/api/v1/events.$id.rsvps'
+import { Route as ApiV1EventsIdTicketsTicketIdRouteImport } from './routes/api/v1/events.$id.tickets.$ticketId'
 
 const TourRoute = TourRouteImport.update({
   id: '/tour',
@@ -181,6 +190,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiV1IndexRoute = ApiV1IndexRouteImport.update({
+  id: '/api/v1/',
+  path: '/api/v1/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -189,6 +203,21 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
 const CSlugSpeakersRoute = CSlugSpeakersRouteImport.update({
   id: '/c/$slug_/speakers',
   path: '/c/$slug/speakers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1VenuesRoute = ApiV1VenuesRouteImport.update({
+  id: '/api/v1/venues',
+  path: '/api/v1/venues',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1MeRoute = ApiV1MeRouteImport.update({
+  id: '/api/v1/me',
+  path: '/api/v1/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1EventsRoute = ApiV1EventsRouteImport.update({
+  id: '/api/v1/events',
+  path: '/api/v1/events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
@@ -254,6 +283,16 @@ const CSlugPIdRoute = CSlugPIdRouteImport.update({
   id: '/c/$slug_/p/$id',
   path: '/c/$slug/p/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1VenuesIdRoute = ApiV1VenuesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiV1VenuesRoute,
+} as any)
+const ApiV1EventsIdRoute = ApiV1EventsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiV1EventsRoute,
 } as any)
 const ApiPublicIcalTokenRoute = ApiPublicIcalTokenRouteImport.update({
   id: '/api/public/ical/$token',
@@ -324,6 +363,22 @@ const AuthenticatedCoordinatorSettingsCustomFieldsRoute =
     path: '/coordinator/settings/custom-fields',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiV1EventsIdTicketsRoute = ApiV1EventsIdTicketsRouteImport.update({
+  id: '/tickets',
+  path: '/tickets',
+  getParentRoute: () => ApiV1EventsIdRoute,
+} as any)
+const ApiV1EventsIdRsvpsRoute = ApiV1EventsIdRsvpsRouteImport.update({
+  id: '/rsvps',
+  path: '/rsvps',
+  getParentRoute: () => ApiV1EventsIdRoute,
+} as any)
+const ApiV1EventsIdTicketsTicketIdRoute =
+  ApiV1EventsIdTicketsTicketIdRouteImport.update({
+    id: '/$ticketId',
+    path: '/$ticketId',
+    getParentRoute: () => ApiV1EventsIdTicketsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -360,8 +415,12 @@ export interface FileRoutesByFullPath {
   '/api/cron/email-reminders': typeof ApiCronEmailRemindersRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/v1/events': typeof ApiV1EventsRouteWithChildren
+  '/api/v1/me': typeof ApiV1MeRoute
+  '/api/v1/venues': typeof ApiV1VenuesRouteWithChildren
   '/c/$slug/speakers': typeof CSlugSpeakersRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/api/v1/': typeof ApiV1IndexRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
   '/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
@@ -374,7 +433,12 @@ export interface FileRoutesByFullPath {
   '/api/ad/c/$slotId': typeof ApiAdCSlotIdRoute
   '/api/ad/i/$slotId': typeof ApiAdISlotIdRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
+  '/api/v1/events/$id': typeof ApiV1EventsIdRouteWithChildren
+  '/api/v1/venues/$id': typeof ApiV1VenuesIdRoute
   '/c/$slug/p/$id': typeof CSlugPIdRoute
+  '/api/v1/events/$id/rsvps': typeof ApiV1EventsIdRsvpsRoute
+  '/api/v1/events/$id/tickets': typeof ApiV1EventsIdTicketsRouteWithChildren
+  '/api/v1/events/$id/tickets/$ticketId': typeof ApiV1EventsIdTicketsTicketIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -410,8 +474,12 @@ export interface FileRoutesByTo {
   '/api/cron/email-reminders': typeof ApiCronEmailRemindersRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/v1/events': typeof ApiV1EventsRouteWithChildren
+  '/api/v1/me': typeof ApiV1MeRoute
+  '/api/v1/venues': typeof ApiV1VenuesRouteWithChildren
   '/c/$slug/speakers': typeof CSlugSpeakersRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/api/v1': typeof ApiV1IndexRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
   '/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
@@ -424,7 +492,12 @@ export interface FileRoutesByTo {
   '/api/ad/c/$slotId': typeof ApiAdCSlotIdRoute
   '/api/ad/i/$slotId': typeof ApiAdISlotIdRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
+  '/api/v1/events/$id': typeof ApiV1EventsIdRouteWithChildren
+  '/api/v1/venues/$id': typeof ApiV1VenuesIdRoute
   '/c/$slug/p/$id': typeof CSlugPIdRoute
+  '/api/v1/events/$id/rsvps': typeof ApiV1EventsIdRsvpsRoute
+  '/api/v1/events/$id/tickets': typeof ApiV1EventsIdTicketsRouteWithChildren
+  '/api/v1/events/$id/tickets/$ticketId': typeof ApiV1EventsIdTicketsTicketIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -463,8 +536,12 @@ export interface FileRoutesById {
   '/api/cron/email-reminders': typeof ApiCronEmailRemindersRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/v1/events': typeof ApiV1EventsRouteWithChildren
+  '/api/v1/me': typeof ApiV1MeRoute
+  '/api/v1/venues': typeof ApiV1VenuesRouteWithChildren
   '/c/$slug_/speakers': typeof CSlugSpeakersRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/api/v1/': typeof ApiV1IndexRoute
   '/_authenticated/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/_authenticated/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
   '/_authenticated/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
@@ -477,7 +554,12 @@ export interface FileRoutesById {
   '/api/ad/c/$slotId': typeof ApiAdCSlotIdRoute
   '/api/ad/i/$slotId': typeof ApiAdISlotIdRoute
   '/api/public/ical/$token': typeof ApiPublicIcalTokenRoute
+  '/api/v1/events/$id': typeof ApiV1EventsIdRouteWithChildren
+  '/api/v1/venues/$id': typeof ApiV1VenuesIdRoute
   '/c/$slug_/p/$id': typeof CSlugPIdRoute
+  '/api/v1/events/$id/rsvps': typeof ApiV1EventsIdRsvpsRoute
+  '/api/v1/events/$id/tickets': typeof ApiV1EventsIdTicketsRouteWithChildren
+  '/api/v1/events/$id/tickets/$ticketId': typeof ApiV1EventsIdTicketsTicketIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -516,8 +598,12 @@ export interface FileRouteTypes {
     | '/api/cron/email-reminders'
     | '/api/embed/$slug'
     | '/api/stripe/webhook'
+    | '/api/v1/events'
+    | '/api/v1/me'
+    | '/api/v1/venues'
     | '/c/$slug/speakers'
     | '/admin/'
+    | '/api/v1/'
     | '/coordinator/settings/custom-fields'
     | '/coordinator/settings/embed'
     | '/coordinator/settings/organizers'
@@ -530,7 +616,12 @@ export interface FileRouteTypes {
     | '/api/ad/c/$slotId'
     | '/api/ad/i/$slotId'
     | '/api/public/ical/$token'
+    | '/api/v1/events/$id'
+    | '/api/v1/venues/$id'
     | '/c/$slug/p/$id'
+    | '/api/v1/events/$id/rsvps'
+    | '/api/v1/events/$id/tickets'
+    | '/api/v1/events/$id/tickets/$ticketId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -566,8 +657,12 @@ export interface FileRouteTypes {
     | '/api/cron/email-reminders'
     | '/api/embed/$slug'
     | '/api/stripe/webhook'
+    | '/api/v1/events'
+    | '/api/v1/me'
+    | '/api/v1/venues'
     | '/c/$slug/speakers'
     | '/admin'
+    | '/api/v1'
     | '/coordinator/settings/custom-fields'
     | '/coordinator/settings/embed'
     | '/coordinator/settings/organizers'
@@ -580,7 +675,12 @@ export interface FileRouteTypes {
     | '/api/ad/c/$slotId'
     | '/api/ad/i/$slotId'
     | '/api/public/ical/$token'
+    | '/api/v1/events/$id'
+    | '/api/v1/venues/$id'
     | '/c/$slug/p/$id'
+    | '/api/v1/events/$id/rsvps'
+    | '/api/v1/events/$id/tickets'
+    | '/api/v1/events/$id/tickets/$ticketId'
   id:
     | '__root__'
     | '/'
@@ -618,8 +718,12 @@ export interface FileRouteTypes {
     | '/api/cron/email-reminders'
     | '/api/embed/$slug'
     | '/api/stripe/webhook'
+    | '/api/v1/events'
+    | '/api/v1/me'
+    | '/api/v1/venues'
     | '/c/$slug_/speakers'
     | '/_authenticated/admin/'
+    | '/api/v1/'
     | '/_authenticated/coordinator/settings/custom-fields'
     | '/_authenticated/coordinator/settings/embed'
     | '/_authenticated/coordinator/settings/organizers'
@@ -632,7 +736,12 @@ export interface FileRouteTypes {
     | '/api/ad/c/$slotId'
     | '/api/ad/i/$slotId'
     | '/api/public/ical/$token'
+    | '/api/v1/events/$id'
+    | '/api/v1/venues/$id'
     | '/c/$slug_/p/$id'
+    | '/api/v1/events/$id/rsvps'
+    | '/api/v1/events/$id/tickets'
+    | '/api/v1/events/$id/tickets/$ticketId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -655,7 +764,11 @@ export interface RootRouteChildren {
   ApiCronEmailRemindersRoute: typeof ApiCronEmailRemindersRoute
   ApiEmbedSlugRoute: typeof ApiEmbedSlugRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  ApiV1EventsRoute: typeof ApiV1EventsRouteWithChildren
+  ApiV1MeRoute: typeof ApiV1MeRoute
+  ApiV1VenuesRoute: typeof ApiV1VenuesRouteWithChildren
   CSlugSpeakersRoute: typeof CSlugSpeakersRoute
+  ApiV1IndexRoute: typeof ApiV1IndexRoute
   ApiAdCSlotIdRoute: typeof ApiAdCSlotIdRoute
   ApiAdISlotIdRoute: typeof ApiAdISlotIdRoute
   ApiPublicIcalTokenRoute: typeof ApiPublicIcalTokenRoute
@@ -832,6 +945,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/': {
+      id: '/api/v1/'
+      path: '/api/v1'
+      fullPath: '/api/v1/'
+      preLoaderRoute: typeof ApiV1IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
       path: '/'
@@ -844,6 +964,27 @@ declare module '@tanstack/react-router' {
       path: '/c/$slug/speakers'
       fullPath: '/c/$slug/speakers'
       preLoaderRoute: typeof CSlugSpeakersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/venues': {
+      id: '/api/v1/venues'
+      path: '/api/v1/venues'
+      fullPath: '/api/v1/venues'
+      preLoaderRoute: typeof ApiV1VenuesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/me': {
+      id: '/api/v1/me'
+      path: '/api/v1/me'
+      fullPath: '/api/v1/me'
+      preLoaderRoute: typeof ApiV1MeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/events': {
+      id: '/api/v1/events'
+      path: '/api/v1/events'
+      fullPath: '/api/v1/events'
+      preLoaderRoute: typeof ApiV1EventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/stripe/webhook': {
@@ -930,6 +1071,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CSlugPIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/venues/$id': {
+      id: '/api/v1/venues/$id'
+      path: '/$id'
+      fullPath: '/api/v1/venues/$id'
+      preLoaderRoute: typeof ApiV1VenuesIdRouteImport
+      parentRoute: typeof ApiV1VenuesRoute
+    }
+    '/api/v1/events/$id': {
+      id: '/api/v1/events/$id'
+      path: '/$id'
+      fullPath: '/api/v1/events/$id'
+      preLoaderRoute: typeof ApiV1EventsIdRouteImport
+      parentRoute: typeof ApiV1EventsRoute
+    }
     '/api/public/ical/$token': {
       id: '/api/public/ical/$token'
       path: '/api/public/ical/$token'
@@ -1013,6 +1168,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/coordinator/settings/custom-fields'
       preLoaderRoute: typeof AuthenticatedCoordinatorSettingsCustomFieldsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/v1/events/$id/tickets': {
+      id: '/api/v1/events/$id/tickets'
+      path: '/tickets'
+      fullPath: '/api/v1/events/$id/tickets'
+      preLoaderRoute: typeof ApiV1EventsIdTicketsRouteImport
+      parentRoute: typeof ApiV1EventsIdRoute
+    }
+    '/api/v1/events/$id/rsvps': {
+      id: '/api/v1/events/$id/rsvps'
+      path: '/rsvps'
+      fullPath: '/api/v1/events/$id/rsvps'
+      preLoaderRoute: typeof ApiV1EventsIdRsvpsRouteImport
+      parentRoute: typeof ApiV1EventsIdRoute
+    }
+    '/api/v1/events/$id/tickets/$ticketId': {
+      id: '/api/v1/events/$id/tickets/$ticketId'
+      path: '/$ticketId'
+      fullPath: '/api/v1/events/$id/tickets/$ticketId'
+      preLoaderRoute: typeof ApiV1EventsIdTicketsTicketIdRouteImport
+      parentRoute: typeof ApiV1EventsIdTicketsRoute
     }
   }
 }
@@ -1111,6 +1287,55 @@ const EventsRouteChildren: EventsRouteChildren = {
 const EventsRouteWithChildren =
   EventsRoute._addFileChildren(EventsRouteChildren)
 
+interface ApiV1EventsIdTicketsRouteChildren {
+  ApiV1EventsIdTicketsTicketIdRoute: typeof ApiV1EventsIdTicketsTicketIdRoute
+}
+
+const ApiV1EventsIdTicketsRouteChildren: ApiV1EventsIdTicketsRouteChildren = {
+  ApiV1EventsIdTicketsTicketIdRoute: ApiV1EventsIdTicketsTicketIdRoute,
+}
+
+const ApiV1EventsIdTicketsRouteWithChildren =
+  ApiV1EventsIdTicketsRoute._addFileChildren(ApiV1EventsIdTicketsRouteChildren)
+
+interface ApiV1EventsIdRouteChildren {
+  ApiV1EventsIdRsvpsRoute: typeof ApiV1EventsIdRsvpsRoute
+  ApiV1EventsIdTicketsRoute: typeof ApiV1EventsIdTicketsRouteWithChildren
+}
+
+const ApiV1EventsIdRouteChildren: ApiV1EventsIdRouteChildren = {
+  ApiV1EventsIdRsvpsRoute: ApiV1EventsIdRsvpsRoute,
+  ApiV1EventsIdTicketsRoute: ApiV1EventsIdTicketsRouteWithChildren,
+}
+
+const ApiV1EventsIdRouteWithChildren = ApiV1EventsIdRoute._addFileChildren(
+  ApiV1EventsIdRouteChildren,
+)
+
+interface ApiV1EventsRouteChildren {
+  ApiV1EventsIdRoute: typeof ApiV1EventsIdRouteWithChildren
+}
+
+const ApiV1EventsRouteChildren: ApiV1EventsRouteChildren = {
+  ApiV1EventsIdRoute: ApiV1EventsIdRouteWithChildren,
+}
+
+const ApiV1EventsRouteWithChildren = ApiV1EventsRoute._addFileChildren(
+  ApiV1EventsRouteChildren,
+)
+
+interface ApiV1VenuesRouteChildren {
+  ApiV1VenuesIdRoute: typeof ApiV1VenuesIdRoute
+}
+
+const ApiV1VenuesRouteChildren: ApiV1VenuesRouteChildren = {
+  ApiV1VenuesIdRoute: ApiV1VenuesIdRoute,
+}
+
+const ApiV1VenuesRouteWithChildren = ApiV1VenuesRoute._addFileChildren(
+  ApiV1VenuesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
@@ -1132,7 +1357,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronEmailRemindersRoute: ApiCronEmailRemindersRoute,
   ApiEmbedSlugRoute: ApiEmbedSlugRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  ApiV1EventsRoute: ApiV1EventsRouteWithChildren,
+  ApiV1MeRoute: ApiV1MeRoute,
+  ApiV1VenuesRoute: ApiV1VenuesRouteWithChildren,
   CSlugSpeakersRoute: CSlugSpeakersRoute,
+  ApiV1IndexRoute: ApiV1IndexRoute,
   ApiAdCSlotIdRoute: ApiAdCSlotIdRoute,
   ApiAdISlotIdRoute: ApiAdISlotIdRoute,
   ApiPublicIcalTokenRoute: ApiPublicIcalTokenRoute,
