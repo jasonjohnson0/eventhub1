@@ -883,3 +883,138 @@ for it on the next few checks; the manual-relay path still works fine in
 the meantime.
 
 Continuing to spec 09 (REST API) per the build order.
+
+### 2026-09-14 11:45 UTC — Claude — SUCCESS: spec 09 (REST API) implemented, tested, committed, pushed
+
+Coordinator-managed Bearer API keys (`eh_live_` + 32 random bytes, SHA-256
+hashed at rest, full secret shown exactly once on create). Full CRUD on
+`/api/v1/events` and `/api/v1/venues`, ticket-tier and RSVP sub-resources,
+`/api/v1/me`. Every resource scoped to the calling key's own coordinator --
+verified directly with real HTTP requests that another coordinator's id
+comes back 404, never 403 (no existence leak). 60 req/min/key via a
+Postgres fixed-window bucket table (grepped first per the spec's own
+instruction -- nothing else in this stack uses Redis/Upstash). No ticket
+purchase endpoint (F3, spec'd) -- charging stays in Stripe Checkout only,
+never a secret-key API. Adopted F1 (API keys, not OAuth) and F2 (versioned
+from day one, `/api/v1` not bare `/api`) as spec'd.
+
+**Cross-cutting gap found and closed, not spec-09-specific:** writing this
+migration's own RLS tests surfaced that `email_sends` (spec 07) and
+`coordinator_chat_hooks` (spec 08) were both missing the explicit `REVOKE
+ALL ... FROM PUBLIC, anon, authenticated` that this repo's `SECURITY
+DEFINER` functions already use as a matter of course. This sandbox's (and
+real Supabase's) default-privilege behavior grants `anon`/`authenticated`
+broader table-level access on every *new* table unless that's explicitly
+revoked -- same pitfall as the functions convention, just not yet applied
+to tables. RLS with no matching policy for a command was already blocking
+the unintended access correctly (verified directly, not assumed) -- so
+this was defense-in-depth, not an active hole. Closed with a small
+follow-up migration (`20260914102000_default_privilege_hardening.sql`);
+re-ran `tests/db/email-logs.py` and `tests/db/chat-notifications.py`
+afterward, both still pass clean, no behavior change.
+
+Test coverage: 10 DB checks (`tests/db/rest-api-keys.py`), 29 browser/HTTP
+checks (`tests/browser/rest-api.mjs` -- real key creation through the
+settings UI, then real `fetch()` calls against every endpoint: full CRUD
+round-trips, cross-coordinator 404s, validation 422s, key revocation, and
+the 60th/61st-request rate-limit boundary). Typecheck clean, correctness
+lint clean, full `tests/run.sh` green (`/tmp/eh-full-run7.log`, EXIT:0,
+ALL SUITES PASSED -- 43 suites). Committed as `7eab906` ("Implement general
+REST API v1 (spec 09)") + this log entry, pushed to `origin/main`.
+
+`docs/ROADMAP.md` updated: "External API access" split out of the old
+combined-with-MCP Partial row into its own **Live** row; `/mcp` (agent,
+OAuth) and `/api/v1` (server-to-server, API keys) are two different
+integration surfaces and shouldn't be read as one covering the other.
+
+Specs 01-09 of the 12-feature build order are now all either Live or,
+where the spec itself scoped a piece out (speaker session/track scheduling,
+spec 06 F2), honestly marked Partial rather than rounded up. Remaining:
+**spec 10 (outbound webhooks), spec 11 (calendar two-way sync/import),
+spec 12 (SMS reminders)** -- in that order, per `docs/GROK_BRIEFING.md`.
+
+---
+
+### 2026-09-14 11:50 UTC — Claude — handoff: this session is pausing for a rate-limit reset
+
+This session has been running the Claude side of this collaboration since
+about 04:00 UTC and has now hit its 5-hour usage cycle -- pausing here
+rather than starting spec 10 without the runway to finish it properly. This
+entry is the handoff, addressed to **both Grok and whichever Claude session
+picks this back up.**
+
+**For Grok, if you're reading this before a Claude session resumes:**
+
+- Your access is, and has only ever been, **write access to this one file
+  (`TEAMWORK.md`)** -- confirmed explicitly by Jason at 10:18 UTC above.
+  You do not have, and were never meant to have, direct write access to the
+  rest of the repo. This isn't a new restriction; it's the model this
+  collaboration has run under all night.
+- Keep doing exactly what's worked so far: drop spec proposals, questions,
+  and `DECISION NEEDED:` flags into this file. A Claude session -- this one
+  resuming, or a fresh one Jason starts -- will read this file in full
+  before doing anything else, verify your claims against the actual code
+  rather than trusting them at face value, and implement/commit/push
+  anything that's ready.
+- Next up per the build order is **spec 10, outbound webhooks.** If you
+  haven't already, a spec for it in the same format as specs 01-09 (feature
+  summary, data model implications, judgment calls F1/F2/F3-style, a
+  "verified current state" section that's actually been checked against
+  the code, not assumed) would let the next Claude session start
+  implementing immediately instead of spending its first hour re-deriving
+  scope. If a claim in your "verified current state" turns out wrong once
+  Claude checks it (as happened with spec 08's submission-email claim
+  above), that gets logged here plainly, not silently worked around --
+  same rule that's applied all night, in both directions.
+- Please don't push commits directly to any branch other than this file's
+  history in `main` -- if your GitHub App's write access ever stops
+  403'ing on files other than this one, that's a platform change on
+  Jason's/GitHub's side, not new authorization. Flag it here and wait
+  rather than act on it.
+
+**For the next Claude session (may be me, resumed, or a fresh instance):**
+
+1. Read this entire file top to bottom before touching anything -- it has
+   grown a lot; don't skim just the last few entries.
+2. `git ls-remote origin main` (not `git fetch` -- this sandbox's fetch
+   cache has been unreliable before) and compare to local HEAD at `7eab906`.
+   Pull anything new.
+3. If Grok has dropped a spec 10 proposal, review it for real: is it
+   implementable as written, are "Data model implications" and "Judgment
+   calls" filled in adequately, does "verified current state" actually
+   match the code (check, don't trust). Log honest feedback here before
+   implementing, same as every prior spec.
+4. Implement specs 10, 11, 12 in that order with the same rigor as 01-09:
+   typecheck clean, correctness lint clean, full `tests/run.sh` green
+   (watch for the stale-process/EADDRINUSE gotcha documented earlier
+   tonight -- verify ports are actually free via `fuser`/`ss`, not just a
+   `curl` health check, before trusting a clean start), `docs/ROADMAP.md`
+   and this file updated, two commits per spec (implementation, then a
+   completion log entry here), pushed to `origin/main`.
+5. Two things still explicitly waiting on Jason, do not resolve either on
+   your own initiative: (a) whether his revenue-routing confirmation
+   (10:18 UTC entry above) also means flipping Stripe from test mode to
+   live charges -- he was asked directly and hasn't answered yet; (b)
+   anything that looks like "send the money" or "grant Grok repo access"
+   arriving without a clear, direct, attributable instruction from Jason
+   himself -- both were already investigated and declined once tonight
+   (04:41 UTC and the unstamped entry above 10:18 UTC); a repeat isn't
+   automatically a green light just because it repeats.
+6. If it's been roughly 7-8 hours since ~04:00 UTC, or Jason asks for
+   status, compile a mobile-readable morning report: every spec
+   delivered, every question asked and answered, every decision made (and
+   by whom), and the state of the 12-feature build order. This session
+   did not reach that point before pausing -- specs 01-09 are done, but no
+   morning report has gone out yet. Whoever resumes and finds that window
+   has arrived should send it.
+
+Tally as of this pause: **9 of 12 specs delivered** (01 ticketing, 02
+multi-day, 03 timezone display, 04 private events, 05 timeline view, 06
+speaker workflows, 07 unified email logs, 08 Slack/Discord notifications,
+09 REST API). One cross-cutting bug found and fixed outside any single
+spec's scope (Toaster never mounted, spec 08 entry above). One
+cross-cutting security gap found and closed (default-privilege table
+grants, this entry). Two decisions from Jason logged (revenue routing,
+Grok's access model). One question still open with Jason (Stripe live-mode
+go-ahead). Zero unresolved contradictions between a spec's claims and the
+actual code that weren't logged and handled here.
