@@ -13,6 +13,7 @@ import { MonthView } from "@/components/CalendarViews/MonthView";
 import { WeekView } from "@/views/WeekView";
 import { PhotoView } from "@/views/PhotoView";
 import { SummaryView } from "@/views/SummaryView";
+import { TimelineView } from "@/views/TimelineView";
 import { EventsCountdownWidget } from "@/components/widgets/EventsCountdownWidget";
 import { WeekEventsWidget } from "@/components/widgets/WeekEventsWidget";
 import { FeaturedVenueWidget } from "@/components/widgets/FeaturedVenueWidget";
@@ -57,7 +58,7 @@ function EventsRouteComponent() {
   return <EventsPage />;
 }
 
-const VIEWS = ["grid", "month", "week", "day", "list", "photo", "summary", "map", "agenda"] as const;
+const VIEWS = ["grid", "month", "week", "day", "list", "photo", "summary", "timeline", "map", "agenda"] as const;
 type ViewKey = (typeof VIEWS)[number];
 const VIEW_LABELS: Record<ViewKey, string> = {
   grid: "Grid",
@@ -67,6 +68,7 @@ const VIEW_LABELS: Record<ViewKey, string> = {
   list: "List",
   photo: "Photos",
   summary: "Summary",
+  timeline: "Timeline",
   map: "Map",
   agenda: "My agenda",
 };
@@ -181,7 +183,10 @@ function EventsPage() {
         : [30.3322, -81.6557];
 
   const periodTitle = useMemo(() => {
-    if (view === "month") return cursor.toLocaleString(undefined, { month: "long", year: "numeric" });
+    // Timeline's axis defaults to "current month" (spec 05), same cursor
+    // semantics as Month.
+    if (view === "month" || view === "timeline")
+      return cursor.toLocaleString(undefined, { month: "long", year: "numeric" });
     if (view === "week") {
       const s = startOfWeek(cursor);
       const e = addDays(s, 6);
@@ -198,7 +203,8 @@ function EventsPage() {
   }, [view, cursor]);
 
   function step(delta: number) {
-    if (view === "month") setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1));
+    if (view === "month" || view === "timeline")
+      setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1));
     else if (view === "week") setCursor(addDays(cursor, 7 * delta));
     else setCursor(addDays(cursor, delta));
   }
@@ -346,6 +352,8 @@ function EventsPage() {
           <PhotoView events={filtered} />
         ) : view === "summary" ? (
           <SummaryView events={filtered} />
+        ) : view === "timeline" ? (
+          <TimelineView cursor={cursor} events={filtered} />
         ) : view === "map" ? (
           <div className="h-[70vh] overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
             {mapReady ? (

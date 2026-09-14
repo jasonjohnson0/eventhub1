@@ -17,6 +17,9 @@ export type CalendarEvent = {
   /** IANA zone the event is scheduled in (spec 03) -- what "6pm" means on
    *  the coordinator's own calendar, not the viewer's browser zone. */
   timezone: string;
+  /** Spec 05 (timeline view)'s optional group-by-venue toggle. */
+  venue_id: string | null;
+  venue_name: string | null;
 };
 
 export type EventFilters = {
@@ -79,7 +82,7 @@ export async function fetchEvents(filters: EventFilters = {}): Promise<CalendarE
   const limit = filters.limit ?? 300;
   let q = supabase
     .from("events")
-    .select(sel("id, title, description, location, start_time, end_time, category, timezone"))
+    .select(sel("id, title, description, location, start_time, end_time, category, timezone, venue_id"))
     .eq("status", "approved")
     // Unlisted events are omitted from every listing surface (spec 04) --
     // this is the single shared query behind Month/Week/Day/List/Agenda/
@@ -105,12 +108,14 @@ export async function fetchEvents(filters: EventFilters = {}): Promise<CalendarE
     end_time: string;
     category: string | null;
     timezone: string | null;
+    venue_id: string | null;
   };
   const { data: rows, error } = await q.returns<Row[]>();
   if (error) throw new Error(error.message);
   const base = rows ?? [];
   const ids = base.map((r) => r.id);
-  const enriched = await enrich(ids);
+  const venueIds = [...new Set(base.map((r) => r.venue_id).filter((v): v is string => !!v))];
+  const [enriched, venueNames] = await Promise.all([enrich(ids), venueNameMap(venueIds)]);
 
   let out: CalendarEvent[] = base.map((r) => ({
     ...r,
@@ -120,6 +125,7 @@ export async function fetchEvents(filters: EventFilters = {}): Promise<CalendarE
     organizers: enriched.organizers.get(r.id) ?? [],
     latitude: enriched.coords.get(r.id)?.lat ?? null,
     longitude: enriched.coords.get(r.id)?.lng ?? null,
+    venue_name: r.venue_id ? (venueNames.get(r.venue_id) ?? null) : null,
   }));
 
   const text = filters.q?.trim().toLowerCase();
@@ -193,6 +199,18 @@ async function enrich(ids: string[]) {
     coords.set(l.event_id, { lat: Number(l.latitude), lng: Number(l.longitude) });
   }
   return { images, counts, organizers, coords };
+}
+
+/** Bulk venue-name lookup for spec 05's timeline group-by-venue toggle.
+ *  Keyed by venue id, not event id -- several events commonly share one
+ *  venue, so this is one query for the distinct set rather than one per
+ *  event. */
+async function venueNameMap(venueIds: string[]): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  if (!venueIds.length) return names;
+  const { data } = await supabase.from("venues").select("id, name").in("id", venueIds);
+  for (const v of data ?? []) names.set(v.id, v.name);
+  return names;
 }
 
 export type NearbyEvent = {

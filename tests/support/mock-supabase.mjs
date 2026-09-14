@@ -87,12 +87,14 @@ const EVENTS = [
   // test assert the event page labels the event's own zone and, only when
   // the viewer is elsewhere, shows a secondary "your time" line.
   { id: 'e1', coordinator_id: COORD, title: 'Harvest Festival', description: 'Music, food and a parade.', location: 'Main Street', start_time: day(2), end_time: day(2, 22), category: 'community', status: 'approved', timezone: 'America/Chicago' },
-  { id: 'e2', coordinator_id: COORD, title: 'Farmers Market', description: 'Local growers and makers.', location: 'Riverfront Park', start_time: day(5, 9), end_time: day(5, 13), category: 'community', status: 'approved' },
+  // venue_id set (spec 05): lets a test exercise the timeline's group-by-venue
+  // toggle -- e5 below shares this same venue, e1/e3/e4 have none.
+  { id: 'e2', coordinator_id: COORD, title: 'Farmers Market', description: 'Local growers and makers.', location: 'Riverfront Park', start_time: day(5, 9), end_time: day(5, 13), category: 'community', status: 'approved', venue_id: 'venue-1' },
   { id: 'e3', coordinator_id: COORD, title: 'Jazz on the Water', description: 'Live quartet at sunset.', location: 'The Landing', start_time: day(9, 19), end_time: day(9, 22), category: 'music', status: 'approved' },
   { id: 'e4', coordinator_id: COORD, title: '<img src=x onerror="window.__XSS=1">', description: 'hostile "quoted" & <b>markup</b>', location: "O'Brien Hall", start_time: day(12, 10), end_time: day(12, 12), category: 'other', status: 'approved' },
   // Spans 3 calendar days (spec 02) -- same day-offset range as e1-e4, which
   // is already proven to stay inside the visible month grid in this suite.
-  { id: 'e5', coordinator_id: COORD, title: 'River Bend Music Fest', description: 'A weekend of live music on the water.', location: 'Riverfront Park', start_time: day(2, 18), end_time: day(4, 14), category: 'music', status: 'approved' },
+  { id: 'e5', coordinator_id: COORD, title: 'River Bend Music Fest', description: 'A weekend of live music on the water.', location: 'Riverfront Park', start_time: day(2, 18), end_time: day(4, 14), category: 'music', status: 'approved', venue_id: 'venue-1' },
   // Belongs to a different coordinator: must never appear on /c/riverside.
   { id: 'x1', coordinator_id: OTHER, title: 'Somebody Else’s Gala', description: 'Not Riverside.', location: 'Elsewhere', start_time: day(3), end_time: day(3, 22), category: 'other', status: 'approved' },
   // Unlisted (spec 04): must never appear on /c/riverside, /events, or the
@@ -105,6 +107,10 @@ const EVENTS = [
   // manage-authorization.mjs can exercise those routes.
   { id: 'aaaaaaaa-1111-4111-8111-111111111111', coordinator_id: COORD, title: 'Harvest Festival', description: 'Music, food and a parade.', location: 'Main Street', start_time: day(2), end_time: day(2, 22), category: 'community', status: 'approved' },
 ];
+
+// Spec 05's timeline group-by-venue toggle -- e2 and e5 above both carry
+// venue_id: 'venue-1'.
+const VENUES = [{ id: 'venue-1', name: 'Riverfront Park' }];
 
 function parseEq(search, field) {
   const v = new URLSearchParams(search).get(field);
@@ -264,6 +270,12 @@ function handle(req, res) {
   // interested/declined (spec 04's manage-page visibility toggle checks
   // these to decide whether to confirm) would otherwise always read as
   // artificially nonzero for every event, regardless of the real RSVP state.
+  // Bulk venue-name lookup (spec 05's timeline group-by-venue toggle). No
+  // `in.()` parsing here -- this fixture set is small enough that returning
+  // the full list unfiltered is harmless, same laissez-faire approach as
+  // every other bulk lookup in this mock.
+  if (path === '/rest/v1/venues') return send(VENUES);
+
   if (path === '/rest/v1/event_rsvps') return send([], { 'content-range': '0-0/0' });
   // The public going/interested/declined aggregate. e1 gets a deliberately
   // nonzero, distinctive value so a test can tell "wired to the RPC" apart

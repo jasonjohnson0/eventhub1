@@ -12,13 +12,14 @@ import { AgendaView } from "@/components/CalendarViews/AgendaView";
 import { WeekView } from "@/views/WeekView";
 import { PhotoView } from "@/views/PhotoView";
 import { SummaryView } from "@/views/SummaryView";
+import { TimelineView } from "@/views/TimelineView";
 import { supabase } from "@/integrations/supabase/client";
 import { siteUrl } from "@/lib/site-url";
 import { brandWash, findPresetByColor } from "@/lib/organizer-presets";
 
 /** Every view the platform has, minus the ones that need geo state the embed
  *  does not carry. Adding a view here is all it takes to expose it. */
-const VIEWS = ["month", "week", "day", "list", "agenda", "photo", "summary"] as const;
+const VIEWS = ["month", "week", "day", "list", "agenda", "photo", "summary", "timeline"] as const;
 type ViewKey = (typeof VIEWS)[number];
 const DEFAULT_VIEW: ViewKey = "month";
 const ANCHOR_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -30,6 +31,7 @@ const VIEW_LABELS: Record<ViewKey, string> = {
   agenda: "Agenda",
   photo: "Photos",
   summary: "Summary",
+  timeline: "Timeline",
 };
 
 /** Every param is optional and nothing is defaulted here.
@@ -184,7 +186,9 @@ function CoordinatorCalendar() {
   }, [events, query]);
 
   const periodLabel = useMemo(() => {
-    if (view === "month")
+    // Timeline's axis defaults to "current month" (spec 05), same cursor
+    // semantics as Month.
+    if (view === "month" || view === "timeline")
       return cursor.toLocaleString(undefined, { month: "long", year: "numeric" });
     if (view === "week") {
       const s = startOfWeek(cursor);
@@ -203,7 +207,7 @@ function CoordinatorCalendar() {
 
   const step = (delta: number) => {
     const next =
-      view === "month"
+      view === "month" || view === "timeline"
         ? new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1)
         : view === "week"
           ? addDays(cursor, 7 * delta)
@@ -332,6 +336,8 @@ function CoordinatorCalendar() {
           <ListView events={filtered} />
         ) : view === "photo" ? (
           <PhotoView events={filtered} />
+        ) : view === "timeline" ? (
+          <TimelineView cursor={cursor} events={filtered} />
         ) : (
           <SummaryView events={filtered} />
         )}
