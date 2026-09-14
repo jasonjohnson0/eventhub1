@@ -10,6 +10,39 @@ import { toast } from "sonner";
 
 const searchSchema = z.object({ next: z.string().optional() });
 
+// A dropped connection doesn't always fail fast -- a request that goes into
+// a network black hole can leave the button reading "Please wait…"
+// indefinitely, with nothing telling the visitor anything went wrong. This
+// caps how long any single auth call is allowed to hang before we give up
+// and say so, rather than leaving that entirely up to the browser's own
+// (much longer, and inconsistent across networks) connection timeout.
+const AUTH_TIMEOUT_MS = 15_000;
+class AuthTimeoutError extends Error {}
+
+function withTimeout<T>(promise: Promise<T>, ms = AUTH_TIMEOUT_MS): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new AuthTimeoutError("Taking longer than expected — check your connection and try again.")),
+      ms,
+    );
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
+function authErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof AuthTimeoutError) return err.message;
+  return err instanceof Error ? err.message : fallback;
+}
+
 function safeNext(next: string | undefined): string {
   if (!next) return "/dashboard";
   try {
@@ -52,21 +85,23 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next ?? "/dashboard")}` },
-        });
+        const { error } = await withTimeout(
+          supabase.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next ?? "/dashboard")}` },
+          }),
+        );
         if (error) throw error;
         setPendingEmail(email);
         toast.success("Check your email to confirm your account.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await withTimeout(supabase.auth.signInWithPassword({ email, password }));
         if (error) throw error;
         navigate({ to: safeNext(next), replace: true });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Authentication failed");
+      toast.error(authErrorMessage(err, "Authentication failed"));
     } finally {
       setLoading(false);
     }
@@ -76,11 +111,11 @@ function AuthPage() {
     if (!pendingEmail) return;
     setResending(true);
     try {
-      const { error } = await supabase.auth.resend({ type: "signup", email: pendingEmail });
+      const { error } = await withTimeout(supabase.auth.resend({ type: "signup", email: pendingEmail }));
       if (error) throw error;
       toast.success("Confirmation email sent again.");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not resend the email");
+      toast.error(authErrorMessage(err, "Could not resend the email"));
     } finally {
       setResending(false);
     }
