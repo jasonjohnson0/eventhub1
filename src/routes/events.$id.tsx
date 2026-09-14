@@ -1,7 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { z } from "zod";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { upsertRsvp } from "@/lib/tracking.functions";
+import { purchaseTicket, createTicketCheckout, listMyPurchases } from "@/lib/monetization.functions";
 import { Button } from "@/components/ui/button";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
 import {
@@ -32,8 +35,18 @@ import {
   Star,
 } from "lucide-react";
 
+// ?buy=<tierId> carries a signed-out visitor's purchase intent through the
+// sign-in round trip; ?purchase=success|canceled is Stripe Checkout's own
+// return.
+const searchSchema = z.object({
+  buy: z.string().uuid().optional(),
+  purchase: z.enum(["success", "canceled"]).optional(),
+  session_id: z.string().optional(),
+});
+
 export const Route = createFileRoute("/events/$id")({
   component: PublicEventDetail,
+  validateSearch: (s) => searchSchema.parse(s),
   head: () => ({
     meta: [
       { title: "Event — EventHub" },
@@ -112,6 +125,7 @@ const DEMO_SPONSOR_SLOTS = [
 
 function PublicEventDetail() {
   const { id } = Route.useParams();
+  const search = Route.useSearch();
   const navigate = useNavigate();
   const [data, setData] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -119,6 +133,14 @@ function PublicEventDetail() {
   const [userId, setUserId] = useState<string | null>(null);
   const [rsvpOpen, setRsvpOpen] = useState(false);
   const [photoIdx, setPhotoIdx] = useState(0);
+  /** Which tier prompted the sign-in dialog, if any -- lets the dialog say
+   *  "sign in to buy" instead of the generic RSVP copy, and carries the
+   *  intent through to /auth's `next` param. */
+  const [buyIntentTierId, setBuyIntentTierId] = useState<string | null>(null);
+  const [checkoutBusyTierId, setCheckoutBusyTierId] = useState<string | null>(null);
+  const [purchaseBanner, setPurchaseBanner] = useState<
+    "confirming" | "confirmed" | "canceled" | "timeout" | null
+  >(search.purchase === "success" ? "confirming" : search.purchase === "canceled" ? "canceled" : null);
   /** The visitor's own RSVP, and the going count once they change it. Both are
    *  null until known, so the loader's count is shown in the meantime. */
   const [myRsvp, setMyRsvp] = useState<"going" | "interested" | "declined" | null>(null);
@@ -249,6 +271,84 @@ function PublicEventDetail() {
     };
   }, [id, userId]);
 
+  /** Returning from Stripe Checkout with ?purchase=success -- the webhook
+   *  confirms the purchase async, so this polls rather than trusting the
+   *  redirect alone. Matches spec 01's "Confirming payment..." / 15s
+   *  timeout behavior. */
+  useEffect(() => {
+    if (search.purchase !== "success") return;
+    let cancelled = false;
+    const deadline = Date.now() + 15_000;
+    async function poll() {
+      while (!cancelled && Date.now() < deadline) {
+        try {
+          const purchases = await listMyPurchases({ data: { event_id: id } });
+          if (purchases.some((p: { status: string }) => p.status === "confirmed")) {
+            if (!cancelled) setPurchaseBanner("confirmed");
+            return;
+          }
+        } catch {
+          // keep polling -- a transient error here shouldn't flip to timeout early
+        }
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+      if (!cancelled) setPurchaseBanner("timeout");
+    }
+    void poll();
+    navigate({ to: "/events/$id", params: { id }, search: {}, replace: true });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.purchase, id]);
+
+  useEffect(() => {
+    if (search.purchase === "canceled") {
+      toast("Purchase canceled. No charge.");
+      navigate({ to: "/events/$id", params: { id }, search: {}, replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.purchase, id]);
+
+  /** A signed-out visitor who clicked Buy is sent to /auth?next=…, which
+   *  redirects back here with ?buy=<tierId> once signed in -- resume their
+   *  intent automatically instead of making them find the button again. */
+  useEffect(() => {
+    if (!search.buy || !signedIn || !data) return;
+    const tier = data.tickets.find((t) => t.id === search.buy);
+    if (!tier) return;
+    navigate({ to: "/events/$id", params: { id }, search: {}, replace: true });
+    void handleBuyClick(tier);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.buy, signedIn, data]);
+
+  async function handleBuyClick(tier: Detail["tickets"][number]) {
+    if (!signedIn) {
+      setBuyIntentTierId(tier.id);
+      setRsvpOpen(true);
+      return;
+    }
+    setCheckoutBusyTierId(tier.id);
+    try {
+      const price =
+        tier.early_bird && tier.early_bird_price_cents != null
+          ? tier.early_bird_price_cents
+          : tier.price_cents;
+      if (price === 0) {
+        const res = await purchaseTicket({ data: { ticket_id: tier.id, quantity: 1 } });
+        toast.success("You're confirmed! Check your tickets on your dashboard.");
+        if (res.checkout_url) window.location.href = res.checkout_url;
+        return;
+      }
+      const res = await createTicketCheckout({ data: { ticket_id: tier.id, quantity: 1 } });
+      window.location.href = res.checkout_url;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not start checkout");
+    } finally {
+      setCheckoutBusyTierId(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white p-8">
@@ -368,6 +468,26 @@ function PublicEventDetail() {
           </Link>
         </div>
       </header>
+
+      {purchaseBanner && (
+        <div className="mx-auto max-w-4xl px-6">
+          <div
+            className={`mb-4 rounded-2xl border p-4 text-sm ${
+              purchaseBanner === "confirmed"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                : purchaseBanner === "timeout"
+                  ? "border-amber-200 bg-amber-50 text-amber-900"
+                  : "border-slate-200 bg-slate-50 text-slate-700"
+            }`}
+          >
+            {purchaseBanner === "confirming" && "Confirming payment…"}
+            {purchaseBanner === "confirmed" &&
+              "You're confirmed! 🎉 Find your ticket QR code on your dashboard."}
+            {purchaseBanner === "timeout" &&
+              "Still confirming — refresh this page in a moment and your ticket will appear once payment lands."}
+          </div>
+        </div>
+      )}
 
       <main className="mx-auto max-w-4xl px-6 pb-16">
         {/* Hero card */}
@@ -703,11 +823,17 @@ function PublicEventDetail() {
                       </div>
                     </div>
                     <Button
-                      onClick={handleRsvpClick}
-                      disabled={soldOut}
+                      onClick={() => handleBuyClick(t)}
+                      disabled={soldOut || checkoutBusyTierId === t.id}
                       className="mt-4 w-full rounded-full"
                     >
-                      {soldOut ? "Sold out" : signedIn ? "Buy ticket" : "Sign in to buy"}
+                      {soldOut
+                        ? "Sold out"
+                        : checkoutBusyTierId === t.id
+                          ? "Redirecting…"
+                          : signedIn
+                            ? "Buy ticket"
+                            : "Sign in to buy"}
                     </Button>
                   </div>
                 );
@@ -814,12 +940,20 @@ function PublicEventDetail() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={rsvpOpen} onOpenChange={setRsvpOpen}>
+      <Dialog
+        open={rsvpOpen}
+        onOpenChange={(v) => {
+          setRsvpOpen(v);
+          if (!v) setBuyIntentTierId(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>🎉 Almost there!</DialogTitle>
             <DialogDescription>
-              Sign in (it's free) to RSVP, save events, and get updates from coordinators.
+              {buyIntentTierId
+                ? "Sign in (it's free) to buy your ticket — we'll bring you right back here."
+                : "Sign in (it's free) to RSVP, save events, and get updates from coordinators."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
@@ -827,7 +961,14 @@ function PublicEventDetail() {
               Keep browsing
             </Button>
             <Button asChild className="rounded-full bg-gradient-to-r from-fuchsia-500 to-pink-500">
-              <Link to="/auth">Sign in to RSVP</Link>
+              <Link
+                to="/auth"
+                search={{
+                  next: buyIntentTierId ? `/events/${id}?buy=${buyIntentTierId}` : `/events/${id}`,
+                }}
+              >
+                {buyIntentTierId ? "Sign in to buy" : "Sign in to RSVP"}
+              </Link>
             </Button>
           </DialogFooter>
         </DialogContent>
