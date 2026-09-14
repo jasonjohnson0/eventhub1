@@ -20,7 +20,7 @@ export type EmailMessage = {
   text?: string;
 };
 
-export type SendResult = { ok: true } | { ok: false; error: string };
+export type SendResult = { ok: true; messageId?: string } | { ok: false; error: string };
 
 function fromHeader(name: string, address: string): string {
   return name ? `${name} <${address}>` : address;
@@ -43,7 +43,9 @@ async function sendViaSendGrid(c: EmailCredentials, m: EmailMessage): Promise<Se
       ],
     }),
   });
-  if (res.status >= 200 && res.status < 300) return { ok: true };
+  if (res.status >= 200 && res.status < 300) {
+    return { ok: true, messageId: res.headers.get("x-message-id") ?? undefined };
+  }
   const body = await res.text().catch(() => "");
   return { ok: false, error: `SendGrid ${res.status}: ${body.slice(0, 300)}` };
 }
@@ -65,7 +67,10 @@ async function sendViaPostmark(c: EmailCredentials, m: EmailMessage): Promise<Se
       MessageStream: "outbound",
     }),
   });
-  if (res.status >= 200 && res.status < 300) return { ok: true };
+  if (res.status >= 200 && res.status < 300) {
+    const body = await res.json().catch(() => null) as { MessageID?: string } | null;
+    return { ok: true, messageId: body?.MessageID };
+  }
   const body = await res.text().catch(() => "");
   return { ok: false, error: `Postmark ${res.status}: ${body.slice(0, 300)}` };
 }
@@ -88,7 +93,10 @@ async function sendViaMailgun(c: EmailCredentials, m: EmailMessage): Promise<Sen
     },
     body: form.toString(),
   });
-  if (res.status >= 200 && res.status < 300) return { ok: true };
+  if (res.status >= 200 && res.status < 300) {
+    const body = await res.json().catch(() => null) as { id?: string } | null;
+    return { ok: true, messageId: body?.id };
+  }
   const body = await res.text().catch(() => "");
   return { ok: false, error: `Mailgun ${res.status}: ${body.slice(0, 300)}` };
 }
@@ -97,6 +105,9 @@ async function sendViaLovable(_c: EmailCredentials, _m: EmailMessage): Promise<S
   // Lovable's built-in email is queued via the email infra (pgmq + cron).
   // For "Test Email" from setup, we treat the config as always valid — the queue
   // handles delivery. A real integration would enqueue to `transactional_emails`.
+  // This `ok: true` does not mean delivered -- platform-mailer.server.ts's
+  // logging layer maps a lovable send to status "simulated", not "sent"
+  // (spec 07 F1), specifically so a log built on top of this doesn't lie.
   return { ok: true };
 }
 

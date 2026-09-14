@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-async function loadUserDirectory(
+export async function loadUserDirectory(
   supabaseAdmin: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     from: (t: string) => any;

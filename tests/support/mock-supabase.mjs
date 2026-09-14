@@ -136,6 +136,20 @@ const EVENT_ORGANIZERS = [
   { event_id: UNLISTED_ID, organizer_id: ORG_SPEAKER, role: 'speaker', display_order: 0 },
 ];
 
+// Spec 07 (unified email logs). Mixed types/statuses across two of
+// riverside's events plus one row that belongs to OTHER -- proves the
+// workspace-wide settings log and the event-scoped manage-page log both
+// filter by the *signed-in* coordinator, not just by whatever event id (or
+// no event id at all) the query happened to pass.
+const EMAIL_SENDS = [
+  { id: 'f0000001-0000-4000-8000-000000000001', coordinator_id: COORD, event_id: HARVEST_UUID, invitation_id: null, type: 'invitation', recipient_email: 'guest1@example.com', subject: "You're invited: Harvest Festival", provider: 'sendgrid', status: 'sent', error: null, sent_at: day(-1), opened_at: day(-1, 20), clicked_at: null, created_at: day(-1) },
+  { id: 'f0000001-0000-4000-8000-000000000002', coordinator_id: COORD, event_id: HARVEST_UUID, invitation_id: null, type: 'announcement', recipient_email: 'attendee@example.com', subject: 'Update: Harvest Festival', provider: 'sendgrid', status: 'failed', error: 'SendGrid 401: Unauthorized', sent_at: null, opened_at: null, clicked_at: null, created_at: day(-1, 6) },
+  { id: 'f0000001-0000-4000-8000-000000000003', coordinator_id: COORD, event_id: HARVEST_UUID, invitation_id: null, type: 'reminder', recipient_email: 'attendee2@example.com', subject: 'Reminder: Harvest Festival — tomorrow', provider: 'lovable', status: 'simulated', error: null, sent_at: day(-1, 12), opened_at: null, clicked_at: null, created_at: day(-1, 12) },
+  { id: 'f0000001-0000-4000-8000-000000000004', coordinator_id: COORD, event_id: 'e2', invitation_id: null, type: 'update', recipient_email: 'farmer@example.com', subject: 'Update: Farmers Market', provider: 'sendgrid', status: 'sent', error: null, sent_at: day(-2), opened_at: null, clicked_at: null, created_at: day(-2) },
+  { id: 'f0000001-0000-4000-8000-000000000005', coordinator_id: COORD, event_id: HARVEST_UUID, invitation_id: null, type: 'reminder', recipient_email: '', subject: null, provider: null, status: 'skipped', error: 'No email on file', sent_at: null, opened_at: null, clicked_at: null, created_at: day(-1, 12) },
+  { id: 'f0000001-0000-4000-8000-000000000006', coordinator_id: OTHER, event_id: null, invitation_id: null, type: 'announcement', recipient_email: 'not-riversides@example.com', subject: 'Update', provider: 'sendgrid', status: 'sent', error: null, sent_at: day(-1), opened_at: null, clicked_at: null, created_at: day(-1) },
+];
+
 function parseEq(search, field) {
   const v = new URLSearchParams(search).get(field);
   if (!v) return null;
@@ -516,6 +530,26 @@ function handle(req, res) {
       return send(rows);
     }
     return send([]);
+  }
+
+  if (path === '/rest/v1/email_sends') {
+    const params = new URLSearchParams(url.search);
+    const coordinatorId = parseEq(url.search, 'coordinator_id');
+    let rows = EMAIL_SENDS.filter((r) => r.coordinator_id === coordinatorId);
+    const eventId = parseEq(url.search, 'event_id');
+    if (eventId) rows = rows.filter((r) => r.event_id === eventId);
+    const type = parseEq(url.search, 'type');
+    if (type) rows = rows.filter((r) => r.type === type);
+    const status = parseEq(url.search, 'status');
+    if (status) rows = rows.filter((r) => r.status === status);
+    const searchRaw = params.get('recipient_email'); // ilike.%25needle%25
+    const m = searchRaw && /^ilike\.%25(.*)%25$/.exec(searchRaw);
+    if (m) {
+      const needle = decodeURIComponent(m[1]).toLowerCase();
+      rows = rows.filter((r) => r.recipient_email.toLowerCase().includes(needle));
+    }
+    rows = [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return send(rows);
   }
 
   if (path === '/rest/v1/organizers') {

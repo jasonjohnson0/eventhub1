@@ -53,6 +53,7 @@ import { Input } from "@/components/ui/input";
 import { TicketManager } from "@/components/ticket-manager";
 import { PhotoGallery } from "@/components/photo-gallery";
 import { SponsorCreativeEditor } from "@/components/sponsor-creative-editor";
+import { EmailLogTable } from "@/components/email-log-table";
 import { BarChart3, Smartphone } from "lucide-react";
 import {
   Select,
@@ -882,6 +883,19 @@ function EventPage() {
                 Send announcement
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isCoordinator && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Mail className="h-4 w-4" /> Email log
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <EmailLogTable eventId={id} />
           </CardContent>
         </Card>
       )}

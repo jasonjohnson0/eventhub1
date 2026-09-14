@@ -37,6 +37,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as CSlugSpeakersRouteImport } from './routes/c.$slug_.speakers'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
 import { Route as ApiEmbedSlugRouteImport } from './routes/api/embed.$slug'
+import { Route as ApiCronEmailRemindersRouteImport } from './routes/api/cron.email-reminders'
 import { Route as AuthenticatedCoordinatorSubmissionsRouteImport } from './routes/_authenticated/coordinator.submissions'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminSponsorshipRouteImport } from './routes/_authenticated/admin.sponsorship'
@@ -200,6 +201,11 @@ const ApiEmbedSlugRoute = ApiEmbedSlugRouteImport.update({
   path: '/api/embed/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronEmailRemindersRoute = ApiCronEmailRemindersRouteImport.update({
+  id: '/api/cron/email-reminders',
+  path: '/api/cron/email-reminders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedCoordinatorSubmissionsRoute =
   AuthenticatedCoordinatorSubmissionsRouteImport.update({
     id: '/coordinator/submissions',
@@ -351,6 +357,7 @@ export interface FileRoutesByFullPath {
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
+  '/api/cron/email-reminders': typeof ApiCronEmailRemindersRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/c/$slug/speakers': typeof CSlugSpeakersRoute
@@ -400,6 +407,7 @@ export interface FileRoutesByTo {
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
+  '/api/cron/email-reminders': typeof ApiCronEmailRemindersRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/c/$slug/speakers': typeof CSlugSpeakersRoute
@@ -452,6 +460,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
+  '/api/cron/email-reminders': typeof ApiCronEmailRemindersRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/c/$slug_/speakers': typeof CSlugSpeakersRoute
@@ -504,6 +513,7 @@ export interface FileRouteTypes {
     | '/admin/sponsorship'
     | '/admin/users'
     | '/coordinator/submissions'
+    | '/api/cron/email-reminders'
     | '/api/embed/$slug'
     | '/api/stripe/webhook'
     | '/c/$slug/speakers'
@@ -553,6 +563,7 @@ export interface FileRouteTypes {
     | '/admin/sponsorship'
     | '/admin/users'
     | '/coordinator/submissions'
+    | '/api/cron/email-reminders'
     | '/api/embed/$slug'
     | '/api/stripe/webhook'
     | '/c/$slug/speakers'
@@ -604,6 +615,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/sponsorship'
     | '/_authenticated/admin/users'
     | '/_authenticated/coordinator/submissions'
+    | '/api/cron/email-reminders'
     | '/api/embed/$slug'
     | '/api/stripe/webhook'
     | '/c/$slug_/speakers'
@@ -640,6 +652,7 @@ export interface RootRouteChildren {
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
   MarketingUnsubscribeRoute: typeof MarketingUnsubscribeRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  ApiCronEmailRemindersRoute: typeof ApiCronEmailRemindersRoute
   ApiEmbedSlugRoute: typeof ApiEmbedSlugRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   CSlugSpeakersRoute: typeof CSlugSpeakersRoute
@@ -845,6 +858,13 @@ declare module '@tanstack/react-router' {
       path: '/api/embed/$slug'
       fullPath: '/api/embed/$slug'
       preLoaderRoute: typeof ApiEmbedSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/email-reminders': {
+      id: '/api/cron/email-reminders'
+      path: '/api/cron/email-reminders'
+      fullPath: '/api/cron/email-reminders'
+      preLoaderRoute: typeof ApiCronEmailRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/coordinator/submissions': {
@@ -1109,6 +1129,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarketingSubscribeRoute: MarketingSubscribeRoute,
   MarketingUnsubscribeRoute: MarketingUnsubscribeRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  ApiCronEmailRemindersRoute: ApiCronEmailRemindersRoute,
   ApiEmbedSlugRoute: ApiEmbedSlugRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   CSlugSpeakersRoute: CSlugSpeakersRoute,

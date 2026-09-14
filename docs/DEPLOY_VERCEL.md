@@ -48,6 +48,7 @@ behind a `VITE_` prefix.
 | `PUBLIC_SITE_URL` | yes | Your Vercel URL or custom domain, no trailing slash. |
 | `PLATFORM_CONFIG_ENC_KEY` | yes | **Secret. Copy the existing value — do not generate a new one.** See below. |
 | `STRIPE_SECRET_KEY` | optional | **Secret.** Only gates Stripe Connect setup; the app runs without it. |
+| `CRON_SECRET` | yes, for reminders to actually send | **Secret.** Gates `/api/cron/email-reminders` (spec 07): Vercel automatically sends `Authorization: Bearer $CRON_SECRET` on requests it makes to the `crons` entries in `vercel.json`, and the route checks that header. Without this set, the route 500s on every request rather than silently no-op'ing, so a missing reminder drain is loud, not quiet. `vercel.json` schedules it every 15 minutes (`*/15 * * * *`) — **Vercel's Hobby plan only runs cron jobs once a day**, so a paid plan is required for reminders to actually go out near their scheduled 7d/1d/1h offsets rather than up to a day late. |
 
 Only `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` are in the committed `.env`.
 `SUPABASE_SERVICE_ROLE_KEY` comes from the Supabase dashboard under

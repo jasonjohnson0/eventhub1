@@ -22,6 +22,8 @@ import { CoordinatorAnalyticsCard } from "@/components/coordinator-analytics-car
 import { VenueManager } from "@/components/venue-manager";
 import { OrganizerManager } from "@/components/organizer-manager";
 import { CustomFieldManager } from "@/components/custom-field-manager";
+import { EmailLogTable } from "@/components/email-log-table";
+import { Mail } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   getCoordinatorProfile,
@@ -497,6 +499,17 @@ function SettingsPage() {
             <Button size="sm" onClick={savePrefs}>
               Save preferences
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-4 w-4" /> Email log
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <EmailLogTable />
           </CardContent>
         </Card>
 
