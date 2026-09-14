@@ -42,6 +42,7 @@ function UsersPage() {
   const [banDuration, setBanDuration] = useState<"1d" | "7d" | "30d" | "permanent">("permanent");
   const [banSubmitting, setBanSubmitting] = useState(false);
   const [promotingId, setPromotingId] = useState<string | null>(null);
+  const [promoteTarget, setPromoteTarget] = useState<UserRow | null>(null);
 
   async function reload() {
     setLoading(true);
@@ -56,15 +57,21 @@ function UsersPage() {
     void reload();
   }, []);
 
-  async function handlePromote(u: UserRow) {
+  function openPromote(u: UserRow) {
     if (u.roles.includes("coordinator")) {
       toast("Already a coordinator");
       return;
     }
-    setPromotingId(u.id);
+    setPromoteTarget(u);
+  }
+
+  async function confirmPromote() {
+    if (!promoteTarget) return;
+    setPromotingId(promoteTarget.id);
     try {
-      await promoteUser({ data: { user_id: u.id, role: "coordinator" } });
-      toast.success(`${u.email} promoted to coordinator`);
+      await promoteUser({ data: { user_id: promoteTarget.id, role: "coordinator" } });
+      toast.success(`${promoteTarget.email} promoted to coordinator`);
+      setPromoteTarget(null);
       await reload();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Promotion failed");
@@ -147,7 +154,7 @@ function UsersPage() {
                     size="sm"
                     variant="outline"
                     disabled={promotingId === u.id}
-                    onClick={() => handlePromote(u)}
+                    onClick={() => openPromote(u)}
                   >
                     Promote to coordinator
                   </Button>
@@ -199,6 +206,29 @@ function UsersPage() {
             </Button>
             <Button variant="destructive" onClick={submitBan} disabled={banSubmitting}>
               {banSubmitting ? "Banning…" : "Confirm ban"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!promoteTarget} onOpenChange={(o) => !o && setPromoteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Promote {promoteTarget?.email} to coordinator?</DialogTitle>
+            <DialogDescription>
+              This grants a coordinator workspace: they'll be able to publish events, run a public
+              calendar, and sell sponsorships. This isn't reversible from here.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setPromoteTarget(null)}
+              disabled={promotingId === promoteTarget?.id}
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmPromote} disabled={promotingId === promoteTarget?.id}>
+              {promotingId === promoteTarget?.id ? "Promoting…" : "Confirm promotion"}
             </Button>
           </DialogFooter>
         </DialogContent>
