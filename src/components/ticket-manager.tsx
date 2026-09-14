@@ -18,6 +18,11 @@ import {
 type Tier = Awaited<ReturnType<typeof listTicketTiers>>[number];
 type Purchase = Awaited<ReturnType<typeof listMyPurchases>>[number];
 
+function formatPrice(cents: number): string {
+  if (cents === 0) return "Free";
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
 export function TicketManager({
   eventId,
   isCoordinator,
@@ -152,12 +157,12 @@ export function TicketManager({
                   {soldOut && <Badge variant="destructive">Sold out</Badge>}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  ${(t.price_cents / 100).toFixed(2)} · {remaining} of {t.quantity_available} left
+                  {formatPrice(t.price_cents)} · {remaining} of {t.quantity_available} left
                 </div>
               </div>
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => buy(t)} disabled={soldOut}>
-                  Buy · ${(t.price_cents / 100).toFixed(0)}
+                  Buy · {formatPrice(t.price_cents)}
                 </Button>
                 {isCoordinator && (
                   <Button size="sm" variant="ghost" onClick={() => del(t.id)}>
@@ -174,7 +179,7 @@ export function TicketManager({
             {purchases.map((p) => (
               <div key={p.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
                 <div>
-                  {p.quantity} × ${(p.amount_cents / 100 / p.quantity).toFixed(2)} · {p.status}
+                  {p.quantity} × {formatPrice(p.amount_cents / p.quantity)} · {p.status}
                   <span className="ml-2 text-xs text-muted-foreground">
                     {p.check_in_count}/{p.quantity} checked in
                   </span>
