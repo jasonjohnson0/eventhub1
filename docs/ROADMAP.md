@@ -15,7 +15,7 @@ wrong "already live" here sends the next person chasing a feature that isn't
 there, which is exactly what happened to produce this doc's first draft
 (see "Revision history" at the bottom).
 
-Last verified: 2026-09-14, against commit `8a04b15`.
+Last verified: 2026-09-14, against commit `e7f10bb` (Grok spec pass). Specs for everything below that isn't Live: `docs/specs/`. Overnight mailbox: `TEAMWORK.md` (repo root).
 
 ---
 
@@ -29,10 +29,9 @@ Confirmed working end to end (not just scaffolded) as of the commit above.
 | Recurring events (RRULE) | `src/lib/series.functions.ts` | Timezone-aware occurrence computation, capped at `MAX_OCCURRENCES`, "this/future/all" delete scoping. |
 | Virtual / hybrid event format | `event-modal.tsx`, `events.$id.manage.tsx` (`EventFormatEditor`) | In-person / virtual / hybrid + provider link (Zoom/Meet/YouTube/other). |
 | RSVP (going/interested/declined) + waitlist | `events.$id.manage.tsx`, `attendee.functions.ts` | Waitlist auto-promotion on a cancellation. |
-| Free ticketing (tiers, QR, check-in) | `monetization.functions.ts`, `ticket-manager.tsx` | Full path works when `price_cents === 0`: purchase auto-confirms, QR generates, desk + mobile check-in scan it. |
-| QR check-in, desktop + mobile | `events.$id.checkin.tsx`, `events.$id.checkin-mobile.tsx` | |
+| Free ticketing (tiers, QR, check-in) | `monetization.functions.ts`, `ticket-manager.tsx` | Full path works when `price_cents === 0`: purchase auto-confirms, QR generates, desk + mobile check-in scan it. **Public `/events/$id` "Buy ticket" currently calls RSVP, not `purchaseTicket` (`events.$id.tsx:706`) — the working purchase UI is the manage-page `TicketManager`.** |
+| QR check-in, desktop + mobile | `events.$id.checkin.tsx`, `events.$id.checkin-mobile.tsx` | `check_in_ticket` does not require `status = 'confirmed'` (migration `20260706081427`). Fine for free tickets; must change when paid charges are real. |
 | iCal export (one-way) | `distribution.functions.ts`, `api/public/ical.$token.ts` | Per-coordinator feed URL + per-event `.ics` download. One-way subscribe only — see "Not built" for two-way sync. |
-| Email reminders + announcements | `communications.functions.ts` | Scheduled reminders, one-off broadcast to RSVP'd attendees, per-send delivery/open/click tracking. |
 | Venue management | `venues.functions.ts`, `venue-manager.tsx` | Scoped to the creating coordinator. |
 | Cross-coordinator venue autosuggest ("master list") | `venues.functions.ts` (`searchVenuesPublic`), wired into `event-modal.tsx` | No auth required; every coordinator's venues suggest to every other coordinator. |
 | Organizer management | `organizers.functions.ts`, `organizer-manager.tsx` | Labelled "Organizers & speakers" in the UI — see "Not built" re: speaker-specific workflows. |
@@ -56,8 +55,9 @@ mark these fully "Live" or fully "Not built" — say what's actually there.
 |---|---|---|
 | Multi-day events | You can set `start_time`/`end_time` days apart; nothing rejects it. | `MonthView.tsx` buckets an event under its `start_time` date only (`new Date(e.start_time).toDateString()`) — a 3-day event shows once, on day one, not as a spanning bar or repeated across its days. No dedicated multi-day rendering anywhere. |
 | Timezone handling | Recurring-series RRULE math is timezone-aware (`series.functions.ts` stores + computes against a `timezone` field). | No per-event timezone display/conversion for one-off events — no "shown in your local time" UI. The earlier "M4" fix addressed one specific late-night-event bug, not a general timezone-conversion feature. |
-| Paid ticketing | Full tier/pricing/early-bird schema and "Buy" UI exist (`monetization.functions.ts`, `ticket-manager.tsx`); inventory (`quantity_sold`) really decrements. | `purchaseTicket()` never calls Stripe. It literally returns `"Purchase pending — Stripe charge would happen here"` and marks the purchase confirmed/pending with no money moving. Paid tickets are UI/schema-complete, payment execution is a stub. |
-| Email logs | Per-invitation send/open/click/RSVP tracking is real and surfaced on the event-manage page. | No unified log across *all* email types (announcements + reminders aren't tracked the same way invitations are). |
+| Paid ticketing | Full tier/pricing/early-bird schema and "Buy" UI exist (`monetization.functions.ts`, `ticket-manager.tsx`); inventory (`quantity_sold`) really decrements. Spec: `docs/specs/01-paid-ticketing.md`. | `purchaseTicket()` never calls Stripe (`monetization.functions.ts:154`). Public "Buy ticket" is wired to RSVP (`events.$id.tsx:706`). `quantity_sold` increments before any charge (`:146-149`). Webhook only handles subscription Checkout (`api/stripe.webhook.ts`). |
+| Email reminders + announcements | Invitations really send via `sendPlatformEmails` (`communications.functions.ts:62`). Announcements and reminders only insert `user_notifications` (`:194`, `:229`) — they never call the mailer. A `user_notifications_pending_idx` exists; no worker drains it. Spec: `docs/specs/07-unified-email-logs.md`. | Reminders/announcements are in-app rows, not email. Don't read "invitations send" as "all three types send." |
+| Email logs | Per-invitation send/open/click/RSVP tracking is real and surfaced on the event-manage page. | No unified log across invitations + announcements + reminders. Announcements/reminders aren't emailed (see row above). |
 | External API access | `/mcp` gives AI agents live, OAuth-protected, RLS-enforced tool access today. | No general-purpose public REST CRUD API. Don't read "MCP exists" as "REST API exists" — they're different integration surfaces for different consumers. |
 
 ---
@@ -81,6 +81,7 @@ or `src/components` as of the commit above.
 
 ## Revision history
 
+- **2026-09-14 (later)** — Grok spec pass against `e7f10bb`. Moved "Email reminders + announcements" from Live → Partial: only invitations call `sendPlatformEmails`; announcements/reminders insert `user_notifications` with no drain worker. Noted public Buy-button is RSVP, not purchase. Specs for all 12 build items landed under `docs/specs/`; mailbox is `TEAMWORK.md` (repo root).
 - **2026-09-14** — First verified pass. Corrected several inaccuracies from an
   earlier chat-generated cross-reference: multi-day events and full timezone
   support were incorrectly marked Live (moved to Partial/Not built); CSV
