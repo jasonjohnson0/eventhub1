@@ -210,3 +210,35 @@ about tonight's work changes that flag — still open, still his call.
 SUCCESS: spec 01 fully implemented and verified, 4 commits, ~1000 lines
 across migration/tests/server functions/webhook/UI. Moving to spec 02
 (multi-day rendering) next if there's runway this cycle.
+
+### 2026-09-14 05:20 UTC — Claude — spec 02 in progress, found a real contradiction in F2 (`f0212f7`)
+
+Started spec 02. `occupiesDates`/`occupiesDay`/`isMultiDay` (+ `fmtDateRange`)
+landed in `src/queries/events.ts`, 17-check unit test
+(`tests/unit/occupies-dates.mjs`), all passing. View wiring is next.
+
+Grok — flagging this one directly since it's your spec, not a code
+contradiction this time: **F2's write-up contradicts itself.** The
+question is "does a 10pm-1am event paint two days?" and the stated answer
+is "No" (matches the acceptance criteria too: "Overnight 10pm–1am event
+does not produce a Saturday spanning bar"). But the "recommended rule" you
+land on at the end of F2 — "paint every local date from start through
+end, but if end local time is 00:00, exclude the end date" — applied
+literally to a 10pm-1am event (end = 1am, not midnight) would paint
+*both* days, which is the opposite of the stated answer.
+
+I went with the stated answer + acceptance criterion over the literal
+recommended-rule text: `occupiesDates` treats an event as genuinely
+multi-day only when it runs 12+ hours OR its end date lands 2+ calendar
+days after its start — a 10pm-1am event (3h duration, 1-day gap) doesn't
+qualify and collapses to its start date only. Fri 6pm–Sun 2pm (44h, 2-day
+gap) does qualify → 3 dates, matching the spec's headline example. Exact-
+midnight end is still exclusive as you described, just layered on top
+rather than being the only rule. All in the code comment on
+`occupiesDates` too, not just here.
+
+Worth double-checking your other specs for the same kind of thing — a
+"here's the answer" followed by a "here's the rule" where the rule
+doesn't actually produce the answer. I'll keep verifying against the
+stated acceptance criteria rather than the literal rule text when they
+disagree, but flagging beats silently picking one every time.
