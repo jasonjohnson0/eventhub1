@@ -24,19 +24,66 @@ const categoryEnum = z.enum([
 // insert tens of thousands of rows.
 const MAX_OCCURRENCES = 400;
 
+/** Offset (ms) to ADD to a real instant to get a Date whose UTC getters read
+ *  as that instant's wall-clock time in `timeZone`. */
+function tzOffsetMs(instant: Date, timeZone: string): number {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const get = (t: string) => Number(dtf.formatToParts(instant).find((p) => p.type === t)?.value ?? "0");
+  const asIfUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  return asIfUtc - instant.getTime();
+}
+
+/** A real instant -> a "floating" Date whose UTC getters read as that
+ *  instant's wall-clock time in `timeZone`. rrule only understands calendar
+ *  arithmetic on UTC getters, so recurrence is computed entirely in this
+ *  floating representation and converted back to a real instant per
+ *  occurrence below -- otherwise "every day at 11pm" is really "every 24
+ *  hours" and silently drifts an hour across a DST change, which is most
+ *  visible for exactly the late-night events that sit near a day boundary. */
+function toFloating(instant: Date, timeZone: string): Date {
+  return new Date(instant.getTime() + tzOffsetMs(instant, timeZone));
+}
+
+/** The inverse of toFloating: a floating wall-clock Date -> the real instant
+ *  in `timeZone`. Re-derives the offset from the candidate instant itself,
+ *  not the floating guess, since the two can disagree right at a DST
+ *  boundary. */
+function fromFloating(floating: Date, timeZone: string): Date {
+  const guessOffset = tzOffsetMs(floating, timeZone);
+  const candidate = floating.getTime() - guessOffset;
+  const offset = tzOffsetMs(new Date(candidate), timeZone);
+  return new Date(floating.getTime() - offset);
+}
+
 function computeOccurrences(
   rrule: string,
   dtstart: Date,
   until: Date | null,
+  timezone: string,
 ): { dates: Date[]; truncated: boolean } {
+  const floatingStart = toFloating(dtstart, timezone);
   // Ensure RRULE has DTSTART for rrulestr
   const rule = rrulestr(
-    `DTSTART:${dtstart.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}\nRRULE:${rrule}`,
+    `DTSTART:${floatingStart.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}\nRRULE:${rrule}`,
     { forceset: false },
   ) as RRule;
-  const hardCap = until ?? new Date(dtstart.getTime() + 2 * 365 * 24 * 60 * 60 * 1000);
-  const all = rule.between(dtstart, hardCap, true);
-  return { dates: all.slice(0, MAX_OCCURRENCES), truncated: all.length > MAX_OCCURRENCES };
+  const floatingHardCap = until
+    ? toFloating(until, timezone)
+    : new Date(floatingStart.getTime() + 2 * 365 * 24 * 60 * 60 * 1000);
+  const all = rule.between(floatingStart, floatingHardCap, true);
+  return {
+    dates: all.slice(0, MAX_OCCURRENCES).map((f) => fromFloating(f, timezone)),
+    truncated: all.length > MAX_OCCURRENCES,
+  };
 }
 
 export const createSeries = createServerFn({ method: "POST" })
@@ -60,7 +107,7 @@ export const createSeries = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const dtstart = new Date(data.dtstart);
     const until = data.until ? new Date(data.until) : null;
-    const { dates: occurrences, truncated } = computeOccurrences(data.rrule, dtstart, until);
+    const { dates: occurrences, truncated } = computeOccurrences(data.rrule, dtstart, until, data.timezone);
     if (occurrences.length === 0) throw new Error("RRULE produced no occurrences");
 
     const { data: series, error: sErr } = await context.supabase

@@ -3,6 +3,7 @@
 #
 #   tests/run.sh          everything
 #   tests/run.sh lint     correctness lint only (2 seconds, no deps)
+#   tests/run.sh unit     pure-function logic only (no DB, no browser)
 #   tests/run.sh db       schema, RLS, grants and the billing rules only
 #   tests/run.sh browser  the rendered pages and HTTP endpoints only
 #
@@ -35,6 +36,10 @@ if [ "$WHICH" = "all" ] || [ "$WHICH" = "lint" ]; then
   run "lint (correctness rules)" npx eslint . \
     --rule '{"prettier/prettier":"off","@typescript-eslint/no-explicit-any":"off"}' \
     --max-warnings 20
+fi
+
+if [ "$WHICH" = "all" ] || [ "$WHICH" = "unit" ]; then
+  for f in tests/unit/*.mjs; do run "unit/$(basename "$f")" node "$f"; done
 fi
 
 if [ "$WHICH" = "all" ] || [ "$WHICH" = "db" ]; then
