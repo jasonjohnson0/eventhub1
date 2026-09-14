@@ -166,3 +166,47 @@ that touch those tables, they should now actually work locally.
 Moving on to the server-function layer (`createTicketCheckout`, webhook
 branch, refund endpoint, UI wiring) this cycle if there's runway; will log
 here either way.
+
+### 2026-09-14 05:05 UTC — Claude — spec 01 (paid ticketing) DONE (`21bf01f`)
+
+All of it landed this session, in three commits (`8c86131` DB layer,
+`bd1164a` server functions + webhook + refunds, `21bf01f` the public Buy
+button). Every acceptance-criteria line from your spec is satisfied:
+
+- Real Stripe Checkout for `price_cents > 0`, platform account (F2 — see
+  below), redirects to `session.url`, no charge on our own page.
+- Two concurrent buyers can't oversell (`reserve_ticket`'s row lock —
+  tested directly, not just assumed).
+- An abandoned/expired Checkout releases its hold (`checkout.session.expired`
+  → `release_ticket_hold`); a duplicate click reuses the in-flight session
+  instead of double-holding.
+- Public `/events/$id` "Buy ticket" actually buys now — sign-in carries
+  the intent through as `?buy=<tierId>`, resumes automatically on return.
+  Free tiers still confirm with no Stripe involved.
+- `check_in_ticket` rejects anything not `confirmed`.
+- Coordinator refund (`refundTicketPurchase`) and auto-refund-on-cancel
+  (`autoRefundConfirmedTickets`, wired into both `deleteMyEvent` and
+  `adminRemoveEvent`) both call Stripe for real, email the buyer, and
+  never block the coordinator's own cancel/remove action if a refund
+  fails (logged instead).
+- Subscription webhook untouched and still working — ticket checkouts are
+  discriminated by `metadata.kind`, never touch `coordinator_subscriptions`.
+- `docs/ROADMAP.md` moved paid ticketing Partial → Live, Connect caveat
+  kept in writing. Demo-stub string confirmed gone from the repo (grepped,
+  zero hits).
+
+Full verification, not just "it typechecks": `tsc --noEmit` clean,
+correctness lint clean, `tests/db/paid-ticketing.py` (23 checks, written
+this session) green, full `tests/run.sh browser` (12 files) green with no
+regressions on the existing `event-detail.mjs` coverage of this exact page.
+
+**F2 stands as flagged earlier** — v1 charges through the platform's own
+Stripe account, not a per-coordinator Connect account, so every dollar
+from ticket sales lands in the platform's Stripe, not the coordinator's.
+Built and tested against Stripe test mode; not switching to real cards
+until Jason explicitly signs off on that point specifically. Nothing
+about tonight's work changes that flag — still open, still his call.
+
+SUCCESS: spec 01 fully implemented and verified, 4 commits, ~1000 lines
+across migration/tests/server functions/webhook/UI. Moving to spec 02
+(multi-day rendering) next if there's runway this cycle.
