@@ -632,3 +632,106 @@ access (no slug reverse-lookup) and one real routing bug (silently-non-
 rendering nested routes) caught and fixed before shipping, not invented
 busywork -- the routing one specifically would not have been caught without
 real browser assertions on rendered body content.
+
+### 2026-09-14 09:10 UTC — Claude — spec 07 (unified email logs) DONE
+
+Read `docs/specs/07-unified-email-logs.md`. Nothing new to answer first.
+
+Adopted F1/F2/F3 as written: `lovable` provider sends log `simulated`, not
+`sent` (F1 -- this exact mislabeling is what made ROADMAP wrong about this
+feature before your spec pass caught it). Bounce webhooks schema-ready but
+no inbound route implemented (F2 -- production's actual configured provider
+isn't known from here, so implementing a verifier for the wrong one would be
+pure guessing). No resend button (F3).
+
+New `email_sends` table (migration `20260914090500_unified_email_logs.sql`).
+RLS: coordinator reads own only, service_role writes -- verified with an
+actual cross-coordinator read attempt in the DB test, not just a read of the
+policy text. Caught one real bug writing that test: my first pass at the
+migration used a bare `CREATE POLICY`, which is **not idempotent** in
+Postgres (no `IF NOT EXISTS` for policies) -- fine on a fresh database, but
+`tests/run.sh`'s own "migration is re-runnable" check (replaying the same
+file a second time, which every db test in this suite does) failed
+immediately. Fixed with `DROP POLICY IF EXISTS` first, the same idiom
+already used elsewhere in this repo's migrations -- would have shipped
+broken on any environment that ever re-applies migrations, not just this
+sandbox.
+
+Centralized every real send through `sendAndLogEmails`/`logEmailSends` in
+`platform-mailer.server.ts` (your own implementation note: "centralize that
+... so future senders can't forget"), so `sendEventInvitations`,
+`sendEventAnnouncement`, and the new reminder drain all log through the same
+one path rather than each rolling their own email_sends insert.
+
+The actual functional gap your spec flagged -- announcements and reminders
+never emailed, only ever wrote `user_notifications` -- is fixed:
+- `sendEventAnnouncement` now looks up attendee emails (`loadUserDirectory`,
+  which already existed in `attendee.functions.ts` for CSV export -- I
+  exported it and reused it rather than writing a second admin-listUsers
+  lookup) and actually calls the mailer, in addition to the existing in-app
+  row. A recipient with no email on file is logged `skipped`, not silently
+  dropped or thrown on, matching your Edges section.
+- `scheduleReminders` itself is unchanged -- it was already correctly
+  writing rows. What never existed was a drain. Added
+  `drainDueEmailReminders()` + a new route, `/api/cron/email-reminders`,
+  gated by `CRON_SECRET` (Vercel sends `Authorization: Bearer $CRON_SECRET`
+  automatically for its own `crons` entries once that env var is set --
+  documented in `docs/DEPLOY_VERCEL.md`). Flagging one real constraint for
+  Jason directly: **Vercel's Hobby plan only runs cron jobs once a day**, so
+  `vercel.json`'s `*/15 * * * *` schedule needs a paid plan to actually run
+  that often -- on Hobby, reminders would still send, just not within
+  15 minutes of their 7d/1d/1h offsets. Users with
+  `notification_preferences.email_reminders = false` are skipped (checked
+  in the drain), matching your acceptance criterion.
+- Provider message-id is now captured for SendGrid (response header)
+  Postmark and Mailgun (response body) when the API returns one --
+  `email-providers.server.ts`'s `SendResult` gained an optional
+  `messageId` field.
+
+Email log UI: `EmailLogTable` (new shared component) on the event manage
+page (scoped to that event) and on settings (workspace-wide, across every
+event) -- same component, `eventId` prop just narrows the query, same way
+it narrows `listEmailSends` itself. Filterable by type and status, search by
+recipient. `listEmailSends` reads through the authenticated client rather
+than an admin client specifically so RLS does the scoping -- there's no
+separate ownership check to get wrong, the same reasoning private events
+(#4) used for its own RPCs.
+
+Test coverage: 8 unit checks (`tests/unit/reminder-offset.mjs` -- the
+7d/1d/1h bucketing has to tolerate the drain running a few minutes late
+without mislabeling a reminder, since the cron only fires every 15 minutes,
+not continuously), 11 DB checks (`tests/db/email-logs.py` -- schema, CHECK
+constraints on `type`/`status`, and the cross-coordinator RLS read I
+mentioned above), 14 browser checks (`tests/browser/email-log.mjs` -- the
+event-scoped log, the workspace-wide log spanning multiple events, type and
+status filters actually narrowing results, and that another coordinator's
+rows never leak into either view). Added `email_sends` fixtures + a GET
+handler to `tests/support/mock-supabase.mjs`, which had none before this.
+
+**Honest gap, not silently skipped:** the full send-through-a-real-provider
+path (an announcement actually reaching `sendEmail`, and the cron drain
+itself) is verified by code review plus the email_sends schema/RLS test,
+not by an end-to-end browser test. Doing that for real would mean mocking
+GoTrue's admin user-listing endpoint (`auth.admin.listUsers`, which
+`loadUserDirectory` calls) and `platform_config` (which
+`loadEmailCredentials` reads) on top of everything this mock already fakes
+-- at that point it starts looking like a second, smaller mock Supabase
+rather than an extension of this one. Flagging this the same way spec 04
+flagged the PostGIS gap: known, documented, not pretended away.
+
+Typecheck clean, correctness lint clean, full `tests/run.sh` green (the
+pre-existing `dashboard.mjs` flake showed up once, same signature as every
+other time -- not chased further).
+
+`docs/ROADMAP.md` updated: both "Email reminders + announcements" and
+"Email logs" move Partial -> **Live** -- your own acceptance criterion was
+explicit that this only counts if the mailer is actually called, and it now
+is.
+
+Next up per the build order: spec 08 (Slack/Discord notifications).
+
+SUCCESS: spec 07 fully done and verified. One real migration idempotency bug
+caught by the test suite's own "safe to re-run" check before it shipped, and
+one real architectural decision documented rather than guessed at (which
+provider's bounce webhook to build, deferred since production's provider
+isn't known from here).
