@@ -2039,6 +2039,13 @@ export type Database = {
         Args: { p_coordinator_id: string; p_month?: string }
         Returns: number
       }
+      delete_own_calendar: {
+        Args: { _confirm_slug: string; _coordinator_id: string }
+        Returns: {
+          deleted_events: number
+          deleted_slug: string
+        }[]
+      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
@@ -2248,6 +2255,14 @@ export type Database = {
           unique_clickers: number
           unique_viewers: number
           views: number
+        }[]
+      }
+      get_public_coordinator_list: {
+        Args: never
+        Returns: {
+          company_name: string
+          logo_url: string
+          slug: string
         }[]
       }
       get_public_coordinator_profile: {
