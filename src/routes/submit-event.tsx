@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { z } from "zod";
 import { toast } from "sonner";
 import { CalendarPlus, Loader2, PartyPopper } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,21 +18,24 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { submitEvent } from "@/lib/submissions.functions";
 import { CATEGORIES, type SubmissionCategory } from "@/lib/submissions.shared";
+import { getPublicCoordinator, listLiveCoordinators } from "@/lib/coordinator.functions";
+
+const searchSchema = z.object({ c: z.string().trim().optional() });
 
 export const Route = createFileRoute("/submit-event")({
   component: SubmitEventPage,
+  validateSearch: (s) => searchSchema.parse(s),
   head: () => ({
     meta: [
-      { title: "Submit a community event — EventHub Jackson County" },
+      { title: "Submit a community event — EventHub" },
       {
         name: "description",
-        content:
-          "Share your Jackson County, FL event with the community calendar. Submit the details and our coordinators will review it.",
+        content: "Share your event with a community calendar. Submit the details and a coordinator will review it.",
       },
       { property: "og:title", content: "Submit a community event — EventHub" },
       {
         property: "og:description",
-        content: "Tell us about your event and we'll add it to the Jackson County community calendar.",
+        content: "Tell us about your event and we'll add it to the community calendar.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -40,6 +44,28 @@ export const Route = createFileRoute("/submit-event")({
 });
 
 function SubmitEventPage() {
+  const { c } = Route.useSearch();
+  const [coordinatorSlug, setCoordinatorSlug] = useState<string | null>(c ?? null);
+  const [coordinatorName, setCoordinatorName] = useState<string | null>(null);
+  const [coordinators, setCoordinators] = useState<{ slug: string; company_name: string | null }[]>([]);
+  const [loadingCoordinators, setLoadingCoordinators] = useState(true);
+
+  useEffect(() => {
+    if (c) {
+      // A slug arrived from a link (e.g. a coordinator's own "Submit an
+      // event" button) -- resolve it for display, but the server re-validates
+      // it independently rather than trusting this round-trip.
+      getPublicCoordinator({ data: { slug: c } })
+        .then((p) => setCoordinatorName(p?.company_name ?? p?.slug ?? c))
+        .catch(() => setCoordinatorName(c));
+      setLoadingCoordinators(false);
+    } else {
+      listLiveCoordinators()
+        .then(setCoordinators)
+        .finally(() => setLoadingCoordinators(false));
+    }
+  }, [c]);
+
   const [form, setForm] = useState({
     submitted_by_email: "",
     contact_name: "",
@@ -74,11 +100,13 @@ function SubmitEventPage() {
   };
 
   const submit = async () => {
+    if (!coordinatorSlug) return toast.error("Choose which community calendar this is for");
     if (!form.date || !form.start || !form.end) return toast.error("Add a date and time");
     setBusy(true);
     try {
       await submitEvent({
         data: {
+          coordinator_slug: coordinatorSlug,
           submitted_by_email: form.submitted_by_email,
           contact_name: form.contact_name || null,
           title: form.title,
@@ -130,6 +158,38 @@ function SubmitEventPage() {
         </div>
         <Card>
           <CardContent className="space-y-4 p-6">
+            {c && coordinatorName ? (
+              <p className="rounded-md border bg-muted/40 p-3 text-sm">
+                Submitting to <span className="font-medium">{coordinatorName}</span>'s calendar.
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                <Label>Which community calendar is this for?</Label>
+                <Select
+                  value={coordinatorSlug ?? ""}
+                  onValueChange={(v) => setCoordinatorSlug(v)}
+                  disabled={loadingCoordinators}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={loadingCoordinators ? "Loading…" : "Choose a community"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {coordinators.map((co) => (
+                      <SelectItem key={co.slug} value={co.slug}>
+                        {co.company_name || co.slug}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!loadingCoordinators && coordinators.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No community calendars are set up yet.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Your name</Label>
@@ -184,7 +244,7 @@ function SubmitEventPage() {
                 <Input
                   value={form.location}
                   onChange={(e) => setForm({ ...form, location: e.target.value })}
-                  placeholder="Madison Street Park, Marianna"
+                  placeholder="Where's it happening?"
                 />
               </div>
               <div className="space-y-1.5">
@@ -229,7 +289,12 @@ function SubmitEventPage() {
                 <img src={imageUrl} alt="Event preview" className="mt-2 h-28 rounded object-cover" />
               ) : null}
             </div>
-            <Button className="w-full" size="lg" onClick={submit} disabled={busy || uploading}>
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={submit}
+              disabled={busy || uploading || !coordinatorSlug}
+            >
               {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Submit for review
             </Button>

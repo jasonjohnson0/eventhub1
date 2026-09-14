@@ -254,6 +254,13 @@ function CoordinatorCalendar() {
               </p>
             )}
           </div>
+          <Link
+            to="/submit-event"
+            search={{ c: coordinator.slug }}
+            className="shrink-0 rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-white"
+          >
+            Submit an event
+          </Link>
         </div>
       </header>
 

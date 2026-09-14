@@ -56,3 +56,23 @@ export const getPublicCoordinator = createServerFn({ method: "GET" })
     }
     return ((rows as PublicCoordinator[] | null) ?? [])[0] ?? null;
   });
+
+export type PublicCoordinatorListing = {
+  slug: string;
+  company_name: string | null;
+  logo_url: string | null;
+};
+
+/** Every live coordinator, for the "which community is this for?" picker on
+ *  /submit-event when it isn't reached with a slug already in hand. */
+export const listLiveCoordinators = createServerFn({ method: "GET" }).handler(
+  async (): Promise<PublicCoordinatorListing[]> => {
+    // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+    const { data, error } = await (supabase as any).rpc("get_public_coordinator_list");
+    if (error) {
+      console.error("listLiveCoordinators error", error);
+      return [];
+    }
+    return (data as PublicCoordinatorListing[] | null) ?? [];
+  },
+);

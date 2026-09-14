@@ -2,6 +2,12 @@ import { z } from "zod";
 import { CATEGORIES } from "@/lib/submissions.shared";
 
 export const submitSchema = z.object({
+  // Which coordinator's calendar this event belongs to. Required -- there is
+  // no honest default across a multi-tenant platform, and guessing (the
+  // platform's oldest coordinator, previously) meant every submission from
+  // every tenant's own submit page landed in one unrelated coordinator's
+  // queue regardless of whose site the visitor was actually using.
+  coordinator_slug: z.string().trim().toLowerCase().min(1).max(40),
   submitted_by_email: z.string().trim().email().max(254),
   contact_name: z.string().trim().max(120).optional().nullable(),
   title: z.string().trim().min(3).max(160),
@@ -28,7 +34,7 @@ export async function notifySubmitter(to: string, subject: string, body: string)
     await sendPlatformEmail({
       to,
       subject,
-      html: `<!doctype html><html><body style="font-family:system-ui,Arial,sans-serif;padding:24px;max-width:600px;margin:auto"><p style="white-space:pre-line">${body}</p><hr style="border:none;border-top:1px solid #eee;margin:24px 0"/><p style="font-size:12px;color:#888">EventHub · Jackson County, FL</p></body></html>`,
+      html: `<!doctype html><html><body style="font-family:system-ui,Arial,sans-serif;padding:24px;max-width:600px;margin:auto"><p style="white-space:pre-line">${body}</p><hr style="border:none;border-top:1px solid #eee;margin:24px 0"/><p style="font-size:12px;color:#888">EventHub</p></body></html>`,
       text: body,
     });
   } catch {

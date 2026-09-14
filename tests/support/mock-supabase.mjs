@@ -17,6 +17,9 @@ const SLOT_HOSTILE = 'dddddddd-2222-4222-8222-222222222222';
 const SLOT_EXPIRED = 'dddddddd-3333-4333-8333-333333333333';
 // What record_ad_event wrote, so a test can assert on it.
 export const AD_LOG = [];
+// What submitEvent() wrote, so a test can assert which coordinator it actually
+// landed on -- the exact thing the tenant-routing bug got wrong.
+export const SUBMISSIONS = [];
 
 const COORD = '11111111-1111-1111-1111-111111111111';
 const OTHER = '99999999-9999-9999-9999-999999999999';
@@ -335,6 +338,24 @@ function handle(req, res) {
   // A window for tests to read what was recorded.
   if (path === '/__adlog') return send(AD_LOG);
   if (path === '/__adlog/reset') { AD_LOG.length = 0; return send([]); }
+
+  // Backs the /submit-event "which community is this for?" picker.
+  if (path === '/rest/v1/rpc/get_public_coordinator_list') {
+    return send(
+      COORDINATORS
+        .filter((c) => c.setup_completed_at)
+        .map((c) => ({ slug: c.slug, company_name: c.company_name, logo_url: c.logo_url })),
+    );
+  }
+
+  if (path === '/rest/v1/event_submissions' && req.method === 'POST') {
+    let body = {};
+    try { body = JSON.parse(req.__body || '{}'); } catch {}
+    SUBMISSIONS.push(body);
+    return send(wantsObject ? body : [body]);
+  }
+  if (path === '/__submissions') return send(SUBMISSIONS);
+  if (path === '/__submissions/reset') { SUBMISSIONS.length = 0; return send([]); }
 
   if (path.startsWith('/rest/v1/rpc/')) return send([]);
 

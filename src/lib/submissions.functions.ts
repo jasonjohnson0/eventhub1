@@ -40,15 +40,24 @@ export const submitEvent = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
     const sb = supabaseAdmin as any;
-    // Route to the primary coordinator (owner of the earliest event).
-    const { data: firstEvent } = await sb
-      .from("events")
+    // The coordinator this submission is actually for -- previously this
+    // routed every submission platform-wide to whichever coordinator owned
+    // the oldest event on the entire platform, so a real, successful insert
+    // would still never appear in the queue of the coordinator whose site the
+    // visitor was actually using. There is no honest default here: an
+    // unresolvable slug is a hard error, not a silent fallback to someone
+    // else's calendar.
+    const { data: coordinator } = await sb
+      .from("coordinator_profiles")
       .select("coordinator_id")
-      .order("created_at", { ascending: true })
-      .limit(1)
+      .eq("slug", data.coordinator_slug)
+      .not("setup_completed_at", "is", null)
       .maybeSingle();
+    if (!coordinator) {
+      throw new Error("That community calendar could not be found.");
+    }
     const { error } = await sb.from("event_submissions").insert({
-      coordinator_id: firstEvent?.coordinator_id ?? null,
+      coordinator_id: coordinator.coordinator_id,
       submitted_by_email: data.submitted_by_email.toLowerCase(),
       status: "pending",
       event_data: {
