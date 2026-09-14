@@ -46,7 +46,11 @@ function Dashboard() {
                 title="Create an event"
                 desc="Publish an event visible on the public calendar in seconds."
                 icon={<PlusCircle className="h-5 w-5" />}
-                action={<Link to="/calendar">Go to calendar</Link>}
+                action={
+                  <Link to="/calendar" search={{ new: "1" }}>
+                    Create event
+                  </Link>
+                }
               />
               <QuickCard
                 title="Workspace staff"

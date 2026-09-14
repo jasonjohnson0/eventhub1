@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Plus, Users, Share2 } from "lucide-react";
@@ -8,8 +9,11 @@ import { listMyEvents, rescheduleEvent, listEventCounts } from "@/lib/events.fun
 import { colorForEvent } from "@/lib/event-colors";
 import { EventModal } from "@/components/event-modal";
 
+const searchSchema = z.object({ new: z.union([z.literal("1"), z.boolean()]).optional() });
+
 export const Route = createFileRoute("/_authenticated/calendar")({
   component: CalendarPage,
+  validateSearch: (s) => searchSchema.parse(s),
   head: () => ({ meta: [{ title: "Calendar — EventHub" }] }),
 });
 
@@ -57,6 +61,8 @@ function fmtTime(iso: string) {
 }
 
 function CalendarPage() {
+  const { new: openOnLoad } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [view, setView] = useState<View>("month");
   const [cursor, setCursor] = useState<Date>(new Date());
   const [events, setEvents] = useState<EventRow[]>([]);
@@ -64,6 +70,17 @@ function CalendarPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalStart, setModalStart] = useState<Date | undefined>(undefined);
   const [selected, setSelected] = useState<EventRow | null>(null);
+
+  // A coordinator landing here from the dashboard's "Create an event" card
+  // gets the modal already open, rather than having to find the button
+  // themselves -- that extra hop was the P0 Grok Bot flagged: the capability
+  // existed on this page all along, it just wasn't reachable in one click.
+  useEffect(() => {
+    if (!openOnLoad) return;
+    setModalStart(new Date());
+    setModalOpen(true);
+    void navigate({ search: (prev) => ({ ...prev, new: undefined }), replace: true });
+  }, [openOnLoad, navigate]);
 
   const reload = useCallback(async () => {
     try {

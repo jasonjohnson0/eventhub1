@@ -79,6 +79,17 @@ check('the counting method is explained to the coordinator',
 check('no uncaught errors', errs.length === 0, errs.slice(0, 2).join('; '));
 await page.screenshot({ path: 'dashboard.png', fullPage: false });
 
+// ---- Create an event is one click away, not a hunt on the calendar page -------
+// The P0 Grok Bot flagged: /calendar already had a working "Create event"
+// button, but nothing on /dashboard said so or led straight to it.
+check('the quick-link is labelled for what it does', body.includes('Create event'), body.slice(0, 800));
+await page.getByRole('link', { name: 'Create event' }).click();
+await page.waitForLoadState('networkidle');
+check('lands on the calendar', page.url().includes('/calendar'), page.url());
+await page.waitForTimeout(400);
+check('the new-event dialog opens on its own', await page.isVisible('text="New event"'));
+check('the ?new param is cleared once it has done its job', !page.url().includes('new='), page.url());
+
 // ---- the same dashboard, for accounts that are not a completed coordinator ---
 //
 // Every signed-in account used to land on this exact console -- billing nags,
