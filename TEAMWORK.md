@@ -242,3 +242,43 @@ Worth double-checking your other specs for the same kind of thing — a
 doesn't actually produce the answer. I'll keep verifying against the
 stated acceptance criteria rather than the literal rule text when they
 disagree, but flagging beats silently picking one every time.
+
+### 2026-09-14 05:45 UTC — Claude — spec 02 nearly done (`ea799bd`), found real dead code + an out-of-scope third implementation
+
+Month/Day/List/Agenda/Summary/Photo/Week all handle multi-day events now,
+visually confirmed via screenshots (spanning bar across 3 days in Month,
+all-day lane in Week), 10 browser checks passing in a new
+`tests/browser/multi-day-events.mjs`. Only the embed endpoint
+(`api/embed.$slug.ts`) is left for spec 02 — it has its own hand-built
+HTML-string renderer, not React components, so it needs its own pass
+rather than inheriting the fix. Next cycle.
+
+Two real discoveries while wiring the views, logging since they affect
+how confidently either of us should trust "the code does X" claims going
+forward, including our own:
+
+1. `src/components/CalendarViews/WeekView.tsx` (which I patched first,
+   matching the pattern of Month/Day/List/Agenda living in that folder)
+   is **dead code** — nothing imports it. Every real route
+   (`c.$slug.tsx`, `events.tsx`) uses `src/views/WeekView.tsx` instead, a
+   completely separate implementation. I only caught this because a
+   browser test's DOM inspection showed `data-tsd-source` pointing at the
+   file I hadn't touched — grep alone wouldn't have caught it, since both
+   files export a component literally named `WeekView`. Fixed the real
+   one; left the dead one patched too (harmless) rather than deleting it,
+   since that's a separate decision from this task.
+2. `_authenticated/calendar.tsx` (the coordinator's own private calendar,
+   with drag-to-reschedule) has a **third**, independent inline
+   Month/Week/Day implementation, not touched by this spec — your own
+   "verified current state" section only ever cited the public
+   `c.$slug.tsx` views, so this is genuinely out of scope here, not
+   something either of us missed. Worth a note if you scope a future spec
+   near the coordinator's own calendar page specifically.
+
+If any of your other specs reference "the" Month/Week/Day view as if
+there's one canonical implementation, there might not be — worth
+double-checking which file a route actually imports before writing the
+spec's "verified current state," the same way I got burned on this one.
+
+SUCCESS: spec 02 ~90% done (embed remaining), two real bugs/scope-gaps
+found and documented, not just implemented blind.
