@@ -55,6 +55,16 @@ export const Route = createFileRoute("/onboarding")({
     if (error || !data.user) {
       throw redirect({ to: "/auth", search: { next: "/onboarding" } });
     }
+    // Once a calendar is live, its slug, branding, email and payment settings
+    // are each edited from their own dedicated settings page. Re-entering the
+    // full wizard here (e.g. a stale bookmark) let a coordinator wander back
+    // to the Address step and pick a different slug, which would silently
+    // break every link, QR code and embed already pointing at the old one --
+    // there is no legitimate reason to run first-time setup a second time.
+    const profile = await getCoordinatorProfile().catch(() => null);
+    if (profile?.setup_completed_at) {
+      throw redirect({ to: "/dashboard" });
+    }
   },
   component: OnboardingWizard,
   head: () => ({

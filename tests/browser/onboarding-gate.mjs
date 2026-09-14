@@ -60,6 +60,35 @@ check('the Go live button is present', (await goLive.count()) > 0);
 check('and it is disabled', await goLive.isDisabled(), 'button was clickable with no slug');
 
 check('no uncaught errors', errs.length === 0, errs.slice(0, 3).join('; '));
+
+// ---- a coordinator whose calendar is already live is turned away ------------
+// Slug, branding, email and payment settings each have their own page once
+// live; nothing legitimate is left for the first-time wizard to do, and
+// letting a live coordinator wander back to Address risked them silently
+// changing their slug and breaking every link already pointing at it.
+{
+  const LIVE = '11111111-1111-1111-1111-111111111111'; // the mock's riverside fixture
+  const jwt2 = [
+    b64({ alg: 'HS256', typ: 'JWT' }),
+    b64({ sub: LIVE, aud: 'authenticated', role: 'authenticated',
+          email: 'coord@example.com', iat: now, exp: now + 3600, iss: `${MOCK}/auth/v1` }),
+    'c2lnbmF0dXJl',
+  ].join('.');
+  const ctx2 = await browser.newContext({ viewport: { width: 1280, height: 1000 }, deviceScaleFactor: 1.5 });
+  await ctx2.addInitScript(([k, v]) => { try { window.localStorage.setItem(k, v); } catch {} },
+    ['sb-127-auth-token', JSON.stringify({
+      access_token: jwt2, token_type: 'bearer', expires_in: 3600, expires_at: now + 3600,
+      refresh_token: 'r',
+      user: { id: LIVE, aud: 'authenticated', role: 'authenticated', email: 'coord@example.com',
+              app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() },
+    })]);
+  const p2 = await ctx2.newPage();
+  await p2.goto(`${BASE}/onboarding`, { waitUntil: 'networkidle' });
+  await p2.waitForTimeout(1000);
+  check('a live coordinator is redirected away from onboarding', p2.url().endsWith('/dashboard'), p2.url());
+  await ctx2.close();
+}
+
 await browser.close();
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`);
 process.exit(failures === 0 ? 0 : 1);
