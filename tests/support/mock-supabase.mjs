@@ -348,6 +348,20 @@ function handle(req, res) {
     );
   }
 
+  // The admin "delete my calendar" danger zone. Mirrors delete_own_calendar():
+  // wrong confirmation is refused, a match "deletes" (just reports success --
+  // this mock has no real cascade to verify, that's what the DB suite is for).
+  if (path === '/rest/v1/rpc/delete_own_calendar') {
+    let b = {};
+    try { b = JSON.parse(req.__body || '{}'); } catch {}
+    const row = COORDINATORS.find((c) => c.coordinator_id === b._coordinator_id);
+    if (!row || row.slug !== b._confirm_slug) {
+      res.writeHead(400, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
+      return res.end(JSON.stringify({ message: 'Confirmation did not match' }));
+    }
+    return send([{ deleted_slug: row.slug, deleted_events: 0 }]);
+  }
+
   if (path === '/rest/v1/event_submissions' && req.method === 'POST') {
     let body = {};
     try { body = JSON.parse(req.__body || '{}'); } catch {}

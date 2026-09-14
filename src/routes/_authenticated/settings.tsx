@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,8 +23,17 @@ import { VenueManager } from "@/components/venue-manager";
 import { OrganizerManager } from "@/components/organizer-manager";
 import { CustomFieldManager } from "@/components/custom-field-manager";
 import { Switch } from "@/components/ui/switch";
-import { getCoordinatorProfile, saveCoordinatorProfile } from "@/lib/onboarding.functions";
+import { getCoordinatorProfile, saveCoordinatorProfile, deleteMyCalendar } from "@/lib/onboarding.functions";
 import { AnnualPlanCard } from "@/components/annual-plan-card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -46,6 +55,12 @@ type EventRow = Awaited<ReturnType<typeof listMyEvents>>[number] & {
 };
 
 function SettingsPage() {
+  const { isAdmin, coordinatorState } = Route.useRouteContext();
+  const navigate = useNavigate();
+  const [calendarSlug, setCalendarSlug] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [staff, setStaff] = useState<StaffRow[]>([]);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -144,11 +159,32 @@ function SettingsPage() {
       try {
         const p = await getCoordinatorProfile();
         setShowNearby(p.show_nearby_events);
+        setCalendarSlug(p.slug);
       } catch {
         /* keep default */
       }
     })();
   }, []);
+
+  function openDeleteCalendar() {
+    setDeleteConfirmText("");
+    setDeleteOpen(true);
+  }
+
+  async function confirmDeleteCalendar() {
+    if (!calendarSlug) return;
+    setDeleting(true);
+    try {
+      await deleteMyCalendar({ data: { confirm_slug: deleteConfirmText.trim() } });
+      toast.success("Calendar deleted");
+      setDeleteOpen(false);
+      navigate({ to: "/dashboard" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete calendar");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   async function toggleShowNearby(v: boolean) {
     setNearbyBusy(true);
@@ -445,7 +481,65 @@ function SettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        {isAdmin && coordinatorState === "complete" && (
+          <Card className="border-destructive/40">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-4 w-4" /> Danger zone
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Permanently delete this calendar — every event, venue, organizer, series,
+                  billing record and pending submission. Your account and sign-in are not
+                  affected; only the calendar itself goes away and its address is released.
+                </p>
+                <Button variant="destructive" onClick={openDeleteCalendar} className="shrink-0">
+                  Delete my calendar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      <Dialog open={deleteOpen} onOpenChange={(o) => !deleting && setDeleteOpen(o)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {calendarSlug ? `${calendarSlug}.lovable.app` : "this calendar"}?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes every event, venue, organizer, series, billing record and
+              pending submission on this calendar, and releases its address for anyone to claim.
+              This cannot be undone. Your account keeps its sign-in and admin access.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="delete-confirm">
+              Type <span className="font-mono font-semibold">{calendarSlug}</span> to confirm
+            </Label>
+            <Input
+              id="delete-confirm"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteCalendar}
+              disabled={deleting || deleteConfirmText.trim() !== calendarSlug}
+            >
+              {deleting ? "Deleting…" : "Delete calendar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

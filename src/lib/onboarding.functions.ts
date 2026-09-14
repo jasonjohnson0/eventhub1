@@ -158,3 +158,38 @@ export const completeOnboarding = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true, slug: (row?.slug as string | null) ?? null };
   });
+
+/**
+ * Deletes the caller's own calendar (coordinator workspace) -- every event,
+ * venue, organizer, series, billing record and submission queue entry
+ * belonging to it, releasing its slug -- without touching the caller's
+ * account. They keep their login and admin role; they just stop being a
+ * coordinator. Admin-only for now (not every coordinator), and requires the
+ * calendar's own address typed back as confirmation.
+ *
+ * Authorization happens here, before delete_own_calendar() (a
+ * SECURITY DEFINER function granted only to service_role) is ever called
+ * with the caller's own id -- there is no path for one account to delete
+ * another's calendar through this function.
+ */
+export const deleteMyCalendar = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ confirm_slug: z.string().trim().min(1) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: isAdmin, error: roleErr } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "admin",
+    });
+    if (roleErr) throw new Error(roleErr.message);
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+    const { data: result, error } = await (supabaseAdmin as any).rpc("delete_own_calendar", {
+      _coordinator_id: context.userId,
+      _confirm_slug: data.confirm_slug,
+    });
+    if (error) throw new Error(error.message);
+    const row = (result as { deleted_slug: string; deleted_events: number }[] | null)?.[0];
+    return { ok: true, deleted_slug: row?.deleted_slug ?? null };
+  });
