@@ -316,3 +316,91 @@ it up next while that context is still loaded.
 
 SUCCESS: spec 02 fully done, 5 commits total across the DB-adjacent parts
 + 3 view-layer parts + embed, full test suite green throughout.
+
+### 2026-09-14 06:47 UTC — Claude — spec 03 (timezone display) DONE
+
+Read `docs/specs/03-timezone-display.md`. Nothing new in this file to
+answer first, so went straight in per the plan from the last entry.
+
+`events.timezone TEXT NOT NULL` (migration `20260914061655`), defaulted by
+a `BEFORE INSERT` trigger from `coordinator_profiles.timezone` (falling
+back to `America/Chicago` if the coordinator has none). One real bug in
+your own spec's SQL, caught before it shipped: your `ADD COLUMN ... NOT
+NULL DEFAULT 'America/Chicago'` plus the trigger's `IF NEW.timezone IS
+NULL` check don't compose the way the write-up implies -- Postgres
+substitutes a column's `DEFAULT` into `NEW` *before* a `BEFORE INSERT`
+trigger runs, so an insert that simply omits `timezone` never reaches the
+trigger as NULL; it's already `'America/Chicago'` by the time the trigger
+looks, and the coordinator-specific lookup silently never fires. Fixed by
+backfilling existing rows from the profile table, then `ALTER COLUMN
+timezone DROP DEFAULT` so an omitted value really does reach the trigger
+as NULL. Covered by a DB test (`tests/db/events-timezone.py`) that
+specifically asserts a coordinator-with-a-profile gets their own zone
+end-to-end, not just that the column exists.
+
+New shared module `src/lib/timezone.ts`: `zonedWallTimeToInstant`/
+`instantToWallTimeInput` compose a `datetime-local` wall-time string with
+a picked IANA zone, DST-safe. This is the exact `toFloating`/
+`fromFloating` technique `series.functions.ts` already had for RRULE
+occurrence math (M4 fix, earlier this project) -- moved it into the new
+shared module rather than duplicating a second copy, and `series.
+functions.ts` now imports it. `event-modal.tsx` and `events.$id.manage.
+tsx` both replace their old browser-local-only `toLocalInput` with this;
+both also gained a timezone picker defaulting to the coordinator's own
+profile zone (`getCoordinatorProfile()`), not the browser's `Intl` zone --
+including the recurring-series create path, which previously stamped
+`Intl.DateTimeFormat().resolvedOptions().timeZone` on every series
+regardless of what the coordinator actually runs their calendar in.
+
+Display, per your F2/F3 defaults (adopted as written, no pushback -- they
+matched what the existing `fmtTime` bug already proved was wrong): every
+surface labels the event's own zone, never silently converts. `/events/
+$id` shows `6:00 PM CDT` as the primary line and adds a secondary "9:00
+PM EDT your time" line only when `Intl.DateTimeFormat().resolvedOptions().
+timeZone` in the viewer's own browser actually differs -- verified with a
+real Playwright `timezoneId` context override, not just a code read.
+Month/Week chips stay in the event's zone with no abbreviation (title
+attribute still carries the full `fmtTime` string for anyone who hovers).
+Every calendar view (Month/Week/Day/List/Agenda/Summary/Photo) and the
+embed endpoint's own hand-built renderer were touched -- same footprint as
+spec 02, reusing `CalendarEvent.timezone` the same way spec 02 reused
+`occupiesDates`.
+
+Deliberately deferred, none silently: (1) `api/public/ical.$token.ts`
+still emits bare UTC `Z` instants with no `VTIMEZONE`/`TZID` block --
+correct and unambiguous today, and your own spec's "Edges" section marks
+this as future work, not an acceptance criterion, so a full RFC5545
+VTIMEZONE emitter (real per-zone DST transition rules) felt like scope
+creep for this pass. (2) `_authenticated/calendar.tsx`'s third
+independent calendar implementation (already flagged out-of-scope in spec
+02's log entry) -- not touched here either. (3) The "also happening
+nearby" cross-promotion widget on `/c/$slug` (`fetchNearbyEvents` / the
+`search_events_nearby` RPC) shows a date-only label with no timezone
+plumbed through that RPC's return shape -- lower stakes (date-only, other
+coordinators' events, not the primary flow) and would need an RPC change,
+not just a client fix.
+
+Test coverage: 17 unit checks (`tests/unit/timezone.mjs` -- composition,
+round-trip, a real spring-forward gap on 2026-03-08 in America/Chicago,
+an ambiguous fall-back time correctly *not* flagged as a gap, unknown-zone
+fallback, DST-varying abbreviations), 9 DB checks (`tests/db/
+events-timezone.py`), 10 browser checks (`tests/browser/
+timezone-display.mjs` -- same-zone/no-secondary-line, different-zone/
+secondary-line-appears, and a Honolulu-viewer month-chip check that
+specifically asserts the chip does NOT silently convert to the viewer's
+local hour). Typecheck clean, correctness lint clean, full `tests/run.sh`
+green except the pre-existing `browser/dashboard.mjs` flake -- confirmed
+pre-existing and unrelated by reverting to `eda1d0e` via `git stash` and
+re-running it standalone 5x (1/5 failed on the unmodified baseline too,
+same check, same "undefined" pageerror signature); restored my changes
+via `git stash pop` before continuing. Not something this pass caused or
+should try to fix blind.
+
+`docs/ROADMAP.md` updated: timezone display moved Partial → Live, old
+"Timezone handling" Partial row replaced with the fuller Live entry.
+
+Next up per the build order: spec 04 (private events).
+
+SUCCESS: spec 03 fully done and verified, one real bug in the spec's own
+SQL caught and fixed before it shipped (not invented busywork), full test
+suite green (bar one confirmed-pre-existing flake).
