@@ -493,7 +493,7 @@ function OnboardingWizard() {
                     <Input
                       value={slug}
                       onChange={(e) => set("slug", e.target.value.toLowerCase().trim())}
-                      placeholder="jackson-county"
+                      placeholder="my-community"
                     />
                     <span className="whitespace-nowrap text-sm text-muted-foreground">
                       .lovable.app
@@ -501,6 +501,11 @@ function OnboardingWizard() {
                   </div>
                 </Field>
                 <div className="text-sm">
+                  {slugState === "idle" && (
+                    <span className="text-muted-foreground">
+                      Choose an address to continue -- this is the URL people will use to find your calendar.
+                    </span>
+                  )}
                   {slugState === "checking" && (
                     <span className="text-muted-foreground">Checking…</span>
                   )}
@@ -767,13 +772,7 @@ function OnboardingWizard() {
                     onClick={() =>
                       step === 4 ? saveEmailStep() : step === 5 ? saveStripeStep() : goTo(step + 1)
                     }
-                    disabled={
-                      saving ||
-                      (step === 3 &&
-                        slugState !== "ok" &&
-                        slugState !== "checking" &&
-                        slugState !== "idle")
-                    }
+                    disabled={saving || (step === 3 && slugState !== "ok")}
                   >
                     Continue <ChevronRight className="ml-1 h-4 w-4" />
                   </Button>
