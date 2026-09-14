@@ -48,7 +48,9 @@ export function WeekEventsWidget({ events, limit = 5 }: { events: CalendarEvent[
                     >
                       {e.category ?? "other"}
                     </span>
-                    <span className="truncate text-xs text-slate-500">{fmtTime(e.start_time)}</span>
+                    <span className="truncate text-xs text-slate-500">
+                      {fmtTime(e.start_time, e.timezone)}
+                    </span>
                   </span>
                 </span>
               </Link>

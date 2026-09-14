@@ -7,8 +7,15 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { createEvent } from "@/lib/events.functions";
 import { createSeries } from "@/lib/series.functions";
+import { getCoordinatorProfile } from "@/lib/onboarding.functions";
 import { CATEGORIES, categoryLabel, type EventCategory } from "@/lib/categories";
 import { listVenues, searchVenuesPublic, type Venue } from "@/lib/venues.functions";
+import {
+  COMMON_TIMEZONES,
+  DEFAULT_TIMEZONE,
+  instantToWallTimeInput,
+  zonedWallTimeToInstant,
+} from "@/lib/timezone";
 import {
   assignToEvent,
   listOrganizers,
@@ -30,12 +37,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-function toLocalInput(d: Date): string {
-  const off = d.getTimezoneOffset();
-  const local = new Date(d.getTime() - off * 60_000);
-  return local.toISOString().slice(0, 16);
-}
-
 export function EventModal({
   open,
   onOpenChange,
@@ -52,6 +53,7 @@ export function EventModal({
   const [location, setLocation] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE);
   const [imageUrl, setImageUrl] = useState("");
   const [category, setCategory] = useState<EventCategory>("other");
   const [tagsText, setTagsText] = useState("");
@@ -73,13 +75,27 @@ export function EventModal({
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
+  // Defaults the picker to the coordinator's own profile timezone (spec 03),
+  // not the browser's -- a coordinator traveling with a laptop shouldn't
+  // silently stamp their event in hotel-time. Start/end are then composed as
+  // wall-clock time in that zone, so they need the zone resolved first.
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    void (async () => {
+      let tz = DEFAULT_TIMEZONE;
+      try {
+        const profile = await getCoordinatorProfile();
+        if (profile.timezone) tz = profile.timezone;
+      } catch {
+        // Not signed in as a coordinator yet, or the profile fetch failed --
+        // fall back to the platform default rather than blocking the modal.
+      }
+      setTimezone(tz);
       const s = initialStart ?? new Date();
       const e = new Date(s.getTime() + 60 * 60_000);
-      setStart(toLocalInput(s));
-      setEnd(toLocalInput(e));
-    }
+      setStart(instantToWallTimeInput(s, tz));
+      setEnd(instantToWallTimeInput(e, tz));
+    })();
   }, [open, initialStart]);
 
   useEffect(() => {
@@ -152,8 +168,15 @@ export function EventModal({
     e.preventDefault();
     setLoading(true);
     try {
-      const startIso = new Date(start).toISOString();
-      const endIso = new Date(end).toISOString();
+      const startComposed = zonedWallTimeToInstant(start, timezone);
+      const endComposed = zonedWallTimeToInstant(end, timezone);
+      if (startComposed.snapped || endComposed.snapped) {
+        toast.warning(
+          "That time falls in a daylight-saving gap in the selected zone -- snapped forward an hour.",
+        );
+      }
+      const startIso = startComposed.instant.toISOString();
+      const endIso = endComposed.instant.toISOString();
       if (new Date(endIso) <= new Date(startIso)) {
         toast.error("End time must be after start time");
         setLoading(false);
@@ -185,6 +208,7 @@ export function EventModal({
             virtual_link: format === "in_person" ? null : virtualLink || null,
             livestream_provider: format === "in_person" ? "none" : provider,
             landscape_image_url: imageUrl.trim() || null,
+            timezone,
           },
         });
         if (selectedOrganizers.length > 0) {
@@ -220,7 +244,7 @@ export function EventModal({
             duration_minutes: durationMin,
             rrule,
             until: repeatUntil ? new Date(repeatUntil).toISOString() : null,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            timezone,
           },
         });
         if (res.truncated) {
@@ -234,6 +258,7 @@ export function EventModal({
       }
       setTitle("");
       setDescription("");
+      setTimezone(DEFAULT_TIMEZONE);
       setLocation("");
       setUnit("");
       setSuggestions([]);
@@ -385,6 +410,25 @@ export function EventModal({
               <Label htmlFor="end">End</Label>
               <Input id="end" type="datetime-local" required value={end} onChange={(e) => setEnd(e.target.value)} />
             </div>
+          </div>
+          <div>
+            <Label>Timezone</Label>
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COMMON_TIMEZONES.map((tz) => (
+                  <SelectItem key={tz} value={tz}>
+                    {tz.replace(/_/g, " ")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The start/end times above are in this zone. Defaults to your profile's timezone --
+              change it for an out-of-town event.
+            </p>
           </div>
           <div>
             <Label htmlFor="img">Header background image URL (optional)</Label>

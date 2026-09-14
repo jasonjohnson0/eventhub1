@@ -11,6 +11,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { siteOrigin } from "@/lib/site-url";
 import { brandWash, findPresetByColor } from "@/lib/organizer-presets";
+import { safeTimeZone } from "@/lib/timezone";
 
 /**
  * A calendar as a self-contained HTML fragment, for embedding on a customer's
@@ -71,10 +72,31 @@ function anchor(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const fmtTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-const fmtDay = (d: Date) =>
-  d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+// Event zone, not viewer zone (spec 03 F2/F3): a fragment embedded on a
+// customer's own site has no reliable "the viewer" concept anyway, and a
+// community calendar is a place -- "6pm" means 6pm there. No abbreviation
+// on the month chip (no room); renderList's rows use it since they have it.
+const fmtTime = (iso: string, timeZone?: string, opts: { abbr?: boolean } = {}) => {
+  const zone = timeZone ? safeTimeZone(timeZone) : undefined;
+  const base = new Date(iso).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    ...(zone ? { timeZone: zone } : {}),
+  });
+  if (!opts.abbr || !zone) return base;
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "short" }).formatToParts(
+    new Date(iso),
+  );
+  const abbr = parts.find((p) => p.type === "timeZoneName")?.value;
+  return abbr ? `${base} ${abbr}` : base;
+};
+const fmtDay = (d: Date, timeZone?: string) =>
+  d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    ...(timeZone ? { timeZone: safeTimeZone(timeZone) } : {}),
+  });
 
 /**
  * Styles are inlined and every selector is scoped under .ehx, so the fragment
@@ -206,8 +228,8 @@ function renderList(events: CalendarEvent[], appUrl: string): string {
       const d = new Date(e.start_time);
       const isMulti = occupiesDates(e).length > 1;
       const when = isMulti
-        ? `${esc(fmtDay(d))}, ${esc(fmtTime(e.start_time))}<br>– ${esc(fmtDay(new Date(e.end_time)))}, ${esc(fmtTime(e.end_time))}`
-        : `${esc(fmtDay(d))}<br>${esc(fmtTime(e.start_time))}`;
+        ? `${esc(fmtDay(d, e.timezone))}, ${esc(fmtTime(e.start_time, e.timezone, { abbr: true }))}<br>– ${esc(fmtDay(new Date(e.end_time), e.timezone))}, ${esc(fmtTime(e.end_time, e.timezone, { abbr: true }))}`
+        : `${esc(fmtDay(d, e.timezone))}<br>${esc(fmtTime(e.start_time, e.timezone, { abbr: true }))}`;
       return `<li class="ehx-item">
         <div class="ehx-when">${when}</div>
         <div>

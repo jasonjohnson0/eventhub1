@@ -20,6 +20,8 @@ export type CoordinatorProfile = {
    *  public calendar. On by default -- more for a visitor to discover, more
    *  reach for every organizer on the platform. Either side can opt out. */
   show_nearby_events: boolean;
+  /** IANA zone (spec 03) -- defaults new one-off events' timezone picker. */
+  timezone: string;
   setup_step: number;
   setup_completed_at: string | null;
   updated_at: string;

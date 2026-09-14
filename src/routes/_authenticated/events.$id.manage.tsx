@@ -60,6 +60,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  COMMON_TIMEZONES,
+  DEFAULT_TIMEZONE,
+  instantToWallTimeInput,
+  zonedWallTimeToInstant,
+} from "@/lib/timezone";
 
 export const Route = createFileRoute("/_authenticated/events/$id/manage")({
   component: EventPage,
@@ -67,12 +73,6 @@ export const Route = createFileRoute("/_authenticated/events/$id/manage")({
 });
 
 type Data = Awaited<ReturnType<typeof getEvent>>;
-
-function toLocalInput(d: Date): string {
-  const off = d.getTimezoneOffset();
-  const local = new Date(d.getTime() - off * 60_000);
-  return local.toISOString().slice(0, 16);
-}
 
 function EventFormatEditor({
   eventId,
@@ -251,6 +251,7 @@ function EventPage() {
   const [eTagsText, setETagsText] = useState("");
   const [eStart, setEStart] = useState("");
   const [eEnd, setEEnd] = useState("");
+  const [eTimezone, setETimezone] = useState(DEFAULT_TIMEZONE);
   const [eSaving, setESaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -322,6 +323,8 @@ function EventPage() {
   const virtualLink = (event as unknown as { virtual_link?: string | null }).virtual_link ?? null;
   const livestreamProvider =
     (event as unknown as { livestream_provider?: string | null }).livestream_provider ?? "none";
+  const eventTimezone =
+    (event as unknown as { timezone?: string | null }).timezone || DEFAULT_TIMEZONE;
   const waitlistCount = (counts as unknown as { waitlist?: number }).waitlist ?? 0;
   const myWaitlistPosition = (data as unknown as { myWaitlistPosition: number | null })
     .myWaitlistPosition;
@@ -427,14 +430,22 @@ function EventPage() {
     setELocation(event.location ?? "");
     setECategory((event.category as EventCategory | null) ?? "other");
     setETagsText((event.tags ?? []).join(", "));
-    setEStart(toLocalInput(new Date(event.start_time)));
-    setEEnd(toLocalInput(new Date(event.end_time)));
+    setETimezone(eventTimezone);
+    setEStart(instantToWallTimeInput(new Date(event.start_time), eventTimezone));
+    setEEnd(instantToWallTimeInput(new Date(event.end_time), eventTimezone));
     setEditOpen(true);
   }
 
   async function handleSaveEdit() {
-    const startIso = new Date(eStart).toISOString();
-    const endIso = new Date(eEnd).toISOString();
+    const startComposed = zonedWallTimeToInstant(eStart, eTimezone);
+    const endComposed = zonedWallTimeToInstant(eEnd, eTimezone);
+    if (startComposed.snapped || endComposed.snapped) {
+      toast.warning(
+        "That time falls in a daylight-saving gap in the selected zone -- snapped forward an hour.",
+      );
+    }
+    const startIso = startComposed.instant.toISOString();
+    const endIso = endComposed.instant.toISOString();
     if (new Date(endIso) <= new Date(startIso)) {
       toast.error("End time must be after the start time");
       return;
@@ -454,6 +465,7 @@ function EventPage() {
             .filter(Boolean),
           start_time: startIso,
           end_time: endIso,
+          timezone: eTimezone,
         },
       });
       const fresh = await getEvent({ data: { id } });
@@ -543,6 +555,8 @@ function EventPage() {
                 day: "numeric",
                 hour: "numeric",
                 minute: "2-digit",
+                timeZone: eventTimezone,
+                timeZoneName: "short",
               })}
             </Badge>
             {event.location && (
@@ -876,6 +890,21 @@ function EventPage() {
                   onChange={(e) => setEEnd(e.target.value)}
                 />
               </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Timezone</Label>
+              <Select value={eTimezone} onValueChange={setETimezone}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COMMON_TIMEZONES.map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz.replace(/_/g, " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <Label>Category</Label>

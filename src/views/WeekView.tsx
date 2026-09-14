@@ -212,12 +212,12 @@ function Slot({
     <Link
       to="/events/$id"
       params={{ id: event.id }}
-      title={`${event.title} · ${fmtTime(event.start_time)}`}
+      title={`${event.title} · ${fmtTime(event.start_time, event.timezone)}`}
       className={`block truncate px-2 py-1 text-xs font-semibold transition-transform hover:scale-[1.01] ${
         spanning ? "rounded-md" : "rounded-lg"
       } ${categoryClasses(event.category)}`}
     >
-      {!compact && <span className="mr-1 opacity-70">{fmtTime(event.start_time)}</span>}
+      {!compact && <span className="mr-1 opacity-70">{fmtTime(event.start_time, event.timezone)}</span>}
       {event.title}
       {note && <span className="ml-1 opacity-60">· {note}</span>}
     </Link>

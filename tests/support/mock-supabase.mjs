@@ -83,7 +83,10 @@ const day = (n, h = 18) => {
 };
 
 const EVENTS = [
-  { id: 'e1', coordinator_id: COORD, title: 'Harvest Festival', description: 'Music, food and a parade.', location: 'Main Street', start_time: day(2), end_time: day(2, 22), category: 'community', status: 'approved' },
+  // timezone: America/Chicago is deliberate here (spec 03) -- lets a browser
+  // test assert the event page labels the event's own zone and, only when
+  // the viewer is elsewhere, shows a secondary "your time" line.
+  { id: 'e1', coordinator_id: COORD, title: 'Harvest Festival', description: 'Music, food and a parade.', location: 'Main Street', start_time: day(2), end_time: day(2, 22), category: 'community', status: 'approved', timezone: 'America/Chicago' },
   { id: 'e2', coordinator_id: COORD, title: 'Farmers Market', description: 'Local growers and makers.', location: 'Riverfront Park', start_time: day(5, 9), end_time: day(5, 13), category: 'community', status: 'approved' },
   { id: 'e3', coordinator_id: COORD, title: 'Jazz on the Water', description: 'Live quartet at sunset.', location: 'The Landing', start_time: day(9, 19), end_time: day(9, 22), category: 'music', status: 'approved' },
   { id: 'e4', coordinator_id: COORD, title: '<img src=x onerror="window.__XSS=1">', description: 'hostile "quoted" & <b>markup</b>', location: "O'Brien Hall", start_time: day(12, 10), end_time: day(12, 12), category: 'other', status: 'approved' },

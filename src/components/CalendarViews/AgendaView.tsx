@@ -39,6 +39,7 @@ export function AgendaView({ signedIn, filters }: { signedIn: boolean; filters?:
         weekday: "long",
         month: "long",
         day: "numeric",
+        timeZone: e.timezone,
       });
       map.set(label, [...(map.get(label) ?? []), e]);
     }
@@ -83,7 +84,9 @@ export function AgendaView({ signedIn, filters }: { signedIn: boolean; filters?:
                 params={{ id: e.id }}
                 className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
               >
-                <div className="w-20 shrink-0 text-sm font-bold text-slate-900">{fmtTime(e.start_time)}</div>
+                <div className="w-20 shrink-0 text-sm font-bold text-slate-900">
+                  {fmtTime(e.start_time, e.timezone)}
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="truncate font-bold text-slate-900">{e.title}</span>
@@ -95,7 +98,11 @@ export function AgendaView({ signedIn, filters }: { signedIn: boolean; filters?:
                     {isMultiDay(e) && (
                       <span className="text-[11px] font-semibold text-slate-400">
                         through{" "}
-                        {new Date(e.end_time).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                        {new Date(e.end_time).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          timeZone: e.timezone,
+                        })}
                       </span>
                     )}
                   </div>

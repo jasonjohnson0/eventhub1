@@ -99,9 +99,17 @@ export function ListView({ events }: { events: CalendarEvent[] }) {
             >
               <div className="w-16 shrink-0 rounded-xl bg-slate-900 p-2 text-center text-white">
                 <div className="text-[10px] uppercase">
-                  {new Date(e.start_time).toLocaleDateString(undefined, { month: "short" })}
+                  {new Date(e.start_time).toLocaleDateString(undefined, {
+                    month: "short",
+                    timeZone: e.timezone,
+                  })}
                 </div>
-                <div className="text-lg font-black leading-none">{new Date(e.start_time).getDate()}</div>
+                <div className="text-lg font-black leading-none">
+                  {new Date(e.start_time).toLocaleDateString(undefined, {
+                    day: "numeric",
+                    timeZone: e.timezone,
+                  })}
+                </div>
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -110,9 +118,9 @@ export function ListView({ events }: { events: CalendarEvent[] }) {
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500">
                   <span>
-                    {fmtTime(e.start_time)}
+                    {fmtTime(e.start_time, e.timezone, { abbr: true })}
                     {isMultiDay(e) &&
-                      ` – ${new Date(e.end_time).toLocaleDateString(undefined, { month: "short", day: "numeric" })}, ${fmtTime(e.end_time)}`}
+                      ` – ${new Date(e.end_time).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: e.timezone })}, ${fmtTime(e.end_time, e.timezone)}`}
                   </span>
                   {e.location && (
                     <span className="inline-flex items-center gap-1">

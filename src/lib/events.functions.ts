@@ -55,6 +55,12 @@ export const createEvent = createServerFn({ method: "POST" })
         virtual_link: z.string().url().max(500).optional().nullable(),
         livestream_provider: z.enum(["zoom", "google_meet", "youtube", "none"]).default("none"),
         landscape_image_url: z.string().trim().url().max(1000).optional().nullable(),
+        // No enum here: the DB trigger falls back to the coordinator's own
+        // profile timezone (or America/Chicago) when this is left unset, and
+        // rejecting an unrecognized IANA name at write time isn't spec 03's
+        // contract -- display code falls back to UTC instead. See
+        // events_default_timezone() in the spec 03 migration.
+        timezone: z.string().min(1).max(100).optional(),
       })
       .parse(data),
   )
@@ -90,6 +96,7 @@ export const createEvent = createServerFn({ method: "POST" })
           virtual_link: data.event_format === "in_person" ? null : (data.virtual_link ?? null),
           livestream_provider:
             data.event_format === "in_person" ? "none" : data.livestream_provider,
+          timezone: data.timezone,
         } as any),
       })
       .select()
@@ -178,6 +185,7 @@ export const updateEvent = createServerFn({ method: "POST" })
         tags: z.array(z.string().min(1).max(40)).max(20).optional(),
         start_time: isoDate.optional(),
         end_time: isoDate.optional(),
+        timezone: z.string().min(1).max(100).optional(),
       })
       .parse(data),
   )
@@ -192,7 +200,8 @@ export const updateEvent = createServerFn({ method: "POST" })
       throw new Error("End time must be after the start time");
     }
     if (Object.keys(patch).length === 0) return { ok: true };
-    const { error } = await context.supabase.from("events").update(patch).eq("id", event_id);
+    // biome-ignore lint/suspicious/noExplicitAny: events.timezone not yet in generated types
+    const { error } = await context.supabase.from("events").update(patch as any).eq("id", event_id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -250,10 +259,11 @@ export const getEvent = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({ id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
-    const { data: ev, error } = await context.supabase
+    // biome-ignore lint/suspicious/noExplicitAny: timezone not yet in generated types
+    const { data: ev, error } = await (context.supabase as any)
       .from("events")
       .select(
-        "id, title, description, location, start_time, end_time, status, coordinator_id, created_at, category, tags, series_id, is_exception, max_capacity, has_waitlist",
+        "id, title, description, location, start_time, end_time, status, coordinator_id, created_at, category, tags, series_id, is_exception, max_capacity, has_waitlist, timezone",
       )
       .eq("id", data.id)
       .maybeSingle();

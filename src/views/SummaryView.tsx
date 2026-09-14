@@ -111,10 +111,11 @@ export function SummaryView({ events }: { events: CalendarEvent[] }) {
                       {new Date(e.start_time).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",
+                        timeZone: e.timezone,
                       })}{" "}
-                      · {fmtTime(e.start_time)}
+                      · {fmtTime(e.start_time, e.timezone)}
                       {isMultiDay(e) &&
-                        ` – ${new Date(e.end_time).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}
+                        ` – ${new Date(e.end_time).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: e.timezone })}`}
                     </span>
                     {e.location && (
                       <span className="inline-flex min-w-0 items-center gap-1">

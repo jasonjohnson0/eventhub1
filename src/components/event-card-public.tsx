@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Calendar, MapPin, Users, ArrowRight } from "lucide-react";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
+import { fmtTime } from "@/queries/events";
 
 export type PublicEvent = {
   id: string;
@@ -12,6 +13,7 @@ export type PublicEvent = {
   image_url: string | null;
   going_count: number;
   event_format?: string | null;
+  timezone?: string | null;
 };
 
 const FALLBACK_GRADIENTS = [
@@ -39,8 +41,9 @@ export function EventCardPublic({ event, index = 0 }: { event: PublicEvent; inde
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: event.timezone ?? undefined,
   });
-  const timeLabel = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  const timeLabel = fmtTime(date, event.timezone ?? undefined);
   const gradient = FALLBACK_GRADIENTS[index % FALLBACK_GRADIENTS.length];
   const emoji = EMOJI_BY_CATEGORY[event.category ?? "other"] ?? "✨";
   const trending = event.going_count >= 10;

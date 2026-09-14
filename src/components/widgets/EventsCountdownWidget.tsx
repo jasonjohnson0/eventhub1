@@ -74,7 +74,7 @@ export function EventsCountdownWidget({
       <p className="mt-3 flex min-w-0 items-center gap-1.5 text-xs font-semibold text-white/90">
         <MapPin className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{target.location ?? "Venue TBA"}</span>
-        <span className="shrink-0">· {fmtTime(target.start_time)}</span>
+        <span className="shrink-0">· {fmtTime(target.start_time, target.timezone)}</span>
       </p>
     </Link>
   );

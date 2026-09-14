@@ -117,12 +117,13 @@ export function DayView({ cursor, events }: { cursor: Date; events: CalendarEven
                       <span>
                         {info.isStartDay && info.isEndDay ? (
                           <>
-                            {fmtTime(e.start_time)} – {fmtTime(e.end_time)} · {Math.round(mins)} min
+                            {fmtTime(e.start_time, e.timezone)} – {fmtTime(e.end_time, e.timezone)} ·{" "}
+                            {Math.round(mins)} min
                           </>
                         ) : info.isStartDay ? (
-                          <>{fmtTime(e.start_time)} – continues</>
+                          <>{fmtTime(e.start_time, e.timezone)} – continues</>
                         ) : (
-                          <>until {fmtTime(e.end_time)} today</>
+                          <>until {fmtTime(e.end_time, e.timezone)} today</>
                         )}
                       </span>
                       {e.location && (

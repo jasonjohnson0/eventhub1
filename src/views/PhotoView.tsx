@@ -42,10 +42,14 @@ export function PhotoView({ events }: { events: CalendarEvent[] }) {
             <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 sm:p-3">
               <span className="block truncate text-xs font-bold text-white sm:text-sm">{e.title}</span>
               <span className="block truncate text-[10px] text-white/80 sm:text-xs">
-                {new Date(e.start_time).toLocaleDateString(undefined, { month: "short", day: "numeric" })} ·{" "}
-                {fmtTime(e.start_time)}
+                {new Date(e.start_time).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  timeZone: e.timezone,
+                })}{" "}
+                · {fmtTime(e.start_time, e.timezone)}
                 {isMultiDay(e) &&
-                  ` – ${new Date(e.end_time).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}
+                  ` – ${new Date(e.end_time).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: e.timezone })}`}
               </span>
             </span>
           </button>
@@ -98,11 +102,12 @@ export function PhotoView({ events }: { events: CalendarEvent[] }) {
                     weekday: "long",
                     month: "long",
                     day: "numeric",
+                    timeZone: active.timezone,
                   })}{" "}
-                  · {fmtTime(active.start_time)}
+                  · {fmtTime(active.start_time, active.timezone, { abbr: true })}
                   {isMultiDay(active)
-                    ? ` – ${new Date(active.end_time).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })} · ${fmtTime(active.end_time)}`
-                    : ` – ${fmtTime(active.end_time)}`}
+                    ? ` – ${new Date(active.end_time).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", timeZone: active.timezone })} · ${fmtTime(active.end_time, active.timezone, { abbr: true })}`
+                    : ` – ${fmtTime(active.end_time, active.timezone, { abbr: true })}`}
                 </p>
                 {active.location && (
                   <p className="flex items-center gap-2">

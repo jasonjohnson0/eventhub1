@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { safeTimeZone } from "@/lib/timezone";
 
 export type CalendarEvent = {
   id: string;
@@ -13,6 +14,9 @@ export type CalendarEvent = {
   organizers: string[];
   latitude: number | null;
   longitude: number | null;
+  /** IANA zone the event is scheduled in (spec 03) -- what "6pm" means on
+   *  the coordinator's own calendar, not the viewer's browser zone. */
+  timezone: string;
 };
 
 export type EventFilters = {
@@ -75,7 +79,7 @@ export async function fetchEvents(filters: EventFilters = {}): Promise<CalendarE
   const limit = filters.limit ?? 300;
   let q = supabase
     .from("events")
-    .select(sel("id, title, description, location, start_time, end_time, category"))
+    .select(sel("id, title, description, location, start_time, end_time, category, timezone"))
     .eq("status", "approved")
     .order("start_time", { ascending: true })
     .limit(limit);
@@ -94,6 +98,7 @@ export async function fetchEvents(filters: EventFilters = {}): Promise<CalendarE
     start_time: string;
     end_time: string;
     category: string | null;
+    timezone: string | null;
   };
   const { data: rows, error } = await q.returns<Row[]>();
   if (error) throw new Error(error.message);
@@ -103,6 +108,7 @@ export async function fetchEvents(filters: EventFilters = {}): Promise<CalendarE
 
   let out: CalendarEvent[] = base.map((r) => ({
     ...r,
+    timezone: safeTimeZone(r.timezone),
     image_url: enriched.images.get(r.id) ?? null,
     going_count: enriched.counts.get(r.id) ?? 0,
     organizers: enriched.organizers.get(r.id) ?? [],
@@ -242,8 +248,27 @@ export function sameDay(a: Date, b: Date) {
     a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
   );
 }
-export function fmtTime(iso: string | Date) {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+/** Formats a time. With no `timeZone`, this is the viewer's own browser zone
+ *  (the old, pre-spec-03 behavior, still used by call sites that don't yet
+ *  carry an event's zone). Pass an event's `timezone` to render the time the
+ *  way it actually reads on that event's own calendar -- spec 03's rule:
+ *  "Saturday 6pm" means 6pm in that event's zone, not a silent conversion to
+ *  whoever's looking. `abbr: true` appends the zone abbreviation, e.g. "6:00
+ *  PM CDT" -- used where there's room (event page, list rows), not on a
+ *  one-line month chip. */
+export function fmtTime(iso: string | Date, timeZone?: string, opts: { abbr?: boolean } = {}) {
+  const zone = timeZone ? safeTimeZone(timeZone) : undefined;
+  const base = new Date(iso).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    ...(zone ? { timeZone: zone } : {}),
+  });
+  if (!opts.abbr || !zone) return base;
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "short" }).formatToParts(
+    new Date(iso),
+  );
+  const abbr = parts.find((p) => p.type === "timeZoneName")?.value;
+  return abbr ? `${base} ${abbr}` : base;
 }
 
 /** Local calendar dates (each a Date at local midnight) this event occupies,
@@ -303,13 +328,22 @@ export function isMultiDay(event: { start_time: string; end_time: string }): boo
  *  meaningful start/end clock times to show, "Fri 3, 6:00 PM – Sun 5, 2:00 PM"
  *  when both matter. Used by List/Agenda/Summary/Photo so a multi-day event
  *  gets one row with a range, not one row per occupied day. */
-export function fmtDateRange(event: { start_time: string; end_time: string }): string {
+export function fmtDateRange(
+  event: { start_time: string; end_time: string },
+  timeZone?: string,
+): string {
   const dates = occupiesDates(event);
   const start = new Date(event.start_time);
-  const dateOpts: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" };
+  const zone = timeZone ? safeTimeZone(timeZone) : undefined;
+  const dateOpts: Intl.DateTimeFormatOptions = {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    ...(zone ? { timeZone: zone } : {}),
+  };
   if (dates.length === 1) {
-    return `${start.toLocaleDateString(undefined, dateOpts)}, ${fmtTime(start)}`;
+    return `${start.toLocaleDateString(undefined, dateOpts)}, ${fmtTime(start, timeZone)}`;
   }
   const end = new Date(event.end_time);
-  return `${start.toLocaleDateString(undefined, dateOpts)}, ${fmtTime(start)} – ${end.toLocaleDateString(undefined, dateOpts)}, ${fmtTime(end)}`;
+  return `${start.toLocaleDateString(undefined, dateOpts)}, ${fmtTime(start, timeZone)} – ${end.toLocaleDateString(undefined, dateOpts)}, ${fmtTime(end, timeZone)}`;
 }

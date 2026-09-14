@@ -7,6 +7,8 @@ import { upsertRsvp } from "@/lib/tracking.functions";
 import { purchaseTicket, createTicketCheckout, listMyPurchases } from "@/lib/monetization.functions";
 import { Button } from "@/components/ui/button";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
+import { fmtTime } from "@/queries/events";
+import { viewerTimeZone } from "@/lib/timezone";
 import {
   Dialog,
   DialogContent,
@@ -67,6 +69,7 @@ type Detail = {
     coordinator_id: string;
     event_format?: string | null;
     virtual_link?: string | null;
+    timezone?: string | null;
   };
   image: string | null;
   photos: { id: string; photo_url: string; caption: string | null }[];
@@ -186,7 +189,7 @@ function PublicEventDetail() {
       const { data: ev } = await (supabase as any)
         .from("events")
         .select(
-          "id, title, description, location, start_time, end_time, category, coordinator_id, event_format, virtual_link, status",
+          "id, title, description, location, start_time, end_time, category, coordinator_id, event_format, virtual_link, status, timezone",
         )
         .eq("id", id)
         .maybeSingle();
@@ -389,13 +392,24 @@ function PublicEventDetail() {
   } = data;
   const start = new Date(event.start_time);
   const end = new Date(event.end_time);
+  const eventTz = event.timezone || "UTC";
+  const viewerTz = viewerTimeZone();
+  // Spec 03 F2: the primary line is always the event's own zone -- "Saturday
+  // 6pm" means 6pm in that town, not a silent conversion to whoever's
+  // looking. A secondary "your time" line only appears when it would
+  // actually read differently for this viewer.
   const dateLabel = start.toLocaleDateString(undefined, {
     weekday: "long",
     month: "long",
     day: "numeric",
     year: "numeric",
+    timeZone: eventTz,
   });
-  const timeLabel = `${start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} – ${end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+  const timeLabel = `${fmtTime(start, eventTz, { abbr: true })} – ${fmtTime(end, eventTz, { abbr: true })}`;
+  const viewerDiffers = viewerTz !== eventTz;
+  const viewerTimeLabel = viewerDiffers
+    ? `${start.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", timeZone: viewerTz })}, ${fmtTime(start, viewerTz, { abbr: true })} – ${fmtTime(end, viewerTz, { abbr: true })} your time`
+    : null;
   const shareUrl = typeof window !== "undefined" ? window.location.href : "";
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(event.title);
@@ -518,6 +532,9 @@ function PublicEventDetail() {
                   <div>
                     <div className="font-semibold text-slate-900">{dateLabel}</div>
                     <div className="text-slate-500">{timeLabel}</div>
+                    {viewerTimeLabel && (
+                      <div className="text-xs text-slate-400">{viewerTimeLabel}</div>
+                    )}
                   </div>
                 </div>
                 {event.location && (

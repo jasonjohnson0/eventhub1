@@ -3,6 +3,7 @@ import { z } from "zod";
 import { RRule, rrulestr } from "rrule";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
+import { DEFAULT_TIMEZONE, toFloating, fromFloating } from "@/lib/timezone";
 
 type EventUpdate = Database["public"]["Tables"]["events"]["Update"];
 type SeriesUpdate = Database["public"]["Tables"]["event_series"]["Update"];
@@ -24,45 +25,16 @@ const categoryEnum = z.enum([
 // insert tens of thousands of rows.
 const MAX_OCCURRENCES = 400;
 
-/** Offset (ms) to ADD to a real instant to get a Date whose UTC getters read
- *  as that instant's wall-clock time in `timeZone`. */
-function tzOffsetMs(instant: Date, timeZone: string): number {
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-  const get = (t: string) => Number(dtf.formatToParts(instant).find((p) => p.type === t)?.value ?? "0");
-  const asIfUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
-  return asIfUtc - instant.getTime();
-}
-
-/** A real instant -> a "floating" Date whose UTC getters read as that
- *  instant's wall-clock time in `timeZone`. rrule only understands calendar
- *  arithmetic on UTC getters, so recurrence is computed entirely in this
- *  floating representation and converted back to a real instant per
- *  occurrence below -- otherwise "every day at 11pm" is really "every 24
- *  hours" and silently drifts an hour across a DST change, which is most
- *  visible for exactly the late-night events that sit near a day boundary. */
-function toFloating(instant: Date, timeZone: string): Date {
-  return new Date(instant.getTime() + tzOffsetMs(instant, timeZone));
-}
-
-/** The inverse of toFloating: a floating wall-clock Date -> the real instant
- *  in `timeZone`. Re-derives the offset from the candidate instant itself,
- *  not the floating guess, since the two can disagree right at a DST
- *  boundary. */
-function fromFloating(floating: Date, timeZone: string): Date {
-  const guessOffset = tzOffsetMs(floating, timeZone);
-  const candidate = floating.getTime() - guessOffset;
-  const offset = tzOffsetMs(new Date(candidate), timeZone);
-  return new Date(floating.getTime() - offset);
-}
+// toFloating/fromFloating (spec 03: now shared with one-off events'
+// datetime-local composition, imported from lib/timezone.ts) convert
+// between a real instant and a "floating" Date whose UTC getters read as
+// that instant's wall-clock time in a given IANA zone. rrule only
+// understands calendar arithmetic on UTC getters, so recurrence is computed
+// entirely in that floating representation and converted back to a real
+// instant per occurrence below -- otherwise "every day at 11pm" is really
+// "every 24 hours" and silently drifts an hour across a DST change, which is
+// most visible for exactly the late-night events that sit near a day
+// boundary.
 
 function computeOccurrences(
   rrule: string,
@@ -100,7 +72,7 @@ export const createSeries = createServerFn({ method: "POST" })
         duration_minutes: z.number().int().positive().max(60 * 24 * 30),
         rrule: z.string().min(3).max(500),
         until: isoDate.nullable().optional(),
-        timezone: z.string().default("UTC"),
+        timezone: z.string().min(1).max(100).default(DEFAULT_TIMEZONE),
       })
       .parse(data),
   )
@@ -143,6 +115,8 @@ export const createSeries = createServerFn({ method: "POST" })
       series_id: series.id,
       series_original_start: start.toISOString(),
       is_exception: false,
+      // biome-ignore lint/suspicious/noExplicitAny: events.timezone not yet in generated types
+      ...({ timezone: data.timezone } as any),
     }));
     const { error: eErr } = await context.supabase.from("events").insert(rows);
     if (eErr) throw new Error(eErr.message);
