@@ -34,6 +34,7 @@ import {
   Video,
   Download,
   ExternalLink,
+  EyeOff,
 } from "lucide-react";
 import { CATEGORIES, categoryClasses, categoryLabel, type EventCategory } from "@/lib/categories";
 import { deleteSeriesInstance } from "@/lib/series.functions";
@@ -255,6 +256,8 @@ function EventPage() {
   const [eSaving, setESaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [visibilityConfirmOpen, setVisibilityConfirmOpen] = useState(false);
+  const [visibilityBusy, setVisibilityBusy] = useState(false);
 
   useEffect(() => {
     getEvent({ data: { id } })
@@ -325,6 +328,8 @@ function EventPage() {
     (event as unknown as { livestream_provider?: string | null }).livestream_provider ?? "none";
   const eventTimezone =
     (event as unknown as { timezone?: string | null }).timezone || DEFAULT_TIMEZONE;
+  const eventVisibility =
+    (event as unknown as { visibility?: "public" | "unlisted" | null }).visibility ?? "public";
   const waitlistCount = (counts as unknown as { waitlist?: number }).waitlist ?? 0;
   const myWaitlistPosition = (data as unknown as { myWaitlistPosition: number | null })
     .myWaitlistPosition;
@@ -479,6 +484,37 @@ function EventPage() {
     }
   }
 
+  /** Applies the actual visibility flip -- called either directly (going
+   *  public with no RSVPs, spec 04's "no confirmation beyond a toast" case)
+   *  or from the confirm dialog. */
+  async function applyVisibilityChange(next: "public" | "unlisted") {
+    setVisibilityBusy(true);
+    try {
+      await updateEvent({ data: { event_id: id, visibility: next } });
+      const fresh = await getEvent({ data: { id } });
+      setData(fresh);
+      toast.success(next === "public" ? "Event is now public" : "Event is now unlisted");
+      setVisibilityConfirmOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not update visibility");
+    } finally {
+      setVisibilityBusy(false);
+    }
+  }
+
+  /** Making public with existing RSVPs, and making unlisted at all, both get
+   *  a confirm dialog (spec 04 F3) -- going public with zero RSVPs is a
+   *  same-click flip with just a toast, since there's nobody to surprise. */
+  function handleToggleVisibility() {
+    const next = eventVisibility === "public" ? "unlisted" : "public";
+    const rsvpTotal = counts.going + counts.interested;
+    if (next === "public" && rsvpTotal === 0) {
+      void applyVisibilityChange(next);
+      return;
+    }
+    setVisibilityConfirmOpen(true);
+  }
+
   async function handleDeleteEvent() {
     setDeleting(true);
     try {
@@ -577,6 +613,12 @@ function EventPage() {
                 {counts.going}/{maxCapacity} RSVPs
               </Badge>
             )}
+            {eventVisibility === "unlisted" && (
+              <Badge variant="secondary" className="gap-1">
+                <EyeOff className="h-3 w-3" />
+                Unlisted
+              </Badge>
+            )}
             {waitlistCount > 0 && <Badge variant="secondary">{waitlistCount} on waitlist</Badge>}
             {eventFormat !== "in_person" && (
               <Badge variant="secondary" className="gap-1 capitalize">
@@ -596,6 +638,19 @@ function EventPage() {
           )}
         </div>
         <div className="flex shrink-0 gap-2">
+          {isCoordinator && (
+            <Button variant="outline" size="sm" onClick={handleToggleVisibility}>
+              {eventVisibility === "unlisted" ? (
+                <>
+                  <Eye className="mr-1 h-3.5 w-3.5" /> Make public
+                </>
+              ) : (
+                <>
+                  <EyeOff className="mr-1 h-3.5 w-3.5" /> Make unlisted
+                </>
+              )}
+            </Button>
+          )}
           {isCoordinator && (
             <Button variant="outline" size="sm" onClick={openEdit}>
               <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
@@ -951,6 +1006,40 @@ function EventPage() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteEvent} disabled={deleting}>
               {deleting ? "Deleting…" : "Delete event"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={visibilityConfirmOpen} onOpenChange={setVisibilityConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {eventVisibility === "public" ? "Make this event unlisted?" : "Make this event public?"}
+            </DialogTitle>
+            <DialogDescription>
+              {eventVisibility === "public"
+                ? "It will disappear from your public calendar, embed, and iCal. Direct links still work. Existing RSVPs keep access."
+                : `This event has ${counts.going + counts.interested} RSVP${counts.going + counts.interested === 1 ? "" : "s"} who treated it as unlisted. Making it public lists it on your calendar. Continue?`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setVisibilityConfirmOpen(false)}
+              disabled={visibilityBusy}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => applyVisibilityChange(eventVisibility === "public" ? "unlisted" : "public")}
+              disabled={visibilityBusy}
+            >
+              {visibilityBusy
+                ? "Saving…"
+                : eventVisibility === "public"
+                  ? "Make unlisted"
+                  : "Make public"}
             </Button>
           </DialogFooter>
         </DialogContent>

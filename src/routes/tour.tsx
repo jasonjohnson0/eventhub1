@@ -79,7 +79,15 @@ function TourPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase.from("events").select("category").eq("status", "approved").limit(500);
+      // "Approved events live, platform-wide" is a public marketing number --
+      // an unlisted event shouldn't inflate it (spec 04, F2).
+      const { data } = await supabase
+        .from("events")
+        .select("category")
+        .eq("status", "approved")
+        // biome-ignore lint/suspicious/noExplicitAny: visibility not yet in generated types
+        .eq("visibility" as any, "public")
+        .limit(500);
       if (cancelled) return;
       const rows = data ?? [];
       setStats({ events: rows.length, categories: new Set(rows.map((r) => r.category)).size });

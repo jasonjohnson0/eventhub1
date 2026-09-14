@@ -19,6 +19,7 @@ export default defineTool({
       .optional(),
     tags: z.array(z.string().min(1).max(40)).max(20).optional(),
     status: z.enum(["pending", "approved", "rejected"]).optional(),
+    visibility: z.enum(["public", "unlisted"]).optional(),
   },
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ id, ...fields }, ctx) => {

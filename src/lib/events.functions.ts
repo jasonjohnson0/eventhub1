@@ -61,6 +61,10 @@ export const createEvent = createServerFn({ method: "POST" })
         // contract -- display code falls back to UTC instead. See
         // events_default_timezone() in the spec 03 migration.
         timezone: z.string().min(1).max(100).optional(),
+        // Coordinator-only creation path (this server fn), never exposed on
+        // /submit-event -- public submitters cannot hide an event from the
+        // coordinator's own calendar (spec 04, F4).
+        visibility: z.enum(["public", "unlisted"]).default("public"),
       })
       .parse(data),
   )
@@ -97,6 +101,7 @@ export const createEvent = createServerFn({ method: "POST" })
           livestream_provider:
             data.event_format === "in_person" ? "none" : data.livestream_provider,
           timezone: data.timezone,
+          visibility: data.visibility,
         } as any),
       })
       .select()
@@ -186,6 +191,7 @@ export const updateEvent = createServerFn({ method: "POST" })
         start_time: isoDate.optional(),
         end_time: isoDate.optional(),
         timezone: z.string().min(1).max(100).optional(),
+        visibility: z.enum(["public", "unlisted"]).optional(),
       })
       .parse(data),
   )
@@ -263,7 +269,7 @@ export const getEvent = createServerFn({ method: "GET" })
     const { data: ev, error } = await (context.supabase as any)
       .from("events")
       .select(
-        "id, title, description, location, start_time, end_time, status, coordinator_id, created_at, category, tags, series_id, is_exception, max_capacity, has_waitlist, timezone",
+        "id, title, description, location, start_time, end_time, status, coordinator_id, created_at, category, tags, series_id, is_exception, max_capacity, has_waitlist, timezone, visibility",
       )
       .eq("id", data.id)
       .maybeSingle();

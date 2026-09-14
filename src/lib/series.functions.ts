@@ -73,6 +73,7 @@ export const createSeries = createServerFn({ method: "POST" })
         rrule: z.string().min(3).max(500),
         until: isoDate.nullable().optional(),
         timezone: z.string().min(1).max(100).default(DEFAULT_TIMEZONE),
+        visibility: z.enum(["public", "unlisted"]).default("public"),
       })
       .parse(data),
   )
@@ -116,7 +117,7 @@ export const createSeries = createServerFn({ method: "POST" })
       series_original_start: start.toISOString(),
       is_exception: false,
       // biome-ignore lint/suspicious/noExplicitAny: events.timezone not yet in generated types
-      ...({ timezone: data.timezone } as any),
+      ...({ timezone: data.timezone, visibility: data.visibility } as any),
     }));
     const { error: eErr } = await context.supabase.from("events").insert(rows);
     if (eErr) throw new Error(eErr.message);

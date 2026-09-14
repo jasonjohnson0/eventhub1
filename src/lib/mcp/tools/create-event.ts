@@ -18,6 +18,7 @@ export default defineTool({
     tags: z.array(z.string().min(1).max(40)).max(20).default([]),
     event_format: z.enum(["in_person", "virtual", "hybrid"]).default("in_person"),
     virtual_link: z.string().url().max(500).optional(),
+    visibility: z.enum(["public", "unlisted"]).default("public"),
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   handler: async (input, ctx) => {
@@ -39,6 +40,7 @@ export default defineTool({
         tags: input.tags,
         event_format: input.event_format,
         virtual_link: input.event_format === "in_person" ? null : input.virtual_link ?? null,
+        visibility: input.visibility,
       })
       .select()
       .single();

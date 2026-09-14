@@ -26,6 +26,11 @@ export default defineTool({
     let query = supabase
       .from("events")
       .select("id, title, description, location, start_time, end_time, status, category, tags, event_format")
+      // Unlisted events stay visible to their own owner/staff (RLS already
+      // scopes "own, any status" separately from "approved, any owner"), but
+      // not to a generic caller just because a row is approved -- spec 04
+      // says don't leak unlisted events to a generic agent token.
+      .or(`visibility.eq.public,coordinator_id.eq.${ctx.getUserId()}`)
       .order("start_time", { ascending: true })
       .limit(limit);
     if (search) query = query.ilike("title", `%${search}%`);

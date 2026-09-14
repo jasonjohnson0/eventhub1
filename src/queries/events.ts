@@ -81,6 +81,12 @@ export async function fetchEvents(filters: EventFilters = {}): Promise<CalendarE
     .from("events")
     .select(sel("id, title, description, location, start_time, end_time, category, timezone"))
     .eq("status", "approved")
+    // Unlisted events are omitted from every listing surface (spec 04) --
+    // this is the single shared query behind Month/Week/Day/List/Agenda/
+    // Summary/Photo, the public coordinator page, the embed endpoint, and
+    // /events. Reachable only by direct link/invitation, not by browsing.
+    // biome-ignore lint/suspicious/noExplicitAny: visibility not yet in generated types
+    .eq("visibility" as any, "public")
     .order("start_time", { ascending: true })
     .limit(limit);
 

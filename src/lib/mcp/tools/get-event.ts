@@ -20,6 +20,13 @@ export default defineTool({
       .maybeSingle();
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
     if (!data) throw new ToolError(`No event found with id ${id}`);
+    // RLS only checks status = 'approved', not visibility -- a stranger's
+    // generic MCP token could otherwise fetch an unlisted event by UUID just
+    // by knowing (or guessing) it. Owner/staff still see their own (spec 04:
+    // "allowed if the caller owns it, otherwise only if public").
+    if (data.visibility === "unlisted" && data.coordinator_id !== ctx.getUserId()) {
+      throw new ToolError(`No event found with id ${id}`);
+    }
     return {
       content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
       structuredContent: { event: data },

@@ -95,6 +95,10 @@ const EVENTS = [
   { id: 'e5', coordinator_id: COORD, title: 'River Bend Music Fest', description: 'A weekend of live music on the water.', location: 'Riverfront Park', start_time: day(2, 18), end_time: day(4, 14), category: 'music', status: 'approved' },
   // Belongs to a different coordinator: must never appear on /c/riverside.
   { id: 'x1', coordinator_id: OTHER, title: 'Somebody Else’s Gala', description: 'Not Riverside.', location: 'Elsewhere', start_time: day(3), end_time: day(3, 22), category: 'other', status: 'approved' },
+  // Unlisted (spec 04): must never appear on /c/riverside, /events, or the
+  // embed, but must still open directly at /events/$id. Real UUID since
+  // getEvent (shared with /manage) validates the id shape.
+  { id: 'bbbbbbbb-2222-4222-8222-222222222222', coordinator_id: COORD, title: 'Backyard BBQ', description: 'Just the regulars.', location: 'Someone\'s backyard', start_time: day(6, 17), end_time: day(6, 20), category: 'social', status: 'approved', visibility: 'unlisted' },
   // getEvent (and the attendee functions it shares /manage and /checkin with)
   // validate `id` as a real UUID, same as production event ids -- the short
   // 'e1'-style ids above fail that check. This one exists only so
@@ -228,14 +232,39 @@ function handle(req, res) {
   if (path === '/rest/v1/events') {
     const coordinator = parseEq(url.search, 'coordinator_id');
     const id = parseEq(url.search, 'id');
+    // updateEvent() PATCHes by id. Applying onto the matched fixture in
+    // place is what lets a test verify a change (e.g. spec 04's visibility
+    // toggle) actually round-trips through a subsequent getEvent() refetch,
+    // rather than silently getting the pre-save row back -- same pattern as
+    // coordinator_profiles above.
+    if (req.method === 'PATCH' && id) {
+      const row = EVENTS.find((e) => e.id === id);
+      if (row) {
+        let body = {};
+        try { body = JSON.parse(req.__body || '{}'); } catch {}
+        Object.assign(row, body);
+      }
+      return send(wantsObject ? (row ?? null) : row ? [row] : []);
+    }
+    // Only filter on visibility when the caller actually asked for it (spec
+    // 04's public-listing queries do; a direct single-event fetch, e.g. the
+    // public event page or getEvent(), deliberately does not -- an unlisted
+    // event still has to open by direct link).
+    const visibility = parseEq(url.search, 'visibility');
     let rows = EVENTS.filter((e) => e.status === 'approved');
     if (coordinator) rows = rows.filter((e) => e.coordinator_id === coordinator);
     if (id) rows = rows.filter((e) => e.id === id);
+    if (visibility) rows = rows.filter((e) => (e.visibility ?? 'public') === visibility);
     rows = rows.slice().sort((a, b) => a.start_time.localeCompare(b.start_time));
     return send(wantsObject ? (rows[0] ?? null) : rows);
   }
 
-  if (path === '/rest/v1/event_rsvps') return send([], { 'content-range': '0-0/7' });
+  // No RSVP rows are actually tracked in this mock, so the count is honestly
+  // 0 rather than a fake nonzero placeholder -- getEvent()'s counts.going/
+  // interested/declined (spec 04's manage-page visibility toggle checks
+  // these to decide whether to confirm) would otherwise always read as
+  // artificially nonzero for every event, regardless of the real RSVP state.
+  if (path === '/rest/v1/event_rsvps') return send([], { 'content-range': '0-0/0' });
   // The public going/interested/declined aggregate. e1 gets a deliberately
   // nonzero, distinctive value so a test can tell "wired to the RPC" apart
   // from "silently fell back to 0" -- the exact failure mode of the bug this

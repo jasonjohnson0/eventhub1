@@ -54,6 +54,7 @@ export function EventModal({
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE);
+  const [visibility, setVisibility] = useState<"public" | "unlisted">("public");
   const [imageUrl, setImageUrl] = useState("");
   const [category, setCategory] = useState<EventCategory>("other");
   const [tagsText, setTagsText] = useState("");
@@ -209,6 +210,7 @@ export function EventModal({
             livestream_provider: format === "in_person" ? "none" : provider,
             landscape_image_url: imageUrl.trim() || null,
             timezone,
+            visibility,
           },
         });
         if (selectedOrganizers.length > 0) {
@@ -245,6 +247,7 @@ export function EventModal({
             rrule,
             until: repeatUntil ? new Date(repeatUntil).toISOString() : null,
             timezone,
+            visibility,
           },
         });
         if (res.truncated) {
@@ -259,6 +262,7 @@ export function EventModal({
       setTitle("");
       setDescription("");
       setTimezone(DEFAULT_TIMEZONE);
+      setVisibility("public");
       setLocation("");
       setUnit("");
       setSuggestions([]);
@@ -428,6 +432,22 @@ export function EventModal({
             <p className="mt-1 text-xs text-muted-foreground">
               The start/end times above are in this zone. Defaults to your profile's timezone --
               change it for an out-of-town event.
+            </p>
+          </div>
+          <div>
+            <Label>Visibility</Label>
+            <Select value={visibility} onValueChange={(v) => setVisibility(v as "public" | "unlisted")}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="public">Public</SelectItem>
+                <SelectItem value="unlisted">Unlisted — hidden from your calendar, reachable by link</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Anyone with the link can view and RSVP. It will not appear on your public calendar,
+              embed, or iCal feed.
             </p>
           </div>
           <div>

@@ -70,6 +70,7 @@ type Detail = {
     event_format?: string | null;
     virtual_link?: string | null;
     timezone?: string | null;
+    visibility?: "public" | "unlisted" | null;
   };
   image: string | null;
   photos: { id: string; photo_url: string; caption: string | null }[];
@@ -189,7 +190,7 @@ function PublicEventDetail() {
       const { data: ev } = await (supabase as any)
         .from("events")
         .select(
-          "id, title, description, location, start_time, end_time, category, coordinator_id, event_format, virtual_link, status, timezone",
+          "id, title, description, location, start_time, end_time, category, coordinator_id, event_format, virtual_link, status, timezone, visibility",
         )
         .eq("id", id)
         .maybeSingle();
@@ -518,6 +519,14 @@ function PublicEventDetail() {
               >
                 {categoryLabel(event.category ?? "other")}
               </span>
+              {event.visibility === "unlisted" && (
+                // Quiet, not a scare banner -- someone with a shared link
+                // shouldn't expect to find this on the public calendar later,
+                // but there's nothing alarming about an unlisted event.
+                <span className="ml-2 inline-flex items-center rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white shadow">
+                  Unlisted event
+                </span>
+              )}
               <h1 className="mt-3 text-3xl font-black text-white drop-shadow md:text-5xl">
                 {event.title}
               </h1>

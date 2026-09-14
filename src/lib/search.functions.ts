@@ -56,6 +56,10 @@ export const searchEvents = createServerFn({ method: "POST" })
       .from("events")
       .select("id, title, description, location, start_time, end_time, status, coordinator_id, category, tags")
       .eq("status", "approved")
+      // Unlisted events are omitted from this platform-wide search too
+      // (spec 04) -- same treatment as every other listing surface.
+      // biome-ignore lint/suspicious/noExplicitAny: visibility not yet in generated types
+      .eq("visibility" as any, "public")
       .order("start_time", { ascending: true })
       .limit(data.limit);
 
@@ -82,6 +86,8 @@ export const getEventsByCategory = createServerFn({ method: "POST" })
       .from("events")
       .select("id, title, description, location, start_time, end_time, status, category, tags")
       .eq("status", "approved")
+      // biome-ignore lint/suspicious/noExplicitAny: visibility not yet in generated types
+      .eq("visibility" as any, "public")
       .eq("category", data.category)
       .order("start_time", { ascending: true })
       .limit(data.limit);
@@ -95,7 +101,9 @@ export const getCategoryCounts = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("events")
       .select("category")
-      .eq("status", "approved");
+      .eq("status", "approved")
+      // biome-ignore lint/suspicious/noExplicitAny: visibility not yet in generated types
+      .eq("visibility" as any, "public");
     if (error) throw new Error(error.message);
     const counts: Record<string, number> = {};
     for (const r of data ?? []) counts[r.category] = (counts[r.category] ?? 0) + 1;
@@ -108,7 +116,9 @@ export const getMapEvents = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("event_locations")
       .select("event_id, location_name, latitude, longitude, events!inner(id,title,start_time,category,status,location)")
-      .eq("events.status", "approved");
+      .eq("events.status", "approved")
+      // biome-ignore lint/suspicious/noExplicitAny: events.visibility not yet in generated types
+      .eq("events.visibility" as any, "public");
     if (error) throw new Error(error.message);
     return (data ?? []).map((r) => ({
       id: r.event_id,
