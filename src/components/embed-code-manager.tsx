@@ -3,7 +3,9 @@ import { toast } from "sonner";
 import { Code2, Copy, Loader2, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -14,6 +16,10 @@ import {
 import { getCoordinatorProfile, type CoordinatorProfile } from "@/lib/onboarding.functions";
 import { siteOrigin } from "@/lib/site-url";
 
+const MIN_HEIGHT = 300;
+const MAX_HEIGHT = 3000;
+const DEFAULT_HEIGHT = 800;
+
 type View = "month" | "week" | "list" | "agenda";
 const VIEWS: { value: View; label: string }[] = [
   { value: "month", label: "Month" },
@@ -22,7 +28,15 @@ const VIEWS: { value: View; label: string }[] = [
   { value: "agenda", label: "Agenda" },
 ];
 
-function CodeField({ label, hint, value }: { label: string; hint?: string; value: string }) {
+function CodeField({
+  label,
+  hint,
+  value,
+}: {
+  label: string;
+  hint?: React.ReactNode;
+  value: string;
+}) {
   async function copy() {
     await navigator.clipboard.writeText(value);
     toast.success("Copied");
@@ -53,6 +67,8 @@ export function EmbedCodeManager() {
   const [profile, setProfile] = useState<CoordinatorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("month");
+  const [height, setHeight] = useState(DEFAULT_HEIGHT);
+  const [bordered, setBordered] = useState(false);
 
   useEffect(() => {
     getCoordinatorProfile()
@@ -72,13 +88,17 @@ export function EmbedCodeManager() {
       view === "month"
         ? `[eventhub_calendar slug="${slug}"]`
         : `[eventhub_calendar slug="${slug}" view="${view}"]`;
+    // Points at the same fragment URL as the raw-fragment box and the live
+    // preview below -- it used to point at /c/$slug (the full page, with its
+    // own header/nav), so what you copied never matched what you previewed.
     // Scripts, popups (for the calendar's own new-tab event links) and
     // same-origin (so a signed-in visitor's session/localStorage still work
     // inside the frame) are allowed; top-level navigation deliberately is
     // not, so nothing embedded here can ever redirect the host page itself.
-    const iframeSnippet = `<iframe src="${calendarUrl}" width="100%" height="800" style="border:0" title="Event calendar" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>`;
+    const border = bordered ? "1px solid #e2e8f0" : "0";
+    const iframeSnippet = `<iframe src="${fragmentUrl}" width="100%" height="${height}" style="border:${border}" title="Event calendar" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>`;
     return { calendarUrl, fragmentUrl, shortcode, iframeSnippet };
-  }, [base, slug, view]);
+  }, [base, slug, view, height, bordered]);
 
   if (loading) {
     return (
@@ -131,10 +151,42 @@ export function EmbedCodeManager() {
             </p>
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="embed-height">Height (px)</Label>
+              <Input
+                id="embed-height"
+                type="number"
+                min={MIN_HEIGHT}
+                max={MAX_HEIGHT}
+                value={height}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (Number.isFinite(n)) setHeight(Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, n)));
+                }}
+                className="max-w-[10rem]"
+              />
+            </div>
+            <label className="flex items-center gap-3 self-end pb-1.5">
+              <Switch checked={bordered} onCheckedChange={setBordered} />
+              <span className="text-sm font-medium">Show a border</span>
+            </label>
+          </div>
+
           <CodeField
             label="WordPress"
             hint={
-              'Install the EventHub Calendar plugin (Plugins → Add New → Upload Plugin), set the host under Settings → EventHub Calendar, then paste this shortcode into any page or post.'
+              <>
+                Download the{" "}
+                <a
+                  href="/downloads/eventhub-calendar.zip"
+                  className="font-medium underline underline-offset-2"
+                >
+                  EventHub Calendar plugin (.zip)
+                </a>
+                , install it under Plugins → Add New → Upload Plugin, set the host under
+                Settings → EventHub Calendar, then paste this shortcode into any page or post.
+              </>
             }
             value={shortcode}
           />

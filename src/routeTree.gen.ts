@@ -11,10 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TourRouteImport } from './routes/tour'
 import { Route as SubmitEventRouteImport } from './routes/submit-event'
+import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as EventsRouteImport } from './routes/events'
+import { Route as EmbedRouteImport } from './routes/embed'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -65,6 +68,7 @@ import { Route as AuthenticatedCoordinatorSettingsStylingRouteImport } from './r
 import { Route as AuthenticatedCoordinatorSettingsOrganizersRouteImport } from './routes/_authenticated/coordinator.settings.organizers'
 import { Route as AuthenticatedCoordinatorSettingsEmbedRouteImport } from './routes/_authenticated/coordinator.settings.embed'
 import { Route as AuthenticatedCoordinatorSettingsCustomFieldsRouteImport } from './routes/_authenticated/coordinator.settings.custom-fields'
+import { Route as AuthenticatedCoordinatorSettingsBrandingRouteImport } from './routes/_authenticated/coordinator.settings.branding'
 import { Route as ApiV1EventsIdTicketsRouteImport } from './routes/api/v1/events.$id.tickets'
 import { Route as ApiV1EventsIdRsvpsRouteImport } from './routes/api/v1/events.$id.rsvps'
 import { Route as ApiV1EventsIdTicketsTicketIdRouteImport } from './routes/api/v1/events.$id.tickets.$ticketId'
@@ -77,6 +81,11 @@ const TourRoute = TourRouteImport.update({
 const SubmitEventRoute = SubmitEventRouteImport.update({
   id: '/submit-event',
   path: '/submit-event',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SigninRoute = SigninRouteImport.update({
+  id: '/signin',
+  path: '/signin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SetupRoute = SetupRouteImport.update({
@@ -94,9 +103,19 @@ const McpRoute = McpRouteImport.update({
   path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EventsRoute = EventsRouteImport.update({
   id: '/events',
   path: '/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedRoute = EmbedRouteImport.update({
+  id: '/embed',
+  path: '/embed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -363,6 +382,12 @@ const AuthenticatedCoordinatorSettingsCustomFieldsRoute =
     path: '/coordinator/settings/custom-fields',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCoordinatorSettingsBrandingRoute =
+  AuthenticatedCoordinatorSettingsBrandingRouteImport.update({
+    id: '/coordinator/settings/branding',
+    path: '/coordinator/settings/branding',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiV1EventsIdTicketsRoute = ApiV1EventsIdTicketsRouteImport.update({
   id: '/tickets',
   path: '/tickets',
@@ -383,10 +408,13 @@ const ApiV1EventsIdTicketsTicketIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/embed': typeof EmbedRoute
   '/events': typeof EventsRouteWithChildren
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
   '/setup': typeof SetupRoute
+  '/signin': typeof SigninRoute
   '/submit-event': typeof SubmitEventRoute
   '/tour': typeof TourRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -421,6 +449,7 @@ export interface FileRoutesByFullPath {
   '/c/$slug/speakers': typeof CSlugSpeakersRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/api/v1/': typeof ApiV1IndexRoute
+  '/coordinator/settings/branding': typeof AuthenticatedCoordinatorSettingsBrandingRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
   '/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
@@ -443,10 +472,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/embed': typeof EmbedRoute
   '/events': typeof EventsRouteWithChildren
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
   '/setup': typeof SetupRoute
+  '/signin': typeof SigninRoute
   '/submit-event': typeof SubmitEventRoute
   '/tour': typeof TourRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -480,6 +512,7 @@ export interface FileRoutesByTo {
   '/c/$slug/speakers': typeof CSlugSpeakersRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/api/v1': typeof ApiV1IndexRoute
+  '/coordinator/settings/branding': typeof AuthenticatedCoordinatorSettingsBrandingRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
   '/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
@@ -504,10 +537,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/embed': typeof EmbedRoute
   '/events': typeof EventsRouteWithChildren
+  '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
   '/setup': typeof SetupRoute
+  '/signin': typeof SigninRoute
   '/submit-event': typeof SubmitEventRoute
   '/tour': typeof TourRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -542,6 +578,7 @@ export interface FileRoutesById {
   '/c/$slug_/speakers': typeof CSlugSpeakersRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/api/v1/': typeof ApiV1IndexRoute
+  '/_authenticated/coordinator/settings/branding': typeof AuthenticatedCoordinatorSettingsBrandingRoute
   '/_authenticated/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   '/_authenticated/coordinator/settings/embed': typeof AuthenticatedCoordinatorSettingsEmbedRoute
   '/_authenticated/coordinator/settings/organizers': typeof AuthenticatedCoordinatorSettingsOrganizersRoute
@@ -566,10 +603,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/embed'
     | '/events'
+    | '/login'
     | '/mcp'
     | '/onboarding'
     | '/setup'
+    | '/signin'
     | '/submit-event'
     | '/tour'
     | '/.well-known/oauth-protected-resource'
@@ -604,6 +644,7 @@ export interface FileRouteTypes {
     | '/c/$slug/speakers'
     | '/admin/'
     | '/api/v1/'
+    | '/coordinator/settings/branding'
     | '/coordinator/settings/custom-fields'
     | '/coordinator/settings/embed'
     | '/coordinator/settings/organizers'
@@ -626,10 +667,13 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/embed'
     | '/events'
+    | '/login'
     | '/mcp'
     | '/onboarding'
     | '/setup'
+    | '/signin'
     | '/submit-event'
     | '/tour'
     | '/.well-known/oauth-protected-resource'
@@ -663,6 +707,7 @@ export interface FileRouteTypes {
     | '/c/$slug/speakers'
     | '/admin'
     | '/api/v1'
+    | '/coordinator/settings/branding'
     | '/coordinator/settings/custom-fields'
     | '/coordinator/settings/embed'
     | '/coordinator/settings/organizers'
@@ -686,10 +731,13 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/embed'
     | '/events'
+    | '/login'
     | '/mcp'
     | '/onboarding'
     | '/setup'
+    | '/signin'
     | '/submit-event'
     | '/tour'
     | '/.well-known/oauth-protected-resource'
@@ -724,6 +772,7 @@ export interface FileRouteTypes {
     | '/c/$slug_/speakers'
     | '/_authenticated/admin/'
     | '/api/v1/'
+    | '/_authenticated/coordinator/settings/branding'
     | '/_authenticated/coordinator/settings/custom-fields'
     | '/_authenticated/coordinator/settings/embed'
     | '/_authenticated/coordinator/settings/organizers'
@@ -748,10 +797,13 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  EmbedRoute: typeof EmbedRoute
   EventsRoute: typeof EventsRouteWithChildren
+  LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   OnboardingRoute: typeof OnboardingRoute
   SetupRoute: typeof SetupRoute
+  SigninRoute: typeof SigninRoute
   SubmitEventRoute: typeof SubmitEventRoute
   TourRoute: typeof TourRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -791,6 +843,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SubmitEventRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/signin': {
+      id: '/signin'
+      path: '/signin'
+      fullPath: '/signin'
+      preLoaderRoute: typeof SigninRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/setup': {
       id: '/setup'
       path: '/setup'
@@ -812,11 +871,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events': {
       id: '/events'
       path: '/events'
       fullPath: '/events'
       preLoaderRoute: typeof EventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed': {
+      id: '/embed'
+      path: '/embed'
+      fullPath: '/embed'
+      preLoaderRoute: typeof EmbedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -1169,6 +1242,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCoordinatorSettingsCustomFieldsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/coordinator/settings/branding': {
+      id: '/_authenticated/coordinator/settings/branding'
+      path: '/coordinator/settings/branding'
+      fullPath: '/coordinator/settings/branding'
+      preLoaderRoute: typeof AuthenticatedCoordinatorSettingsBrandingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/v1/events/$id/tickets': {
       id: '/api/v1/events/$id/tickets'
       path: '/tickets'
@@ -1225,6 +1305,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSubmissionsRoute: typeof AuthenticatedSubmissionsRoute
   AuthenticatedCoordinatorSubmissionsRoute: typeof AuthenticatedCoordinatorSubmissionsRoute
+  AuthenticatedCoordinatorSettingsBrandingRoute: typeof AuthenticatedCoordinatorSettingsBrandingRoute
   AuthenticatedCoordinatorSettingsCustomFieldsRoute: typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   AuthenticatedCoordinatorSettingsEmbedRoute: typeof AuthenticatedCoordinatorSettingsEmbedRoute
   AuthenticatedCoordinatorSettingsOrganizersRoute: typeof AuthenticatedCoordinatorSettingsOrganizersRoute
@@ -1246,6 +1327,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSubmissionsRoute: AuthenticatedSubmissionsRoute,
   AuthenticatedCoordinatorSubmissionsRoute:
     AuthenticatedCoordinatorSubmissionsRoute,
+  AuthenticatedCoordinatorSettingsBrandingRoute:
+    AuthenticatedCoordinatorSettingsBrandingRoute,
   AuthenticatedCoordinatorSettingsCustomFieldsRoute:
     AuthenticatedCoordinatorSettingsCustomFieldsRoute,
   AuthenticatedCoordinatorSettingsEmbedRoute:
@@ -1340,10 +1423,13 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  EmbedRoute: EmbedRoute,
   EventsRoute: EventsRouteWithChildren,
+  LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   OnboardingRoute: OnboardingRoute,
   SetupRoute: SetupRoute,
+  SigninRoute: SigninRoute,
   SubmitEventRoute: SubmitEventRoute,
   TourRoute: TourRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:

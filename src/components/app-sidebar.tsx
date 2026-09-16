@@ -15,6 +15,7 @@ import {
   UserSquare2,
   ListPlus,
   Palette,
+  Paintbrush,
   Code2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -56,6 +57,7 @@ const coordinator = [
   { title: "Venues", url: "/coordinator/settings/venues", icon: MapPin },
   { title: "Organizers", url: "/coordinator/settings/organizers", icon: UserSquare2 },
   { title: "Custom fields", url: "/coordinator/settings/custom-fields", icon: ListPlus },
+  { title: "Branding", url: "/coordinator/settings/branding", icon: Paintbrush },
   { title: "Styling", url: "/coordinator/settings/styling", icon: Palette },
   { title: "Embed", url: "/coordinator/settings/embed", icon: Code2 },
 ];

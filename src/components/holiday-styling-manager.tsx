@@ -127,9 +127,9 @@ export function HolidayStylingManager() {
           {activePreset ? "Reset to the default look" : "Currently using the default look"}
         </button>
         <p className="mt-1 text-xs text-muted-foreground">
-          Want a specific color instead? Set it directly in{" "}
-          <a href="/onboarding" className="underline underline-offset-2">
-            your branding settings
+          Want a specific color, or your own CSS, instead? Set it directly in{" "}
+          <a href="/coordinator/settings/branding" className="underline underline-offset-2">
+            Branding
           </a>
           .
         </p>

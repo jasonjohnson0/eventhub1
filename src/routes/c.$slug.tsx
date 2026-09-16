@@ -222,6 +222,12 @@ function CoordinatorCalendar() {
 
   return (
     <div className="min-h-screen bg-white">
+      {coordinator.custom_css ? (
+        // Sanitized on write (sanitizeCustomCss) -- safe to inject as-is.
+        // Rendered after every other style on the page, including the
+        // theme tokens above, so a coordinator's own CSS can override them.
+        <style data-testid="coordinator-custom-css">{coordinator.custom_css}</style>
+      ) : null}
       <header
         className="border-b border-slate-200"
         style={{

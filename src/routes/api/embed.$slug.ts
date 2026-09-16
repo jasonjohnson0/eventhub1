@@ -385,7 +385,13 @@ export const Route = createFileRoute("/api/embed/$slug")({
         const preset = findPresetByColor(coordinator.primary_color);
         const badge = preset ? `${preset.emoji} ` : "";
 
+        // Already sanitized on write (sanitizeCustomCss) -- safe to inline.
+        // Rendered after STYLE (the theme tokens) so it can override them,
+        // same order as the public calendar page.
+        const customCss = coordinator.custom_css ? `<style>${coordinator.custom_css}</style>` : "";
+
         const html = `<style>${STYLE}</style>
+${customCss}
 <div class="ehx" style="--ehx-brand:${esc(brand)};--ehx-wash:${esc(brandWash(brand, brand2))}">
   <div class="ehx-bar">
     <nav class="ehx-views" aria-label="Calendar views">${tabs}</nav>

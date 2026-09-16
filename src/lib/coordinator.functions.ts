@@ -14,6 +14,9 @@ export type PublicCoordinator = {
   primary_color: string;
   secondary_color: string;
   show_nearby_events: boolean;
+  /** Already sanitized on write (see sanitizeCustomCss); safe to inject
+   *  directly into a <style> tag on the public calendar and the embed. */
+  custom_css: string | null;
 };
 
 // Same shape onboarding validates against, so a slug that can be claimed is a

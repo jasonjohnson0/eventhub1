@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { sanitizeCustomCss } from "@/lib/sanitize-css";
 
 export type CoordinatorProfile = {
   coordinator_id: string;
@@ -12,6 +13,10 @@ export type CoordinatorProfile = {
   favicon_url: string | null;
   primary_color: string;
   secondary_color: string;
+  /** Coordinator-authored CSS, sanitized on write, injected after theme
+   *  tokens on `/c/$slug` and `/api/embed/$slug` (P0 QA: presets alone
+   *  can't express a font or layout tweak). Null/empty means none set. */
+  custom_css: string | null;
   slug: string | null;
   custom_domain: string | null;
   email_provider: "lovable" | "sendgrid" | "postmark" | "mailgun" | "none";
@@ -42,6 +47,12 @@ const profileSchema = z.object({
   favicon_url: z.string().trim().max(1000).optional().nullable(),
   primary_color: hex,
   secondary_color: hex,
+  custom_css: z
+    .string()
+    .max(20000, "Keep custom CSS under 20,000 characters")
+    .optional()
+    .nullable()
+    .transform((v) => (v ? sanitizeCustomCss(v) : v)),
   slug: z
     .string()
     .trim()

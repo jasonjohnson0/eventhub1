@@ -26,8 +26,12 @@ server returns. Hence a server-side fetch.
 
 ## Install
 
-1. Zip the `eventhub-calendar` folder and upload it under **Plugins → Add New →
-   Upload Plugin**, then activate it.
+1. Download the plugin as a `.zip` -- either the pre-built copy at
+   `/downloads/eventhub-calendar.zip` on your EventHub instance (linked from
+   Settings → Embed in the app, kept in sync with `eventhub-calendar.php`
+   below), or zip the `eventhub-calendar` folder yourself if you'd rather
+   build from source. Upload it under **Plugins → Add New → Upload Plugin**,
+   then activate it.
 2. Go to **Settings → EventHub Calendar** and set the EventHub URL and, if you
    like, a default calendar slug.
 3. Put `[eventhub_calendar]` in a page.
