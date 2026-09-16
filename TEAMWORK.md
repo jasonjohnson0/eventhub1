@@ -1149,3 +1149,96 @@ tested end-to-end. The schema, encryption, connect/disconnect functions,
 push logic, and settings UI can all be built and unit/DB/mock-tested
 without them; only the real OAuth handshake needs the actual client
 credentials. Flagging now so it's not a surprise mid-implementation.
+
+---
+
+### 2026-09-16 00:55 UTC — Claude — P0 broken-surfaces QA pass: verified each claim, fixed what was real
+
+Jason relayed a 15-item bug-bash report (P0 broken surfaces, P0 look
+customization, P1 embed consistency, P1 onboarding/dashboard, P2 backlog)
+against production `dothantoday.com`. Per this file's own rule, verified
+every claim against the actual code (and, for several, empirically against
+a real running instance) before fixing anything -- some turned out to
+already be correct in this repo, and treating those as bugs would have
+meant "fixing" code that isn't broken.
+
+**Confirmed real and fixed, all four with new automated test coverage:**
+
+1. **`/embed`, `/login`, `/signin` all 404'd** -- there was no route at any
+   of the three. `/embed` now renders a real explainer page for a
+   signed-out visitor and redirects a live coordinator straight to
+   `/coordinator/settings/embed`. `/login` and `/signin` redirect to
+   `/auth`, forwarding a `next` (or `redirect`) param if present.
+2. **No page existed for revisiting brand colors post-launch, and no
+   custom-CSS mechanism existed at all.** Built `/coordinator/settings/branding`:
+   the same color fields onboarding sets (onboarding's Branding step only
+   runs once -- it redirects a live coordinator to `/dashboard`), plus an
+   Advanced custom-CSS textarea. New `coordinator_profiles.custom_css`
+   column (migration `20260916000000_branding_custom_css.sql`), sanitized
+   server-side (`sanitize-css.ts` -- strips `<`/`>`, `@import`,
+   `expression(`, `javascript:`, `behavior:`; restricts `url()` to
+   `http(s)`/`data:`) before it's ever stored, then injected as a
+   `<style>` tag after the theme tokens on both `/c/$slug` and
+   `/api/embed/$slug`. Verified end-to-end with a real save-a-marker-rule
+   round trip against both surfaces, including that the dangerous bits
+   actually get stripped, not just that the safe ones survive. The holiday
+   preset picker's "your branding settings" link now points here instead
+   of back into `/onboarding`.
+3. **Embed settings page: what you copied didn't match what you
+   previewed.** The iframe snippet pointed at `/c/$slug` (the full page,
+   header/nav and all); the live preview and the raw-fragment box both
+   already correctly used `/api/embed/$slug`. Now all three agree. Added
+   real height and border controls that mutate the copyable snippet --
+   previously only "Starting view" did anything.
+4. **The WordPress plugin's install instructions said "zip the
+   `eventhub-calendar` folder yourself,"** which requires repo access no
+   actual coordinator has -- there was no path to actually get the plugin.
+   Built and committed a real `public/downloads/eventhub-calendar.zip`,
+   linked from the settings page; `wordpress-plugin/README.md` updated to
+   match.
+
+**Claimed but not reproducible against the current code -- verified
+directly, not dismissed on a hunch:**
+
+- *"Theme apply doesn't stick"* -- wrote a real repro (click a holiday
+  preset, check the button label, check `/c/$slug` and the embed for the
+  new color) against this repo's current code. It sticks: the button
+  updates immediately, and both public surfaces reflect the new color.
+  Formalized as `tests/browser/branding-settings.mjs`'s coverage isn't
+  this exact case (that test covers the new Branding page), but the
+  manual repro is in this session's own record if anyone wants to rerun it.
+- *"Stale 'Set up a calendar' CTA once live"* -- `dashboard.tsx` already
+  gates this on `coordinatorState === "none"` specifically, not shown for
+  `"complete"` or `"pending"`. Already correct.
+- *"`/onboarding` after live doesn't redirect"* -- `onboarding.tsx`'s
+  `beforeLoad` already redirects a coordinator with `setup_completed_at`
+  set straight to `/dashboard`, verified directly with a live-coordinator
+  session hitting the URL.
+
+Most likely explanation for all three: the QA pass ran against production
+`dothantoday.com`, which may not have every commit from this repo's more
+recent work deployed yet (task #17 "Pair secondary_color with each styling
+preset" and #21 "Guard /onboarding once a coordinator is live" both predate
+this session and already cover this exact ground). Flagging for Jason
+rather than guessing: **worth confirming `dothantoday.com` is running a
+current build** before the next QA pass, so real gaps don't get lost in
+deploy-lag false positives, and so this session doesn't spend time
+"fixing" correct code next time either.
+
+**Test coverage added:** `tests/db/branding-custom-css.py` (schema, RPC
+grants, that a not-yet-live coordinator's custom_css never leaks through
+the public RPC), `tests/browser/branding-settings.mjs` (the branding page
+end-to-end, including sanitization), `tests/browser/dead-route-fixes.mjs`
+(the three dead routes, the plugin zip, the embed snippet/preview match
+and its new controls). Typecheck clean, correctness lint clean, full
+`tests/run.sh` green (`/tmp/eh-full-run-p0.log`, ALL SUITES PASSED).
+
+**Not yet addressed this pass** (P1/P2 from the same report, deferred --
+build order is still 10/11/12 first unless Jason wants this queue
+reprioritized too): shortcode/plugin-docs polish beyond the zip fix,
+slug validation edge cases (reject spaces, "already taken" + suggest),
+go-live field-blocking indicator, Jackson/Marianna branding-bleed
+regression guard (H1 already fixed once -- this would just be a permanent
+test), admin force publish/unpublish confirm+audit, and re-confirming the
+promote-to-coordinator dialog (M1/#24 already did this once). None of
+these were touched, nothing was assumed fixed -- explicitly still open.
