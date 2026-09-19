@@ -1378,3 +1378,35 @@ itself resolves as available. Full `tests/run.sh` (lint, unit, db,
 browser, wordpress-plugin) green.
 
 Continuing to item 4 (go-live field-blocking indicator) next.
+
+---
+
+### 2026-09-19 14:23 UTC — Claude — Go-live field-blocking indicator (P1 backlog item 4)
+
+The Review & activate step already showed every field's value in a
+summary grid, with "--" for anything blank -- but nothing called that
+out. Only the calendar address actually gated the Go Live button
+(correct, from the earlier P0 fix); organization name and logo have
+graceful fallbacks elsewhere (`c.$slug.tsx`, `api/embed.$slug.ts` both
+fall back to the slug itself, or "Event calendar") so making them hard
+blockers would be wrong, but a coordinator had no way to notice they'd
+left them blank short of scanning a dozen fields for a dash.
+
+Added a "Before you go live" checklist above the summary grid: address
+(required, blocking, same check as before), organization name and logo
+(recommended, informational, each explaining why it matters and linking
+back to the step that sets it). Nothing about what actually blocks Go
+Live changed -- this is visibility, not a new gate.
+
+Extended `tests/browser/onboarding-gate.mjs` against the existing
+UNSLUGGED fixture (has a company_name, no logo, no slug -- covers all
+three states in one page). `tests/run.sh db`/`lint` green; the browser
+suite has a pre-existing flake across a rotating set of files each run
+(already documented in this file before this session, e.g. the old
+`dashboard.mjs` note) -- confirmed unrelated by re-running repeatedly:
+different files fail each time, never the two this change touches
+(`onboarding-gate.mjs`, `edit-calendar-slug.mjs`), which pass
+consistently.
+
+Continuing to item 5 (Jackson/Marianna branding-bleed regression test)
+next.
