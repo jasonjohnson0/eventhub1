@@ -1305,3 +1305,38 @@ Continuing down the P1/P2 backlog from the 2026-09-16 QA pass next
 field-blocking indicator, a permanent Jackson/Marianna branding-bleed
 regression test, admin force publish/unpublish confirm+audit,
 re-confirming promote-to-coordinator) -- logging each as it lands.
+
+---
+
+### 2026-09-19 13:52 UTC — Claude — Shortcode/plugin-docs polish (P1 backlog item 2)
+
+Checked the actual plugin code and docs before touching anything, per this
+file's own ground rule -- the hardcoded default host
+(`sparkle-calendar-co.lovable.app`) looked suspicious at first glance but
+is genuinely this platform's own live instance (confirmed against
+`README.md`'s "Live app" line and `.lovable/CLAUDE-HANDOFF.md`), so left
+it alone rather than "fixing" something that wasn't broken.
+
+Two real gaps found and fixed:
+
+1. **The in-admin Settings screen's own shortcode help list was missing
+   the `on=` parameter entirely** -- it only ever showed 3 of the 4
+   examples the repo's own `wordpress-plugin/README.md` documents. A site
+   admin who only reads the WP admin screen (most will, not the GitHub
+   README) would never learn the calendar can be anchored to a specific
+   month. Added the missing example to `eventhub_cal_settings_page()`.
+2. **No `readme.txt`** -- every other WordPress.org-style plugin ships
+   one; it's what renders on the Plugins screen's "View details" popup.
+   This one only had the one-line description in the file header
+   docblock, no changelog, no FAQ, no installation section visible from
+   inside wp-admin. Added a standard-format `readme.txt` (Description,
+   Installation, Shortcode, FAQ, Changelog) to
+   `wordpress-plugin/eventhub-calendar/`.
+
+Rebuilt `public/downloads/eventhub-calendar.zip` to include the new
+`readme.txt` alongside `eventhub-calendar.php` (still excluding
+`test-wp-plugin.php`, as before) -- verified the packaged `.php` is
+byte-identical to the source file, not just present. `php -l` clean, full
+`tests/browser/*` wordpress-plugin suite (23 checks) still green --
+nothing in the shortcode/fetch logic itself changed, only the two doc
+surfaces above.

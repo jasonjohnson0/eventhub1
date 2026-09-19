@@ -299,9 +299,10 @@ function eventhub_cal_settings_page() {
 
 		<h2><?php esc_html_e( 'Shortcode', 'eventhub-calendar' ); ?></h2>
 		<ul>
-			<li><code>[eventhub_calendar]</code></li>
+			<li><code>[eventhub_calendar]</code> &mdash; <?php esc_html_e( 'the default calendar set above', 'eventhub-calendar' ); ?></li>
 			<li><code>[eventhub_calendar slug="riverside"]</code></li>
 			<li><code>[eventhub_calendar slug="riverside" view="list"]</code> &mdash; <code>month</code>, <code>week</code>, <code>list</code>, <code>agenda</code></li>
+			<li><code>[eventhub_calendar slug="riverside" view="month" on="2027-01-01"]</code> &mdash; <?php esc_html_e( 'anchored to a specific month', 'eventhub-calendar' ); ?></li>
 		</ul>
 		<p><?php esc_html_e( 'The calendar is fetched on the server and cached for five minutes, so it appears in your page HTML and is indexable.', 'eventhub-calendar' ); ?></p>
 	</div>
