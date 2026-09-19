@@ -12,11 +12,9 @@ import sys
 import pgserver
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-PG = os.path.join(tempfile.mkdtemp(prefix="eventhub-pg-"), "data")
-shutil.rmtree(PG, ignore_errors=True)
-os.makedirs(PG)
-os.chmod(PG, 0o777)
-uri = pgserver.get_server(PG).get_uri()
+sys.path.insert(0, os.path.join(REPO, "tests", "support"))
+from pg_temp import temp_pg_uri
+uri = temp_pg_uri()
 
 failures = 0
 

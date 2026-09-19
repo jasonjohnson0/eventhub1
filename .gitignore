@@ -38,3 +38,5 @@ dist-ssr
 .pgdata
 *.png
 !public/**/*.png
+__pycache__/
+*.pyc

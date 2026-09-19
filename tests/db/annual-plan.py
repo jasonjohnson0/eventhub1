@@ -9,6 +9,7 @@ all; the Stripe webhook (running as service_role, which bypasses RLS
 entirely) is the only path that can ever set someone's plan to active.
 """
 import os
+import sys
 import tempfile
 import glob
 import shutil
@@ -17,10 +18,9 @@ import subprocess
 import pgserver
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-PG = os.path.join(tempfile.mkdtemp(prefix="eventhub-pg-"), "data")
-shutil.rmtree(PG, ignore_errors=True)
-os.makedirs(PG); os.chmod(PG, 0o777)
-uri = pgserver.get_server(PG).get_uri()
+sys.path.insert(0, os.path.join(REPO, "tests", "support"))
+from pg_temp import temp_pg_uri
+uri = temp_pg_uri()
 
 failures = 0
 def check(name, cond, extra=""):
