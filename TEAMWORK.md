@@ -1340,3 +1340,41 @@ byte-identical to the source file, not just present. `php -l` clean, full
 `tests/browser/*` wordpress-plugin suite (23 checks) still green --
 nothing in the shortcode/fetch logic itself changed, only the two doc
 surfaces above.
+
+---
+
+### 2026-09-19 14:05 UTC — Claude — Slug validation edge cases (P1 backlog item 3)
+
+Checked the actual behavior before assuming the report was accurate.
+"Reject spaces" turned out to already work correctly both client-side
+(`onboarding.tsx`'s regex runs before any network call) and server-side
+(`saveCoordinatorProfile`'s `profileSchema` regex) -- no fix needed there,
+just locked it down with a new browser check so it stays true.
+
+Two real gaps, found by actually reading `checkSlugAvailable` and the two
+UI call sites rather than guessing:
+
+1. `checkSlugAvailable`'s own input schema (`onboarding.functions.ts`) only
+   checked length, not format -- every *other* slug-touching schema in
+   that file enforces the same regex, this one didn't. Extracted the
+   regex the other two already used into one `SLUG_RE` constant and
+   applied it here too, so a caller who bypasses the client's own
+   pre-check can't ask the availability RPC about a structurally invalid
+   slug.
+2. "Already taken" never suggested anything -- a coordinator just hit a
+   dead end and had to guess a new address themselves. Added: the moment
+   a slug reads as taken, check five numbered variants (`base-2` through
+   `base-6`) in parallel, and surface the first available one as a
+   one-click "try X instead" that refills the field. Same behavior on
+   both the onboarding wizard's Address step and the settings "Change
+   address" dialog -- they already shared the same live-check pattern, so
+   this is the same fix applied twice, not two different features.
+
+Extended `tests/browser/edit-calendar-slug.mjs` (settings dialog, the one
+with existing coverage): a slug with a space is rejected as invalid, not
+treated as taken or available; a taken slug now offers a suggestion; the
+suggestion button is clickable and refills the input; the suggested slug
+itself resolves as available. Full `tests/run.sh` (lint, unit, db,
+browser, wordpress-plugin) green.
+
+Continuing to item 4 (go-live field-blocking indicator) next.
