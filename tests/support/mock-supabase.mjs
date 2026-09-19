@@ -170,6 +170,17 @@ const API_RATE_BUCKETS = [];
 // rather than asserting against a canned fixture.
 const ADMIN_AUDIT_LOG = [];
 let nextAuditId = 1;
+
+// GoTrue admin.listUsers() fixture, for the admin Users page (promoteUser,
+// banUser). COORD is seeded as admin below so the pre-existing "every
+// fixture user is admin by default" nav-gating behavior (route.tsx's own
+// user_roles lookup) keeps working -- OTHER starts with no role at all
+// ("user"), a genuine promote target.
+const ADMIN_USERS = [
+  { id: COORD, email: 'coord@example.com', created_at: '2026-01-01T00:00:00.000Z', last_sign_in_at: '2026-09-01T00:00:00.000Z' },
+  { id: OTHER, email: 'other@example.com', created_at: '2026-02-01T00:00:00.000Z', last_sign_in_at: null },
+];
+const USER_ROLES = [{ user_id: COORD, role: 'admin' }];
 let nextEventId = 1;
 let nextVenueId = 1;
 let nextTicketId = 1;
@@ -254,8 +265,33 @@ function handle(req, res) {
   // and the server functions' middleware verifies a token against the same.
   if (path === '/auth/v1/user') return send(userFromAuthHeader());
   if (path === '/auth/v1/.well-known/jwks.json') return send({ keys: [] });
+  // supabaseAdmin.auth.admin.listUsers() -- the admin Users page's fixture
+  // list. Must come before the /auth/v1 catch-all below, which would
+  // otherwise answer with a session-shaped body listUsers() can't parse.
+  if (path === '/auth/v1/admin/users') return send({ users: ADMIN_USERS, aud: 'authenticated' });
   if (path.startsWith('/auth/v1')) return send({ data: { session: null }, session: null, user: null });
-  if (path === '/rest/v1/user_roles') return send([{ role: 'admin' }]);
+
+  if (path === '/rest/v1/user_roles') {
+    const userId = parseEq(url.search, 'user_id');
+    const role = parseEq(url.search, 'role');
+    if (req.method === 'POST') {
+      // promoteUser's / the admin-setup / staff-invite upsert(onConflict:
+      // "user_id,role") -- idempotent, same as a real upsert.
+      let body = {};
+      try { body = JSON.parse(req.__body || '{}'); } catch {}
+      const incoming = Array.isArray(body) ? body : [body];
+      for (const r of incoming) {
+        if (!USER_ROLES.some((x) => x.user_id === r.user_id && x.role === r.role)) {
+          USER_ROLES.push({ user_id: r.user_id, role: r.role });
+        }
+      }
+      return send(wantsObject ? incoming[0] : incoming);
+    }
+    let rows = USER_ROLES;
+    if (userId) rows = rows.filter((r) => r.user_id === userId);
+    if (role) rows = rows.filter((r) => r.role === role);
+    return send(wantsObject ? (rows[0] ?? null) : rows);
+  }
 
   // The coordinator lookup goes through an RPC now, not a table select,
   // because production does not grant anon SELECT on coordinator_profiles.
