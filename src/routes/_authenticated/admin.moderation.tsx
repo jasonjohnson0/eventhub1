@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { adminListEvents, adminRemoveEvent } from "@/lib/admin.stats.functions";
+import { adminListEvents, adminRemoveEvent, adminRestoreEvent } from "@/lib/admin.stats.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/moderation")({
@@ -20,6 +20,7 @@ function ModerationPage() {
   const [status, setStatus] = useState<"all" | "approved" | "removed">("all");
   const [rows, setRows] = useState<EventRow[]>([]);
   const [removing, setRemoving] = useState<EventRow | null>(null);
+  const [restoring, setRestoring] = useState<EventRow | null>(null);
   const [reason, setReason] = useState("");
 
   async function reload() {
@@ -40,6 +41,19 @@ function ModerationPage() {
       await reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to remove");
+    }
+  }
+
+  async function confirmRestore() {
+    if (!restoring) return;
+    try {
+      await adminRestoreEvent({ data: { id: restoring.id, reason } });
+      toast.success("Event restored");
+      setRestoring(null);
+      setReason("");
+      await reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to restore");
     }
   }
 
@@ -86,9 +100,27 @@ function ModerationPage() {
                 </TableCell>
                 <TableCell>{new Date(r.created_at).toLocaleDateString()}</TableCell>
                 <TableCell className="text-right">
-                  {r.status !== "removed" && (
-                    <Button size="sm" variant="destructive" onClick={() => setRemoving(r)}>
+                  {r.status !== "removed" ? (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => {
+                        setReason("");
+                        setRemoving(r);
+                      }}
+                    >
                       Remove
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => {
+                        setReason("");
+                        setRestoring(r);
+                      }}
+                    >
+                      Restore
                     </Button>
                   )}
                 </TableCell>
@@ -114,6 +146,29 @@ function ModerationPage() {
             </Button>
             <Button variant="destructive" disabled={!reason.trim()} onClick={confirmRemove}>
               Remove event
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!restoring} onOpenChange={(o) => !o && setRestoring(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restore event</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              "{restoring?.title}" will be force-published back to public listings.
+            </p>
+            <Label htmlFor="restore-reason">Reason (audit-logged)</Label>
+            <Textarea id="restore-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRestoring(null)}>
+              Cancel
+            </Button>
+            <Button disabled={!reason.trim()} onClick={confirmRestore}>
+              Restore event
             </Button>
           </DialogFooter>
         </DialogContent>

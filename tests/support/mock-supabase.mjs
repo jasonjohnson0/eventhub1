@@ -101,6 +101,10 @@ const EVENTS = [
   // embed, but must still open directly at /events/$id. Real UUID since
   // getEvent (shared with /manage) validates the id shape.
   { id: 'bbbbbbbb-2222-4222-8222-222222222222', coordinator_id: COORD, title: 'Backyard BBQ', description: 'Just the regulars.', location: 'Someone\'s backyard', start_time: day(6, 17), end_time: day(6, 20), category: 'social', status: 'approved', visibility: 'unlisted' },
+  // Admin force-publish/unpublish (P1 backlog item 6): real UUID since
+  // adminRemoveEvent/adminRestoreEvent's own input validators require one
+  // ('e1'-'e5' above predate those and would fail z.string().uuid()).
+  { id: 'cccccccc-3333-4333-8333-333333333333', coordinator_id: COORD, title: 'Founders Day Picnic', description: 'Annual picnic for admin-moderation coverage.', location: 'City Park', start_time: day(15, 12), end_time: day(15, 16), category: 'community', status: 'approved' },
   // getEvent (and the attendee functions it shares /manage and /checkin with)
   // validate `id` as a real UUID, same as production event ids -- the short
   // 'e1'-style ids above fail that check. This one exists only so
@@ -161,6 +165,11 @@ const CHAT_HOOKS = [];
 export const API_KEYS = [];
 export const EVENT_TICKETS = [];
 const API_RATE_BUCKETS = [];
+// Populated per-test via adminRemoveEvent/adminRestoreEvent's real inserts,
+// same posture as everything else here -- proves the write round-trips
+// rather than asserting against a canned fixture.
+const ADMIN_AUDIT_LOG = [];
+let nextAuditId = 1;
 let nextEventId = 1;
 let nextVenueId = 1;
 let nextTicketId = 1;
@@ -395,6 +404,23 @@ function handle(req, res) {
   // as a deliberate "nobody is staff" rather than an unhandled route.
   if (path === '/rest/v1/workspace_staff') return send(wantsObject ? null : []);
 
+  if (path === '/rest/v1/admin_audit_log') {
+    if (req.method === 'POST') {
+      let body = {};
+      try { body = JSON.parse(req.__body || '{}'); } catch {}
+      const row = {
+        id: `audit-${nextAuditId++}`,
+        created_at: new Date().toISOString(),
+        change_details: {},
+        ...body,
+      };
+      ADMIN_AUDIT_LOG.push(row);
+      return send(wantsObject ? row : [row]);
+    }
+    const rows = ADMIN_AUDIT_LOG.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return send(wantsObject ? (rows[0] ?? null) : rows);
+  }
+
   if (path === '/rest/v1/events') {
     const coordinator = parseEq(url.search, 'coordinator_id');
     const id = parseEq(url.search, 'id');
@@ -433,7 +459,23 @@ function handle(req, res) {
     // public event page or getEvent(), deliberately does not -- an unlisted
     // event still has to open by direct link).
     const visibility = parseEq(url.search, 'visibility');
-    let rows = EVENTS.filter((e) => e.status === 'approved');
+    // Every public-facing query relies on this defaulting to approved-only
+    // (real RLS's equivalent), but admin moderation explicitly asks for
+    // status=eq.removed (or no filter at all, "all") to see what a public
+    // caller never would -- respect an explicit filter when one is given
+    // rather than hardcoding approved-only unconditionally.
+    const statusFilter = parseEq(url.search, 'status');
+    // A direct-by-id lookup (adminRestoreEvent's own read-before-write, or
+    // getEvent()) is never status-filtered by default either -- same
+    // reasoning as the visibility comment above, and the actual callers
+    // agree: adminRestoreEvent explicitly looks up an event *because* it
+    // expects status='removed', so defaulting the lookup to approved-only
+    // would make every restore see a false "not found".
+    let rows = statusFilter
+      ? EVENTS.filter((e) => e.status === statusFilter)
+      : id
+        ? EVENTS
+        : EVENTS.filter((e) => e.status === 'approved');
     if (coordinator) rows = rows.filter((e) => e.coordinator_id === coordinator);
     if (id) rows = rows.filter((e) => e.id === id);
     if (visibility) rows = rows.filter((e) => (e.visibility ?? 'public') === visibility);

@@ -105,6 +105,44 @@ export const adminRemoveEvent = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** The other half of adminRemoveEvent -- force-publishing a removed event
+ *  back to public. No refund/cancellation-notice side effects (those only
+ *  make sense going the other direction); same confirm-dialog-plus-audit-
+ *  trail shape as remove, so a restore is exactly as accountable as the
+ *  removal it reverses. */
+export const adminRestoreEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) => z.object({ id: z.string().uuid(), reason: z.string().min(1).max(500) }).parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: ev, error: readErr } = await supabaseAdmin
+      .from("events")
+      .select("status")
+      .eq("id", data.id)
+      .single();
+    if (readErr) throw new Error(readErr.message);
+    if (ev.status !== "removed") throw new Error("This event isn't removed, so there's nothing to restore");
+    const { error } = await supabaseAdmin
+      .from("events")
+      .update({
+        status: "approved",
+        removed_reason: null,
+        removed_by: null,
+        removed_at: null,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("admin_audit_log").insert({
+      admin_id: context.userId,
+      action: "restore_event",
+      table_name: "events",
+      record_id: data.id,
+      change_details: { reason: data.reason },
+    });
+    return { ok: true };
+  });
+
 export const adminListUsers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data) => z.object({ search: z.string().max(200).optional() }).parse(data))
