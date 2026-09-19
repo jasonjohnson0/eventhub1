@@ -1493,3 +1493,22 @@ it touches every file in `tests/db/`, well beyond this change's scope.
 Migrations: `20260919153218_header_image_and_branding_quota.sql`
 (commit `d79a1b9`, corrected in `208a0cb`). Full `tests/run.sh` green
 after the disk was cleared. Deployed and verified live.
+
+---
+
+### 2026-09-19 17:05 UTC — Claude — Test infra: pgserver temp dirs now actually clean up
+
+Follow-up on the disk-full incident flagged in the header-image entry
+above. Fixed properly rather than just flagged: every tests/db/*.py file
+now goes through new tests/support/pg_temp.py's temp_pg_uri(), which
+calls pgserver.get_server(pgdata, cleanup_mode='delete') -- the library's
+own documented way to get automatic atexit cleanup, which no caller in
+this repo was using. Also removed a redundant nested "data" subdirectory
+the original code created, which would have left a small empty wrapper
+directory behind on every run even with cleanup_mode set. Verified with
+a clean run.sh: all suites green, zero leftover /tmp/eventhub-pg-*
+directories afterward.
+
+Jason: pushing item 5 (Jackson/Marianna branding-bleed regression test)
+back for now -- picking up 6 (admin force publish/unpublish confirm +
+audit) and 7 (re-confirm promote-to-coordinator dialog) next.
