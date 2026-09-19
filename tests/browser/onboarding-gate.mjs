@@ -55,6 +55,20 @@ check('a visible warning explains why the calendar cannot go live',
 check('the warning links back to the Address step',
   (await page.locator('button:has-text("Go back to Address")').count()) > 0);
 
+// ---- "Before you go live" checklist: what's missing, and how urgent -------
+// The UNSLUGGED fixture has a company_name set but no logo and no slug, so
+// this exercises all three states in one page: missing+blocking, present,
+// and missing+recommended (non-blocking).
+check('the go-live checklist is shown', /before you go live/i.test(body), body.slice(0, 500));
+check('calendar address is flagged as required, not just recommended',
+  /Calendar address[\s\S]{0,200}\(required\)/.test(body), body.slice(0, 800));
+check('organization name (already filled on this fixture) is not flagged as missing',
+  !/Organization name\s*—/.test(body), body.slice(0, 800));
+check('logo (unset on this fixture) is flagged as recommended, not required',
+  /Logo[\s\S]{0,200}\(recommended\)/.test(body), body.slice(0, 800));
+check('the logo checklist item links back to the branding step',
+  (await page.locator('div:has-text("Logo") >> button:has-text("Fix this")').count()) > 0);
+
 const goLive = page.locator('button:has-text("Go live")').first();
 check('the Go live button is present', (await goLive.count()) > 0);
 check('and it is disabled', await goLive.isDisabled(), 'button was clickable with no slug');

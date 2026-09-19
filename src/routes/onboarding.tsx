@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import {
+  AlertTriangle,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -742,6 +743,61 @@ function OnboardingWizard() {
             {step === 7 && (
               <section className="space-y-4">
                 <StepTitle title="Review & activate" subtitle="Everything look right?" />
+                <div className="space-y-1.5 rounded-lg border p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Before you go live
+                  </p>
+                  {[
+                    {
+                      label: "Calendar address",
+                      ok: slugState === "ok",
+                      blocking: true,
+                      hint: "People need this to find your calendar.",
+                      goToStep: 3,
+                    },
+                    {
+                      label: "Organization name",
+                      ok: !!(value("company_name") as string | undefined)?.trim(),
+                      blocking: false,
+                      hint: "Shown on your calendar and embed -- without it, visitors just see your address instead.",
+                      goToStep: 1,
+                    },
+                    {
+                      label: "Logo",
+                      ok: !!(value("logo_url") as string | undefined)?.trim(),
+                      blocking: false,
+                      hint: "Shown at the top of your calendar. Optional, but makes the page look finished.",
+                      goToStep: 2,
+                    },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-start gap-2 text-sm">
+                      {item.ok ? (
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      ) : (
+                        <AlertTriangle
+                          className={`mt-0.5 h-4 w-4 shrink-0 ${item.blocking ? "text-destructive" : "text-amber-500"}`}
+                        />
+                      )}
+                      <span className={item.ok ? "text-muted-foreground" : ""}>
+                        <span className="font-medium">{item.label}</span>
+                        {!item.ok && (
+                          <>
+                            {" — "}
+                            {item.hint}{" "}
+                            <button
+                              type="button"
+                              className="font-semibold underline underline-offset-2"
+                              onClick={() => goTo(item.goToStep)}
+                            >
+                              Fix this
+                            </button>
+                            {item.blocking ? " (required)" : " (recommended)"}
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
                 {slugState !== "ok" && (
                   <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
                     {!slug
