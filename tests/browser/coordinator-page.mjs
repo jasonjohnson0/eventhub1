@@ -74,6 +74,43 @@ check('SSR html has the coordinator title', /<title>Riverside Events Co\. — Ev
 
 check('no uncaught page errors', errors.length === 0, errors.slice(0, 2).join('; '));
 
+// ---- header background image --------------------------------------------
+// Mutates the shared riverside fixture the rest of this suite assumes is
+// unmodified (same reasoning as edit-calendar-slug.mjs's restoreSlug) --
+// restored in a finally so no test that runs after this one sees it.
+const MOCK = process.env.MOCK_URL ?? 'http://127.0.0.1:54199';
+const COORD = '11111111-1111-1111-1111-111111111111';
+const TEST_HEADER_URL = 'https://cdn.example.com/branding/header-test.jpg';
+try {
+  await fetch(`${MOCK}/rest/v1/coordinator_profiles?coordinator_id=eq.${COORD}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ header_image_url: TEST_HEADER_URL }),
+  });
+  const withHeader = await go('/c/riverside');
+  const headerHtml = await page.locator('header').first().innerHTML();
+  check('the header renders the uploaded background image', headerHtml.includes(TEST_HEADER_URL), headerHtml.slice(0, 300));
+  check('page content still renders normally alongside the header image',
+    withHeader.includes('Riverside Events Co.') && withHeader.includes('Harvest Festival'), withHeader.slice(0, 200));
+
+  await fetch(`${MOCK}/rest/v1/coordinator_profiles?coordinator_id=eq.${COORD}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ header_image_url: null }),
+  });
+  await go('/c/riverside');
+  const gradientHtml = await page.locator('header').first().innerHTML();
+  const gradientStyle = await page.locator('header').first().getAttribute('style').catch(() => null);
+  check('clearing it falls back to the color gradient, not a broken image',
+    !gradientHtml.includes(TEST_HEADER_URL) && gradientStyle?.includes('gradient'), (gradientStyle ?? '') + gradientHtml.slice(0, 200));
+} finally {
+  await fetch(`${MOCK}/rest/v1/coordinator_profiles?coordinator_id=eq.${COORD}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ header_image_url: null }),
+  }).catch(() => {});
+}
+
 await go('/c/riverside?view=month');
 await page.screenshot({ path: 'coordinator-page.png', fullPage: false });
 

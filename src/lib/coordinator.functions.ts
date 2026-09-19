@@ -17,6 +17,9 @@ export type PublicCoordinator = {
   /** Already sanitized on write (see sanitizeCustomCss); safe to inject
    *  directly into a <style> tag on the public calendar and the embed. */
   custom_css: string | null;
+  /** Background behind the header, 1920x480 (4:1) recommended. Null means
+   *  render the color-gradient header, same as before this existed. */
+  header_image_url: string | null;
 };
 
 // Same shape onboarding validates against, so a slug that can be claimed is a

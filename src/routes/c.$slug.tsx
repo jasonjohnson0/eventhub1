@@ -229,15 +229,30 @@ function CoordinatorCalendar() {
         <style data-testid="coordinator-custom-css">{coordinator.custom_css}</style>
       ) : null}
       <header
-        className="border-b border-slate-200"
+        className="relative overflow-hidden border-b border-slate-200"
         style={{
-          background: brandWash(brand, brand2),
+          background: coordinator.header_image_url ? undefined : brandWash(brand, brand2),
           borderTopColor: brand,
           borderTopWidth: 4,
           borderTopStyle: "solid",
         }}
       >
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-6 py-6">
+        {coordinator.header_image_url && (
+          <>
+            {/* 1920x480 (4:1) recommended -- anything else is cropped to fit,
+             *  same as the preview in branding settings. */}
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${coordinator.header_image_url})` }}
+              aria-hidden
+            />
+            {/* A photo can be anything -- this guarantees the existing dark
+             *  text (text-slate-900/500) stays readable regardless of what's
+             *  underneath, rather than hoping every upload happens to contrast. */}
+            <div className="absolute inset-0 bg-white/70" aria-hidden />
+          </>
+        )}
+        <div className="relative mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-6 py-6">
           {coordinator.logo_url ? (
             <img
               src={coordinator.logo_url}

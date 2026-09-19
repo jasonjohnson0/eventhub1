@@ -51,6 +51,23 @@ await page.waitForTimeout(800);
 check('the branding page rendered', page.url().includes('/coordinator/settings/branding'));
 check('no page errors on load', errs.length === 0, errs.join('; '));
 
+// ---- header background image card ------------------------------------------
+// The mock has no Supabase Storage endpoints at all (the real upload is a
+// direct browser-to-Storage call this harness can't simulate; the security-
+// critical quota/RLS logic is covered for real in tests/db/branding-storage-quota.py
+// instead) -- this only checks the card itself renders correctly and degrades
+// gracefully when the usage lookup has nothing to talk to.
+const headerCardBody = await page.innerText('body');
+check('the header image card is present', headerCardBody.includes('Header background image'), headerCardBody.slice(0, 300));
+check('it recommends the 1920x480 dimensions', headerCardBody.includes('1920') && headerCardBody.includes('480'));
+check('it states the per-file and total caps', headerCardBody.includes('2 MB') && headerCardBody.includes('12 MB'));
+check('with none uploaded, the gradient preview shows instead of a broken image',
+  headerCardBody.includes('No header image set'), headerCardBody.slice(0, 300));
+check('an upload control is offered', (await page.locator('label:has-text("Upload image")').count()) > 0);
+check('usage still renders as a real number when the storage lookup has nothing to talk to',
+  /[\d.]+ MB of 12\.0 MB used/.test(headerCardBody), headerCardBody.slice(0, 300));
+check('no page errors from the header image card either', errs.length === 0, errs.join('; '));
+
 // ---- colors save ------------------------------------------------------------
 const marker = '.ehx-brand-marker-test { color: red; }';
 const dangerous = '@import url(evil.css); .x{ background: url(javascript:alert(1)); } <script>alert(2)</script>';

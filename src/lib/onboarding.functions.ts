@@ -17,6 +17,11 @@ export type CoordinatorProfile = {
    *  tokens on `/c/$slug` and `/api/embed/$slug` (P0 QA: presets alone
    *  can't express a font or layout tweak). Null/empty means none set. */
   custom_css: string | null;
+  /** Background image behind the public calendar header, 1920x480 (4:1)
+   *  recommended. Populated only via the branding-settings upload flow
+   *  (supabase.storage.from("branding")), never free-typed -- see
+   *  BrandingHeaderImage / listHeaderImages / setHeaderImage below. */
+  header_image_url: string | null;
   slug: string | null;
   custom_domain: string | null;
   email_provider: "lovable" | "sendgrid" | "postmark" | "mailgun" | "none";
@@ -48,6 +53,7 @@ const profileSchema = z.object({
   description: z.string().trim().max(2000).optional().nullable(),
   logo_url: z.string().trim().max(1000).optional().nullable(),
   favicon_url: z.string().trim().max(1000).optional().nullable(),
+  header_image_url: z.string().trim().max(1000).optional().nullable().or(z.literal("")),
   primary_color: hex,
   secondary_color: hex,
   custom_css: z
