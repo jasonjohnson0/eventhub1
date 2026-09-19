@@ -73,6 +73,15 @@ try {
   check('your own unchanged address is refused, not offered as a no-op change',
     dialogText.includes('already your current address'), dialogText.slice(0, 300));
 
+  // A slug containing a space is rejected, not silently accepted or sent to the network.
+  await input.fill('has a space');
+  await page.waitForTimeout(700);
+  dialogText = await page.innerText('[role="dialog"]');
+  check('a slug with a space is rejected as invalid, not treated as taken or available',
+    dialogText.includes('lowercase letters, numbers and hyphens')
+      && !dialogText.includes('Already taken') && !dialogText.includes('is available'),
+    dialogText.slice(0, 300));
+
   // An address already claimed by a different coordinator.
   await input.fill('obrien');
   await page.waitForTimeout(700);
@@ -80,6 +89,20 @@ try {
   check('a slug held by someone else reads as taken', dialogText.includes('Already taken'), dialogText.slice(0, 300));
   let confirmBtn = page.getByRole('button', { name: 'Change address' }).last();
   check('Confirm stays locked while taken', await confirmBtn.isDisabled());
+
+  // Taken should offer a free alternative, not just say no.
+  await page.waitForTimeout(700);
+  dialogText = await page.innerText('[role="dialog"]');
+  check('a taken slug is offered a numbered alternative', /try obrien-\d instead/.test(dialogText),
+    dialogText.slice(0, 300));
+  const suggestionMatch = dialogText.match(/try (obrien-\d) instead/);
+  await page.getByRole('button', { name: /try obrien-\d instead/ }).click();
+  await page.waitForTimeout(700);
+  check('clicking the suggestion fills the input with it',
+    (await input.inputValue()) === suggestionMatch?.[1], await input.inputValue());
+  dialogText = await page.innerText('[role="dialog"]');
+  check('...and that suggestion itself resolves as available', dialogText.includes('is available'),
+    dialogText.slice(0, 300));
 
   // A genuinely free address.
   await input.fill('brand-new-address');

@@ -38,6 +38,9 @@ const hex = z
   .optional()
   .nullable();
 
+// Shared with the client's own live-check in onboarding.tsx and settings.tsx.
+const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
+
 const profileSchema = z.object({
   full_name: z.string().trim().max(120).optional().nullable(),
   contact_email: z.string().trim().email().max(254).optional().nullable().or(z.literal("")),
@@ -57,7 +60,7 @@ const profileSchema = z.object({
     .string()
     .trim()
     .toLowerCase()
-    .regex(/^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/, "3-40 chars: letters, numbers, hyphens")
+    .regex(SLUG_RE, "3-40 chars: letters, numbers, hyphens")
     .optional()
     .nullable()
     .or(z.literal("")),
@@ -123,7 +126,11 @@ export const saveCoordinatorProfile = createServerFn({ method: "POST" })
 
 export const checkSlugAvailable = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ slug: z.string().trim().min(3).max(40) }).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({ slug: z.string().trim().toLowerCase().min(3).max(40).regex(SLUG_RE) })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     // Slug availability is a server-side lookup; the RPC is no longer callable by clients.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -143,8 +150,6 @@ export const checkSlugAvailable = createServerFn({ method: "POST" })
 // button was never gated on the slug at all, so a coordinator could -- and
 // one did -- complete onboarding with no calendar address and be told
 // "Your calendar is live!" while /c/ had nothing to serve.
-const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
-
 export const completeOnboarding = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

@@ -111,6 +111,7 @@ function OnboardingWizard() {
   const [slugState, setSlugState] = useState<
     "idle" | "checking" | "ok" | "taken" | "invalid" | "error"
   >("idle");
+  const [slugSuggestion, setSlugSuggestion] = useState<string | null>(null);
   const [uploading, setUploading] = useState<"logo" | "favicon" | null>(null);
   const [done, setDone] = useState(false);
 
@@ -181,6 +182,7 @@ function OnboardingWizard() {
   // Slug availability
   const slug = (value("slug") ?? "") as string;
   useEffect(() => {
+    setSlugSuggestion(null);
     if (!slug) return setSlugState("idle");
     if (!/^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/.test(slug)) return setSlugState("invalid");
     setSlugState("checking");
@@ -199,6 +201,34 @@ function OnboardingWizard() {
     }, 500);
     return () => clearTimeout(t);
   }, [slug]);
+
+  // Once a slug is confirmed taken, find one that isn't rather than just
+  // saying no -- a handful of numbered variants in parallel, since checking
+  // them one at a time would mean up to a dozen round trips before landing
+  // on something free.
+  useEffect(() => {
+    if (slugState !== "taken") return;
+    let cancelled = false;
+    const base = slug.slice(0, 36).replace(/-+$/, "") || "calendar";
+    (async () => {
+      const candidates = [2, 3, 4, 5, 6].map((n) => `${base}-${n}`);
+      const results = await Promise.all(
+        candidates.map(async (candidate) => {
+          try {
+            const { available } = await checkSlugAvailable({ data: { slug: candidate } });
+            return available ? candidate : null;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      if (cancelled) return;
+      setSlugSuggestion(results.find((c): c is string => !!c) ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slugState, slug]);
 
   const uploadFile = async (kind: "logo" | "favicon", file: File) => {
     setUploading(kind);
@@ -512,7 +542,23 @@ function OnboardingWizard() {
                   {slugState === "ok" && (
                     <span className="text-primary">✅ {slug} is available</span>
                   )}
-                  {slugState === "taken" && <span className="text-destructive">Already taken</span>}
+                  {slugState === "taken" && (
+                    <span className="text-destructive">
+                      Already taken
+                      {slugSuggestion && (
+                        <>
+                          {" — "}
+                          <button
+                            type="button"
+                            className="font-semibold underline underline-offset-2"
+                            onClick={() => set("slug", slugSuggestion)}
+                          >
+                            try {slugSuggestion} instead
+                          </button>
+                        </>
+                      )}
+                    </span>
+                  )}
                   {slugState === "invalid" && (
                     <span className="text-destructive">
                       3–40 characters, lowercase letters, numbers and hyphens

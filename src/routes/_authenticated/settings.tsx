@@ -76,6 +76,7 @@ function SettingsPage() {
   const [newSlugState, setNewSlugState] = useState<
     "idle" | "checking" | "ok" | "taken" | "invalid" | "error"
   >("idle");
+  const [newSlugSuggestion, setNewSlugSuggestion] = useState<string | null>(null);
   const [savingSlug, setSavingSlug] = useState(false);
   const [staff, setStaff] = useState<StaffRow[]>([]);
   const [email, setEmail] = useState("");
@@ -214,6 +215,7 @@ function SettingsPage() {
   // your own unchanged address doesn't falsely read as "taken".
   useEffect(() => {
     if (!slugEditOpen) return;
+    setNewSlugSuggestion(null);
     if (!newSlug) return setNewSlugState("idle");
     if (!/^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/.test(newSlug)) return setNewSlugState("invalid");
     if (newSlug === calendarSlug) return setNewSlugState("invalid");
@@ -228,6 +230,31 @@ function SettingsPage() {
     }, 500);
     return () => clearTimeout(t);
   }, [newSlug, slugEditOpen, calendarSlug]);
+
+  // Same "find one that isn't taken" behavior as onboarding's Address step.
+  useEffect(() => {
+    if (newSlugState !== "taken") return;
+    let cancelled = false;
+    const base = newSlug.slice(0, 36).replace(/-+$/, "") || "calendar";
+    (async () => {
+      const candidates = [2, 3, 4, 5, 6].map((n) => `${base}-${n}`);
+      const results = await Promise.all(
+        candidates.map(async (candidate) => {
+          try {
+            const { available } = await checkSlugAvailable({ data: { slug: candidate } });
+            return available ? candidate : null;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      if (cancelled) return;
+      setNewSlugSuggestion(results.find((c): c is string => !!c) ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [newSlugState, newSlug]);
 
   async function confirmSlugEdit() {
     if (newSlugState !== "ok") return;
@@ -682,7 +709,23 @@ function SettingsPage() {
             <div className="text-sm">
               {newSlugState === "checking" && <span className="text-muted-foreground">Checking…</span>}
               {newSlugState === "ok" && <span className="text-primary">✅ {newSlug} is available</span>}
-              {newSlugState === "taken" && <span className="text-destructive">Already taken</span>}
+              {newSlugState === "taken" && (
+                <span className="text-destructive">
+                  Already taken
+                  {newSlugSuggestion && (
+                    <>
+                      {" — "}
+                      <button
+                        type="button"
+                        className="font-semibold underline underline-offset-2"
+                        onClick={() => setNewSlug(newSlugSuggestion)}
+                      >
+                        try {newSlugSuggestion} instead
+                      </button>
+                    </>
+                  )}
+                </span>
+              )}
               {newSlugState === "invalid" && (
                 <span className="text-destructive">
                   {newSlug === calendarSlug
