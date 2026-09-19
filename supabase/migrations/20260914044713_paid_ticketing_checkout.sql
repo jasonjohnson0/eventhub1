@@ -172,7 +172,18 @@ GRANT EXECUTE ON FUNCTION public.mark_ticket_refunded(UUID, TEXT) TO service_rol
 
 -- A pending/cancelled/refunded ticket used to check in fine -- only a
 -- confirmed one should ever scan successfully.
-CREATE OR REPLACE FUNCTION public.check_in_ticket(_qr_token TEXT)
+--
+-- Signature note: the 2026-08-10 migration (20260810154407) already moved
+-- this function from auth.uid() to an explicit _actor_id parameter, because
+-- checkInViaQr (src/lib/monetization.functions.ts) calls it through the
+-- service-role client, not a signed-in user's own session -- auth.uid()
+-- resolves to NULL under service_role, which would make the old
+-- authorization check pass for nobody. An earlier draft of this migration
+-- redefined a stale one-arg version here, which -- caught before it ever
+-- reached production -- would have either failed CREATE OR REPLACE outright
+-- or coexisted as a second, unreachable overload next to the real one.
+-- Keeping the two-arg signature and just adding the missing status check.
+CREATE OR REPLACE FUNCTION public.check_in_ticket(_qr_token TEXT, _actor_id UUID)
 RETURNS TABLE(purchase_id UUID, event_id UUID, user_id UUID, check_in_count INT, quantity INT, ticket_name TEXT)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
@@ -180,13 +191,14 @@ DECLARE
   v_purchase public.ticket_purchases%ROWTYPE;
   v_coord UUID;
 BEGIN
+  IF _actor_id IS NULL THEN RAISE EXCEPTION 'Not authorized'; END IF;
   SELECT * INTO v_purchase FROM public.ticket_purchases WHERE qr_token = _qr_token;
   IF NOT FOUND THEN RAISE EXCEPTION 'Ticket not found'; END IF;
   IF v_purchase.status <> 'confirmed' THEN
     RAISE EXCEPTION 'Ticket is % , not valid for check-in', v_purchase.status;
   END IF;
   SELECT coordinator_id INTO v_coord FROM public.events WHERE id = v_purchase.event_id;
-  IF v_coord IS DISTINCT FROM auth.uid() AND NOT public.has_role(auth.uid(), 'admin') THEN
+  IF v_coord IS DISTINCT FROM _actor_id AND NOT public.has_role(_actor_id, 'admin') THEN
     RAISE EXCEPTION 'Not authorized to check in this ticket';
   END IF;
   IF v_purchase.check_in_count >= v_purchase.quantity THEN
@@ -207,4 +219,5 @@ BEGIN
   RETURN NEXT;
 END;
 $$;
-GRANT EXECUTE ON FUNCTION public.check_in_ticket(TEXT) TO authenticated;
+REVOKE ALL ON FUNCTION public.check_in_ticket(TEXT, UUID) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.check_in_ticket(TEXT, UUID) TO service_role;

@@ -1242,3 +1242,66 @@ regression guard (H1 already fixed once -- this would just be a permanent
 test), admin force publish/unpublish confirm+audit, and re-confirming the
 promote-to-coordinator dialog (M1/#24 already did this once). None of
 these were touched, nothing was assumed fixed -- explicitly still open.
+
+---
+
+### 2026-09-19 13:38 UTC — Claude — Production incident: schema was months behind app code; caught up live
+
+Jason reported the live embed (`dothantoday.com` -> Jackson County Times'
+WordPress site) was 500ing. Root cause: production Supabase
+(`fopxmuaogwchohwhrclk`) had never received any migration from specs 03
+onward, nor the branding/custom_css migration -- `fetchEvents` selects
+`events.timezone` and filters `events.visibility`, neither of which
+existed on the real table. This was masked until now because the Vercel
+deployment itself had been silently blocked for five days by an unrelated
+Hobby-plan cron-frequency issue (see `docs/DEPLOY_VERCEL.md`) -- the schema
+gap only became visible the moment a deployment finally went live.
+
+Stopped the bleeding first: applied just `20260914061655_events_timezone.sql`
+and `20260914070315_private_events.sql` directly to production, verified
+both broken routes back to 200.
+
+Then did the full catch-up properly rather than leaving the gap for next
+time: replayed every migration in this repo against a disposable local
+Postgres (`pgserver`) to confirm the full chronological set applies
+cleanly end-to-end (the only failures were this sandbox's own missing
+postgis/storage extensions, pre-existing and expected), then applied
+every migration from `20260911120000_coordinator_sponsors.sql` through
+`20260916000000_branding_custom_css.sql` to production individually,
+verifying success after each one. Production schema is now caught up to
+this repo's full migration history, confirmed via `information_schema`
+and `pg_proc` queries against the real database, not assumed.
+
+**Found and left alone, flagged rather than guessed at:** production's
+`check_in_ticket` had a signature (`_qr_token, _actor_id`) that doesn't
+exist anywhere in this repo's migration files (which only ever define a
+one-arg `_qr_token` version). Did not overwrite it blindly -- confirmed
+first that the two-arg version is the real, intended one: it's what
+`checkInViaQr` (`src/lib/monetization.functions.ts:404`) actually calls,
+it's what the generated `types.ts` already declares, and it's what
+`20260810154407_461dabcd...sql` deliberately introduced (moving off
+`auth.uid()`, which resolves to NULL under the service-role client this
+function is actually called through). `20260914044713_paid_ticketing_checkout.sql`
+had reintroduced a stale one-arg version -- almost certainly written
+without noticing the August change, i.e. exactly the kind of thing that
+happens when two sessions touch overlapping ground without syncing here
+first. Left production's real function untouched rather than risk
+clobbering it with a regression.
+
+**Fixed properly, not just avoided:** corrected the migration source
+itself to redefine the real two-arg signature with the `status =
+'confirmed'` gate added (the actual point of that part of the spec 01
+migration -- production's live check-in had never gotten this gate, so
+until this fix a pending/cancelled/refunded ticket's QR would still check
+in fine). Updated `tests/db/paid-ticketing.py` to call the two-arg form
+and added a new check that an `authenticated` role is rejected
+(service_role only, matching every other function this migration adds).
+Applied the corrected function to production and verified
+`pg_get_functiondef` now contains the confirmed-only gate. Full
+`tests/run.sh db` green.
+
+Continuing down the P1/P2 backlog from the 2026-09-16 QA pass next
+(shortcode/plugin-docs polish, slug validation edge cases, go-live
+field-blocking indicator, a permanent Jackson/Marianna branding-bleed
+regression test, admin force publish/unpublish confirm+audit,
+re-confirming promote-to-coordinator) -- logging each as it lands.

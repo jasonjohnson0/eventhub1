@@ -150,22 +150,29 @@ check("refunding a purchase that is not confirmed (this one is cancelled) raises
       not ok and "cannot refund" in err.lower(), f"ok={ok} err={err}")
 
 # ---- check_in_ticket: only a confirmed ticket scans ----------------------
+# service_role-only, actor passed explicitly (checkInViaQr calls this
+# through the service-role client, so auth.uid() is not available -- see
+# 20260914044713_paid_ticketing_checkout.sql's note on this signature).
 ok, out, err = sql(f"select qr_token from public.ticket_purchases where id = '{hold3_id}';")
 qr3 = last(out)
-ok, out, err = as_user(COORD, f"select purchase_id, check_in_count from public.check_in_ticket('{qr3}');")
+ok, out, err = sql(f"select purchase_id, check_in_count from public.check_in_ticket('{qr3}', '{COORD}');")
 check("a confirmed ticket checks in", ok and "|1" in out, f"out={out} err={err}")
 
 ok, out, err = sql(f"select qr_token from public.ticket_purchases where id = '{hold2_id}';")
 qr2 = last(out)
-ok, out, err = as_user(COORD, f"select public.check_in_ticket('{qr2}');")
+ok, out, err = sql(f"select public.check_in_ticket('{qr2}', '{COORD}');")
 check("a cancelled hold's QR does not check in", not ok and "not valid for check-in" in err.lower(),
       f"ok={ok} err={err}")
 
 ok, out, err = sql(f"select qr_token from public.ticket_purchases where id = '{hold1_id}';")
 qr1 = last(out)
-ok, out, err = as_user(COORD, f"select public.check_in_ticket('{qr1}');")
+ok, out, err = sql(f"select public.check_in_ticket('{qr1}', '{COORD}');")
 check("a refunded ticket's QR does not check in", not ok and "not valid for check-in" in err.lower(),
       f"ok={ok} err={err}")
+
+ok, out, err = as_user(COORD, f"select public.check_in_ticket('{qr3}', '{COORD}');")
+check("check_in_ticket is not callable by an authenticated user directly (service_role only)",
+      not ok and "permission denied" in err.lower(), f"ok={ok} err={err}")
 
 print("\n" + ("ALL CHECKS PASSED" if failures == 0 else f"{failures} FAILURES"))
 import sys
