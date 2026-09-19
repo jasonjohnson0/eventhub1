@@ -46,8 +46,18 @@ CREATE POLICY "Branding read own folder" ON storage.objects
 -- Per-coordinator storage quota for the branding bucket (logo, favicon,
 -- header images -- everything under {uid}/ in this one bucket shares the
 -- budget). 2 MB per individual file, 12 MB total per coordinator folder.
+--
+-- Lives in public, not storage: Supabase Cloud's `postgres` role has USAGE
+-- on the storage schema but not CREATE -- confirmed directly against
+-- production (`has_schema_privilege('postgres','storage','CREATE')` is
+-- false), so a brand-new function cannot be created inside it. Existing
+-- objects there (a policy or trigger on the existing storage.objects
+-- table) can still be added -- that's an operation on a table this role
+-- already has rights over, not schema-level DDL. A trigger can call a
+-- function in any schema, so the function goes in public (full rights,
+-- established all session) and only the TRIGGER attaches to storage.objects.
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION storage.enforce_branding_quota()
+CREATE OR REPLACE FUNCTION public.enforce_branding_quota()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -90,13 +100,13 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION storage.enforce_branding_quota() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.enforce_branding_quota() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS branding_quota_check ON storage.objects;
 CREATE TRIGGER branding_quota_check
   BEFORE INSERT OR UPDATE ON storage.objects
   FOR EACH ROW
-  EXECUTE FUNCTION storage.enforce_branding_quota();
+  EXECUTE FUNCTION public.enforce_branding_quota();
 
 -- ---------------------------------------------------------------------------
 -- Expose header_image_url through the same public RPC that already carries
