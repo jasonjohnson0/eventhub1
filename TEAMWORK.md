@@ -1512,3 +1512,44 @@ directories afterward.
 Jason: pushing item 5 (Jackson/Marianna branding-bleed regression test)
 back for now -- picking up 6 (admin force publish/unpublish confirm +
 audit) and 7 (re-confirm promote-to-coordinator dialog) next.
+
+---
+
+### 2026-09-19 17:22 UTC — Claude — Admin force-publish (item 6) and promote-to-coordinator regression (item 7)
+
+Per Jason's steer: item 5 (Jackson/Marianna) pushed back for now, moved
+straight to 6 and 7.
+
+**Item 6 -- admin force publish/unpublish.** Verified first: adminRemoveEvent
+already had a confirm dialog and an audit-logged reason -- not a gap. The
+real gap was the other direction: nothing let an admin force-publish a
+removed event back at all. Added `adminRestoreEvent` (same confirm-dialog-
+plus-audit shape as remove, no refund/notification side effects since
+those only make sense removing) and a Restore button on the moderation
+page for removed events. Two real mock-server bugs found and fixed while
+building this, not assumed: `'e1'`-`'e5'` fixtures predate
+adminRemoveEvent/adminRestoreEvent's `z.string().uuid()` input validators
+and fail them outright (added a dedicated real-UUID fixture event); and a
+direct by-id event lookup was silently defaulting to approved-only, the
+same as a public listing query -- meaning adminRestoreEvent's own
+read-before-write could never find the removed row it was specifically
+looking for.
+
+**Item 7 -- promote-to-coordinator.** Verified first, same ground rule:
+the confirm dialog, the "already a coordinator" guard, and the audit log
+write (`promote_user`) were all already correct -- fixed once before as
+M1, nothing had regressed. What was missing was a permanent test, so
+that's what got added: a real click-through covering the dialog content,
+cancel (confirms nothing happens), confirm (checks the toast and the new
+badge), and re-opening for an already-promoted user (confirms the guard
+short-circuits). Needed real mock support that flat-out didn't exist:
+GoTrue's `admin.listUsers()` -- the whole admin Users page 500'd against
+the mock before this, zero prior coverage ever caught it -- and a real
+per-user `user_roles` table in place of a blanket "everyone is admin"
+stub, keeping that stub's effective behavior for the one caller that
+relied on it (route.tsx's nav-gating check).
+
+Both deployed. Full `tests/run.sh` green throughout, zero leftover
+pgserver temp dirs (the cleanup fix from earlier this session held).
+
+Backlog now: only item 5 (deferred) remains from the 2026-09-16 QA pass.
