@@ -1410,3 +1410,86 @@ consistently.
 
 Continuing to item 5 (Jackson/Marianna branding-bleed regression test)
 next.
+
+---
+
+### 2026-09-19 16:30 UTC — Claude — Coordinator header background images, with a real per-coordinator storage quota
+
+New feature request from Jason: let a coordinator upload a background
+image behind their calendar header (1920x480, 4:1), with "their own
+secure storage based on their login," capped at 12 MB total per
+coordinator (multiple images allowed as long as the total stays under
+budget), 2 MB per file.
+
+Researched before building: there was no existing "fixed header
+dimension" anywhere -- the calendar header (`/c/$slug`) is a plain CSS
+gradient with no image concept at all. The only other "header image"
+feature in the repo is a completely different thing (a per-*event* hero
+banner, URL-paste only, no storage). Flagged this to Jason before
+picking dimensions myself -- confirmed 1920x480 (4:1) and the 12 MB
+total.
+
+**Real security finding, fixed as part of this:** the upload path is a
+direct browser-to-Supabase-Storage call (same as the existing
+logo/favicon flow), with no server function in between -- meaning
+quota enforcement cannot live in application code at all; a
+coordinator's own session already has RLS permission to insert into
+their own folder, so anything short of a database-level check is a
+check the client can simply skip. Also found the branding bucket's
+*read* policy had no folder scoping at all -- any signed-in coordinator
+could list/read every other coordinator's branding files directly,
+the only one of the four storage policies that wasn't already scoped
+to the caller's own folder. Public serving of logos/favicons is
+unaffected (long-lived signed URLs don't depend on the requester's own
+RLS).
+
+Built: a BEFORE INSERT/UPDATE trigger on `storage.objects` enforcing
+both caps, the read-policy fix, `coordinator_profiles.header_image_url`,
+and `src/lib/branding-storage.functions.ts` (list with usage totals,
+activate, delete -- service-role, so usage is computed once server-side
+rather than trusting the client to sum bytes). New card in
+branding-settings.tsx: upload, live preview with graceful fallback to
+the color gradient, a picker for previously-uploaded images, usage
+shown as "X of 12 MB used". Rendered on `/c/$slug` behind the header
+bar with a white scrim so existing dark text stays legible regardless
+of what gets uploaded. Deliberately NOT added to the embed fragment --
+that's a compact widget by design, not a bannered page; said so
+directly in the settings copy rather than overclaiming.
+
+**Found and fixed while deploying, not just while coding:** the
+migration as originally written put the quota-trigger function in the
+`storage` schema, which applied fine locally but failed against real
+production with `permission denied for schema storage` --
+`has_schema_privilege('postgres', 'storage', 'CREATE')` is false on
+Supabase Cloud even though the same role can still modify *existing*
+objects there (a policy, a trigger on the pre-existing storage.objects
+table). Moved the function to `public` -- a trigger can call a function
+in any schema -- verified the corrected version applies to production,
+confirmed the trigger is actually attached (`pg_trigger`), then fixed
+the committed migration file to match rather than leaving it silently
+wrong for the next person who replays this repo's history.
+
+**Tested where it matters:** `tests/db/branding-storage-quota.py`
+builds a minimal local stand-in for Supabase Storage's schema
+(`storage.objects` + `foldername()`, not part of a vanilla Postgres)
+so the actual migration file runs unmodified and its trigger/policy
+logic is exercised for real -- per-file cap, cumulative total, quota
+freed by deletion, and the cross-tenant read block, all confirmed
+directly rather than assumed. Browser coverage in
+`coordinator-page.mjs` (header renders the image, falls back cleanly)
+and `branding-settings.mjs` (the new card renders and degrades
+gracefully with nothing to list, since the mock has no real Storage
+endpoints).
+
+**Environment note for whoever runs this suite a lot in one sitting:**
+`tests/db/*.py` never clean up their own throwaway Postgres data
+directories (`tempfile.mkdtemp(prefix="eventhub-pg-")`) -- this
+session hit 719 leftover directories and 100% disk usage from
+repeated `tests/run.sh` runs, which cascaded into unrelated failures
+across the whole suite (both db and browser) until manually cleared.
+Queued as a separate cleanup task rather than fixed inline here, since
+it touches every file in `tests/db/`, well beyond this change's scope.
+
+Migrations: `20260919153218_header_image_and_branding_quota.sql`
+(commit `d79a1b9`, corrected in `208a0cb`). Full `tests/run.sh` green
+after the disk was cleared. Deployed and verified live.
