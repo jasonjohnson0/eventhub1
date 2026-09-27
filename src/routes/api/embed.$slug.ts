@@ -10,7 +10,7 @@ import {
 } from "@/queries/events";
 import { supabase } from "@/integrations/supabase/client";
 import { siteOrigin } from "@/lib/site-url";
-import { brandWash, findPresetByColor } from "@/lib/organizer-presets";
+import { brandWash, findPresetByColor, readableTextColor } from "@/lib/organizer-presets";
 import { safeTimeZone } from "@/lib/timezone";
 
 /**
@@ -161,7 +161,7 @@ const STYLE = armour(`
 .ehx-chip-cont{opacity:.72;border-left:3px solid var(--ehx-brand)}
 .ehx-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
 .ehx-item{display:flex;gap:12px;border:1px solid #e4e4e7;border-radius:12px;padding:12px}
-.ehx-when{min-width:96px;font-size:12px;font-weight:700;color:var(--ehx-brand);text-transform:uppercase}
+.ehx-when{min-width:96px;font-size:12px;font-weight:700;color:var(--ehx-brand-text,var(--ehx-brand));text-transform:uppercase}
 .ehx-title{font-weight:650;margin:0 0 2px}
 .ehx-meta{font-size:13px;color:#71717a;margin:0}
 .ehx-empty{border:1px dashed #e4e4e7;border-radius:12px;padding:28px;text-align:center;color:#71717a}
@@ -392,7 +392,7 @@ export const Route = createFileRoute("/api/embed/$slug")({
 
         const html = `<style>${STYLE}</style>
 ${customCss}
-<div class="ehx" style="--ehx-brand:${esc(brand)};--ehx-wash:${esc(brandWash(brand, brand2))}">
+<div class="ehx" style="--ehx-brand:${esc(brand)};--ehx-brand-text:${esc(readableTextColor(brand))};--ehx-wash:${esc(brandWash(brand, brand2))}">
   <div class="ehx-bar">
     <nav class="ehx-views" aria-label="Calendar views">${tabs}</nav>
     ${nav}
