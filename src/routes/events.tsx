@@ -85,6 +85,11 @@ function EventsPage() {
   const [holidayTheme] = useHolidayTheme();
   const christmasVariant = useChristmasVariant();
   const theme = holidayTheme ? HOLIDAY_THEMES[holidayTheme] : null;
+  // The top bar floats over the hero, so on a dark generic hero (Halloween,
+  // Good Friday, New Year's) its text has to go light too. ChristmasHero
+  // renders its own look and is left as it was.
+  const darkHero = !!theme?.dark && holidayTheme !== "christmas";
+  const ghostOnHero = darkHero ? "text-white/90 hover:bg-white/10 hover:text-white" : "";
 
   const query = search.q;
   const category = search.category ? search.category : null;
@@ -213,15 +218,18 @@ function EventsPage() {
     <div className="min-h-screen bg-gradient-to-b from-white via-amber-50/40 to-white">
       {/* Top bar */}
       <header className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between px-6 py-5">
-        <Link to="/events" className="flex items-center gap-2 text-lg font-black text-slate-900">
+        <Link
+          to="/events"
+          className={`flex items-center gap-2 text-lg font-black ${darkHero ? "text-white" : "text-slate-900"}`}
+        >
           <PartyPopper className={`h-6 w-6 ${theme?.accentText ?? "text-fuchsia-500"}`} />
           EventHub
         </Link>
         <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="ghost" className="rounded-full">
+          <Button asChild size="sm" variant="ghost" className={`rounded-full ${ghostOnHero}`}>
             <Link to="/tour">Tour</Link>
           </Button>
-          <Button asChild size="sm" variant="ghost" className="rounded-full">
+          <Button asChild size="sm" variant="ghost" className={`rounded-full ${ghostOnHero}`}>
             <Link to="/submit-event">Submit an event</Link>
           </Button>
           {signedIn ? (

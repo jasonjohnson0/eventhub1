@@ -38,15 +38,33 @@ const PILL_COLORS: Record<string, string> = {
 export function PublicHero({ query, onQuery, category, onCategory, theme }: Props) {
   const fired = useRef(false);
   const confettiColors = theme?.confettiColors ?? DEFAULT_CONFETTI;
+  // Solemn days (Good Friday, Ash Wednesday) get no burst at all; quieter
+  // ones (Memorial Day, Advent...) a short, slow, sparse one.
+  const confettiStyle = theme?.confettiStyle;
+  const muted = confettiStyle === "muted";
+  // The theme comes from localStorage, which the server can't see, so the
+  // hydration render always has theme = null and the stored theme only
+  // arrives on the re-render right after. The intro burst reads it from this
+  // ref when it actually fires (250ms later) rather than from the mount
+  // render's closure -- otherwise every visitor got the default colors, and a
+  // Good Friday visitor got a party.
+  const themeRef = useRef(theme);
+  useEffect(() => {
+    themeRef.current = theme;
+  });
   useEffect(() => {
     if (fired.current) return;
     fired.current = true;
     const t = setTimeout(() => {
+      const current = themeRef.current;
+      if (current?.confettiStyle === "none") return;
+      const quiet = current?.confettiStyle === "muted";
       confetti({
-        particleCount: 120,
-        spread: 90,
+        particleCount: quiet ? 30 : 120,
+        spread: quiet ? 60 : 90,
         origin: { y: 0.35 },
-        colors: confettiColors,
+        colors: current?.confettiColors ?? DEFAULT_CONFETTI,
+        ...(quiet ? { gravity: 0.6, scalar: 0.8, ticks: 150 } : {}),
       });
     }, 250);
     return () => clearTimeout(t);
@@ -55,11 +73,13 @@ export function PublicHero({ query, onQuery, category, onCategory, theme }: Prop
   }, []);
 
   function burst() {
+    if (confettiStyle === "none") return;
     confetti({
-      particleCount: 60,
+      particleCount: muted ? 15 : 60,
       spread: 60,
       origin: { y: 0.4 },
       colors: confettiColors,
+      ...(muted ? { gravity: 0.6, scalar: 0.8, ticks: 150 } : {}),
     });
   }
 

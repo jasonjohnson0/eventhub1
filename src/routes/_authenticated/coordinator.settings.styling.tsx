@@ -25,8 +25,8 @@ function StylingPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Calendar styling</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Pick a holiday look for your public calendar and embed. One click, no CSS needed --
-            change it as often as you like.
+            Pick a holiday or monthly-observance look for your public calendar and embed. One
+            click, no CSS needed -- change it as often as you like.
           </p>
         </div>
         <HolidayStylingManager />
