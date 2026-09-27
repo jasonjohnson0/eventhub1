@@ -101,6 +101,38 @@ export function fromFloating(floating: Date, timeZone: string): Date {
   return new Date(floating.getTime() - offset);
 }
 
+/** A floating wall-clock Date -> its real instant in `timeZone`, resolving the
+ *  two DST edge cases exactly as RFC 5545 §3.3.5 specifies (so recurrence
+ *  here agrees with Google/Apple/Outlook reading the same RRULE):
+ *   - a wall time in a spring-forward GAP (never occurs) is interpreted with
+ *     the UTC offset in effect *before* the gap, landing just after it
+ *     (02:30 on a US spring-forward night -> 03:30 daylight time);
+ *   - an AMBIGUOUS fall-back wall time (occurs twice) is its *first*
+ *     occurrence (01:30 on a US fall-back night -> 01:30 daylight time).
+ *  fromFloating alone gets both wrong in a hemisphere-dependent way: for
+ *  zones west of UTC it resolved gaps an hour *backward* (a weekly 2:30am
+ *  series produced 1:30am CST on the transition Sunday), and for zones east
+ *  of UTC it picked the *second* occurrence of ambiguous times.
+ *
+ *  The offsets one day either side of the wall time bracket any single
+ *  transition (a floating value is never more than ~14h from its instant,
+ *  and no zone changes offset twice within two days). */
+export function wallToInstant(floating: Date, timeZone: string): Date {
+  const zone = safeTimeZone(timeZone);
+  const f = floating.getTime();
+  const before = tzOffsetMs(new Date(f - 86_400_000), zone);
+  const after = tzOffsetMs(new Date(f + 86_400_000), zone);
+  const withBefore = new Date(f - before);
+  // Valid under the pre-transition offset: the normal case before a
+  // transition, and the FIRST occurrence of an ambiguous time.
+  if (toFloating(withBefore, zone).getTime() === f) return withBefore;
+  const withAfter = new Date(f - after);
+  if (toFloating(withAfter, zone).getTime() === f) return withAfter;
+  // Neither offset reproduces this wall time: it's in a gap. RFC 5545 says
+  // use the offset before the gap, which lands the instant after it.
+  return withBefore;
+}
+
 /** Composes a "YYYY-MM-DDTHH:mm" wall-clock string (what a `datetime-local`
  *  input produces) with an IANA zone into the real instant it names. If that
  *  wall time falls in a DST spring-forward gap (it never actually occurs in
@@ -114,15 +146,13 @@ export function zonedWallTimeToInstant(
   const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(wallTime);
   if (!m) throw new Error("Invalid datetime-local value");
   const floating = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], 0));
-  const instant = fromFloating(floating, zone);
-  // Round-trip check: format the candidate instant back into the zone's wall
-  // clock. If it doesn't match what was asked for, that wall time never
-  // existed (a spring-forward gap) -- nudge an hour later and resolve again,
-  // which lands after every real-world gap.
-  const roundTrip = toFloating(instant, zone);
-  if (roundTrip.getTime() === floating.getTime()) return { instant, snapped: false };
-  const nudged = new Date(floating.getTime() + 60 * 60_000);
-  return { instant: fromFloating(nudged, zone), snapped: true };
+  // wallToInstant resolves gaps forward and ambiguous times to their first
+  // occurrence (RFC 5545), the same rule recurring series use. A wall time
+  // that doesn't round-trip was in a spring-forward gap: report it so the
+  // form can warn the coordinator that their time moved.
+  const instant = wallToInstant(floating, zone);
+  const snapped = toFloating(instant, zone).getTime() !== floating.getTime();
+  return { instant, snapped };
 }
 
 /** The inverse composition: a real instant -> the "YYYY-MM-DDTHH:mm" string

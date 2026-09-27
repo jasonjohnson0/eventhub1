@@ -252,122 +252,19 @@ export async function fetchNearbyEvents(opts: {
 }
 
 /* ---------- shared date helpers used by the views ---------- */
-export function startOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-export function addDays(d: Date, n: number) {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return x;
-}
-export function startOfWeek(d: Date) {
-  const x = startOfDay(d);
-  x.setDate(x.getDate() - x.getDay());
-  return x;
-}
-export function sameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-  );
-}
-/** Formats a time. With no `timeZone`, this is the viewer's own browser zone
- *  (the old, pre-spec-03 behavior, still used by call sites that don't yet
- *  carry an event's zone). Pass an event's `timezone` to render the time the
- *  way it actually reads on that event's own calendar -- spec 03's rule:
- *  "Saturday 6pm" means 6pm in that event's zone, not a silent conversion to
- *  whoever's looking. `abbr: true` appends the zone abbreviation, e.g. "6:00
- *  PM CDT" -- used where there's room (event page, list rows), not on a
- *  one-line month chip. */
-export function fmtTime(iso: string | Date, timeZone?: string, opts: { abbr?: boolean } = {}) {
-  const zone = timeZone ? safeTimeZone(timeZone) : undefined;
-  const base = new Date(iso).toLocaleTimeString(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-    ...(zone ? { timeZone: zone } : {}),
-  });
-  if (!opts.abbr || !zone) return base;
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "short" }).formatToParts(
-    new Date(iso),
-  );
-  const abbr = parts.find((p) => p.type === "timeZoneName")?.value;
-  return abbr ? `${base} ${abbr}` : base;
-}
-
-/** Local calendar dates (each a Date at local midnight) this event occupies,
- *  for calendar-view rendering. A short overnight event that just spills
- *  past midnight (a 10pm-1am show) still reads as one night's event, not
- *  two days on the calendar: "genuinely multi-day" here means either the
- *  event runs 12+ hours, or its end date lands 2+ calendar days after its
- *  start -- anything shorter that merely crosses one midnight boundary
- *  collapses back to its single start date. An end that falls at exactly
- *  local midnight is treated as ending "at the start of" that date, not
- *  spilling into it (typical calendar-app exclusive-end convention).
- *
- *  Spec 02's own F2 write-up is internally inconsistent: it states the
- *  answer to "does a 10pm-1am event paint two days?" is "No", but then
- *  separately recommends a literal rule ("exclude the end date only if
- *  it's exactly midnight") that would actually paint that same event
- *  across two days, contradicting its own stated answer and acceptance
- *  criterion. This implements the stated answer, not the contradictory
- *  literal rule -- see TEAMWORK.md. */
-export function occupiesDates(event: { start_time: string; end_time: string }): Date[] {
-  const start = startOfDay(new Date(event.start_time));
-  const endRaw = new Date(event.end_time);
-  const endIsExactMidnight =
-    endRaw.getHours() === 0 &&
-    endRaw.getMinutes() === 0 &&
-    endRaw.getSeconds() === 0 &&
-    endRaw.getMilliseconds() === 0;
-  let end = startOfDay(endRaw);
-  if (endIsExactMidnight && end.getTime() > start.getTime()) {
-    end = addDays(end, -1);
-  }
-  if (end.getTime() <= start.getTime()) return [start];
-
-  const durationHours =
-    (new Date(event.end_time).getTime() - new Date(event.start_time).getTime()) / 3_600_000;
-  const dayGap = Math.round((end.getTime() - start.getTime()) / 86_400_000);
-  if (durationHours < 12 && dayGap < 2) return [start];
-
-  const dates: Date[] = [];
-  let cur = start;
-  while (cur.getTime() <= end.getTime()) {
-    dates.push(cur);
-    cur = addDays(cur, 1);
-  }
-  return dates;
-}
-
-export function occupiesDay(event: { start_time: string; end_time: string }, day: Date): boolean {
-  return occupiesDates(event).some((d) => sameDay(d, day));
-}
-
-export function isMultiDay(event: { start_time: string; end_time: string }): boolean {
-  return occupiesDates(event).length > 1;
-}
-
-/** "Fri 3, 6:00 PM" for a single day, "Fri 3 – Sun 5" for a range with no
- *  meaningful start/end clock times to show, "Fri 3, 6:00 PM – Sun 5, 2:00 PM"
- *  when both matter. Used by List/Agenda/Summary/Photo so a multi-day event
- *  gets one row with a range, not one row per occupied day. */
-export function fmtDateRange(
-  event: { start_time: string; end_time: string },
-  timeZone?: string,
-): string {
-  const dates = occupiesDates(event);
-  const start = new Date(event.start_time);
-  const zone = timeZone ? safeTimeZone(timeZone) : undefined;
-  const dateOpts: Intl.DateTimeFormatOptions = {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    ...(zone ? { timeZone: zone } : {}),
-  };
-  if (dates.length === 1) {
-    return `${start.toLocaleDateString(undefined, dateOpts)}, ${fmtTime(start, timeZone)}`;
-  }
-  const end = new Date(event.end_time);
-  return `${start.toLocaleDateString(undefined, dateOpts)}, ${fmtTime(start, timeZone)} – ${end.toLocaleDateString(undefined, dateOpts)}, ${fmtTime(end, timeZone)}`;
-}
+// Moved to lib/event-dates.ts (pure, unit-testable, and evaluated on each
+// event's own wall clock -- see that module's header). Re-exported so every
+// existing `from "@/queries/events"` import keeps working unchanged.
+export {
+  addDays,
+  eventWall,
+  fmtDateRange,
+  fmtEventDate,
+  fmtTime,
+  isMultiDay,
+  occupiesDates,
+  occupiesDay,
+  sameDay,
+  startOfDay,
+  startOfWeek,
+} from "@/lib/event-dates";

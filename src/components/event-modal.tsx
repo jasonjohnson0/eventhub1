@@ -11,7 +11,6 @@ import { getCoordinatorProfile } from "@/lib/onboarding.functions";
 import { CATEGORIES, categoryLabel, type EventCategory } from "@/lib/categories";
 import { listVenues, searchVenuesPublic, type Venue } from "@/lib/venues.functions";
 import {
-  COMMON_TIMEZONES,
   DEFAULT_TIMEZONE,
   instantToWallTimeInput,
   zonedWallTimeToInstant,
@@ -38,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TimezonePicker } from "@/components/timezone-picker";
 
 export function EventModal({
   open,
@@ -440,19 +440,13 @@ export function EventModal({
             </div>
           </div>
           <div>
-            <Label>Timezone</Label>
-            <Select value={timezone} onValueChange={setTimezone}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {COMMON_TIMEZONES.map((tz) => (
-                  <SelectItem key={tz} value={tz}>
-                    {tz.replace(/_/g, " ")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="event-timezone">Timezone</Label>
+            <TimezonePicker
+              id="event-timezone"
+              value={timezone}
+              onChange={setTimezone}
+              at={start ? new Date(`${start}:00Z`) : undefined}
+            />
             <p className="mt-1 text-xs text-muted-foreground">
               The start/end times above are in this zone. Defaults to your profile's timezone --
               change it for an out-of-town event.

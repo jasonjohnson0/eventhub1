@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
 import type { CalendarEvent } from "@/queries/events";
 import { fmtTime, occupiesDates, sameDay } from "@/queries/events";
+import { TzBadge } from "@/components/tz-badge";
 
 export type WeekSeg = { event: CalendarEvent; startCol: number; span: number; lane: number };
 
@@ -56,12 +57,18 @@ export function EventChip({
     <Link
       to="/events/$id"
       params={{ id: event.id }}
-      title={`${event.title} · ${fmtTime(event.start_time, event.timezone)}`}
+      title={`${event.title} · ${fmtTime(event.start_time, event.timezone, { abbr: true })}`}
+      data-event-id={event.id}
       className={`block truncate px-2 py-1 text-xs font-semibold transition-transform hover:scale-[1.01] ${
         spanning ? "rounded-md" : "rounded-lg"
       } ${categoryClasses(event.category)}`}
     >
-      {!compact && <span className="mr-1 opacity-70">{fmtTime(event.start_time, event.timezone)}</span>}
+      {!compact && (
+        <span className="mr-1 opacity-70">
+          {fmtTime(event.start_time, event.timezone)}
+          <TzBadge iso={event.start_time} timeZone={event.timezone} />
+        </span>
+      )}
       {event.title}
     </Link>
   );

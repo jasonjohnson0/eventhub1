@@ -729,6 +729,35 @@ function handle(req, res) {
     }
     return send({ added: n + 3 });
   }
+  // Timezone fixtures (tests/browser/timezone-display.mjs, gap-closure
+  // section): events at fixed WALL times in their own zones on fixed days of
+  // the current month, so a test can assert the exact day cell and hour row
+  // each must land in regardless of the viewer's zone.
+  if (path === '/__events/tz') {
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const mo = now.getUTCMonth();
+    const off = (t, tz) => {
+      const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+      return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - t;
+    };
+    const wall = (d, h, m, tz) => {
+      const guess = Date.UTC(y, mo, d, h, m);
+      const t1 = guess - off(guess, tz);
+      return new Date(guess - off(t1, tz)).toISOString();
+    };
+    const base = { coordinator_id: COORD, status: 'approved', description: '', location: 'Somewhere', category: 'community', __tz: true };
+    EVENTS.push(
+      { ...base, id: 'tz-chi', title: 'Chicago Six PM', timezone: 'America/Chicago', start_time: wall(15, 18, 0, 'America/Chicago'), end_time: wall(15, 22, 0, 'America/Chicago') },
+      { ...base, id: 'tz-tok', title: 'Tokyo Morning', timezone: 'Asia/Tokyo', start_time: wall(16, 8, 30, 'Asia/Tokyo'), end_time: wall(16, 10, 0, 'Asia/Tokyo') },
+      { ...base, id: 'tz-phx', title: 'Phoenix Evening', timezone: 'America/Phoenix', start_time: wall(17, 18, 0, 'America/Phoenix'), end_time: wall(17, 20, 0, 'America/Phoenix') },
+    );
+    return send({ added: 3 });
+  }
+  if (path === '/__events/tz/reset') {
+    for (let i = EVENTS.length - 1; i >= 0; i--) if (EVENTS[i].__tz) EVENTS.splice(i, 1);
+    return send([]);
+  }
   if (path === '/__events/timeline/reset') {
     for (let i = EVENTS.length - 1; i >= 0; i--) if (EVENTS[i].__timeline) EVENTS.splice(i, 1);
     return send([]);

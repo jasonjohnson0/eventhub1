@@ -1,64 +1,18 @@
-// Standalone verification of src/lib/timezone.ts's wall-time <-> instant
-// composition (spec 03). Copied verbatim (Intl-only, no app imports) rather
-// than imported, matching tests/unit/dst-recurrence.mjs's approach -- that
-// file isn't loadable outside the Vite/TanStack build either. If
-// tzOffsetMs/toFloating/fromFloating/zonedWallTimeToInstant/safeTimeZone
-// change in src/lib/timezone.ts, mirror the change here too.
+// Verification of src/lib/timezone.ts. Imports the real module under Node's
+// built-in type stripping (Node >= 22.18); this file used to carry a
+// hand-copied duplicate of every helper, which is how a DST resolution bug
+// could hide in the real code while these checks stayed green.
 // Run: node tests/unit/timezone.mjs
-
-function isValidTimeZone(tz) {
-  if (!tz) return false;
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: tz });
-    return true;
-  } catch {
-    return false;
-  }
-}
-function safeTimeZone(tz) {
-  return isValidTimeZone(tz) ? tz : "UTC";
-}
-function tzOffsetMs(instant, timeZone) {
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone, hourCycle: "h23",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
-  const get = (t) => Number(dtf.formatToParts(instant).find((p) => p.type === t)?.value ?? "0");
-  const asIfUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
-  return asIfUtc - instant.getTime();
-}
-function toFloating(instant, timeZone) {
-  return new Date(instant.getTime() + tzOffsetMs(instant, timeZone));
-}
-function fromFloating(floating, timeZone) {
-  const guessOffset = tzOffsetMs(floating, timeZone);
-  const candidate = floating.getTime() - guessOffset;
-  const offset = tzOffsetMs(new Date(candidate), timeZone);
-  return new Date(floating.getTime() - offset);
-}
-function zonedWallTimeToInstant(wallTime, timeZone) {
-  const zone = safeTimeZone(timeZone);
-  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(wallTime);
-  if (!m) throw new Error("Invalid datetime-local value");
-  const floating = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], 0));
-  const instant = fromFloating(floating, zone);
-  const roundTrip = toFloating(instant, zone);
-  if (roundTrip.getTime() === floating.getTime()) return { instant, snapped: false };
-  const nudged = new Date(floating.getTime() + 60 * 60_000);
-  return { instant: fromFloating(nudged, zone), snapped: true };
-}
-function instantToWallTimeInput(instant, timeZone) {
-  const floating = toFloating(instant, safeTimeZone(timeZone));
-  return floating.toISOString().slice(0, 16);
-}
-function zoneAbbr(iso, timeZone) {
-  const zone = safeTimeZone(timeZone);
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "short" }).formatToParts(
-    new Date(iso),
-  );
-  return parts.find((p) => p.type === "timeZoneName")?.value ?? zone;
-}
+import {
+  fromFloating,
+  instantToWallTimeInput,
+  isValidTimeZone,
+  safeTimeZone,
+  toFloating,
+  tzOffsetMs,
+  zoneAbbr,
+  zonedWallTimeToInstant,
+} from "../../src/lib/timezone.ts";
 
 let failures = 0;
 const check = (n, c, e = "") => {

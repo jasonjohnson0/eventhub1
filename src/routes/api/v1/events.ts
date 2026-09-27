@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { ianaTimeZone } from "@/lib/timezone-schema";
 import { withApiAuth, jsonOk, jsonError } from "@/lib/api-auth.server";
 
 const EVENT_COLUMNS =
@@ -15,7 +16,7 @@ const createEventBody = z.object({
     .enum(["sports", "networking", "education", "social", "fundraiser", "workshop", "other"])
     .default("other"),
   tags: z.array(z.string().min(1).max(40)).max(20).default([]),
-  timezone: z.string().min(1).max(100).optional(),
+  timezone: ianaTimeZone.optional(),
   visibility: z.enum(["public", "unlisted"]).default("public"),
 });
 

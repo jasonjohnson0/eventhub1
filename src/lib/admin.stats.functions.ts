@@ -76,11 +76,14 @@ export const adminRemoveEvent = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: ev, error: readErr } = await supabaseAdmin
+    // timezone isn't in the generated types yet (see other biome-ignore notes);
+    // selected so the refund email states the event's own local time.
+    const { data: evRow, error: readErr } = await (supabaseAdmin as any)
       .from("events")
-      .select("title, start_time, coordinator_id")
+      .select("title, start_time, coordinator_id, timezone")
       .eq("id", data.id)
       .single();
+    const ev = evRow as { title: string; start_time: string; coordinator_id: string; timezone: string | null };
     if (readErr) throw new Error(readErr.message);
     const { error } = await supabaseAdmin
       .from("events")
@@ -100,7 +103,7 @@ export const adminRemoveEvent = createServerFn({ method: "POST" })
       change_details: { reason: data.reason },
     });
     const { autoRefundConfirmedTickets } = await import("@/lib/monetization.functions");
-    const refundResult = await autoRefundConfirmedTickets(data.id, ev.title, ev.start_time);
+    const refundResult = await autoRefundConfirmedTickets(data.id, ev.title, ev.start_time, ev.timezone);
     await notifyEventCancelled(supabaseAdmin, data.id, ev, refundResult.refunded);
     return { ok: true };
   });

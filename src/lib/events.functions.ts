@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { ianaTimeZone } from "@/lib/timezone-schema";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const isoDate = z.string().datetime({ offset: true });
@@ -36,7 +37,7 @@ export const listMyEvents = createServerFn({ method: "GET" })
       .not("accepted_at", "is", null);
     const coordinatorIds = [context.userId, ...(staff ?? []).map((s) => s.coordinator_id)];
     const columns =
-      "id, title, description, location, start_time, end_time, status, coordinator_id, category, tags, series_id";
+      "id, title, description, location, start_time, end_time, status, coordinator_id, category, tags, series_id, timezone";
     // Own/workspace events (any status except removed) plus every approved event on the
     // platform, so the calendar is never empty for viewers who don't own the events.
     const [owned, approved] = await Promise.all([
@@ -81,7 +82,7 @@ export const createEvent = createServerFn({ method: "POST" })
         // rejecting an unrecognized IANA name at write time isn't spec 03's
         // contract -- display code falls back to UTC instead. See
         // events_default_timezone() in the spec 03 migration.
-        timezone: z.string().min(1).max(100).optional(),
+        timezone: ianaTimeZone.optional(),
         // Coordinator-only creation path (this server fn), never exposed on
         // /submit-event -- public submitters cannot hide an event from the
         // coordinator's own calendar (spec 04, F4).
@@ -211,7 +212,7 @@ export const updateEvent = createServerFn({ method: "POST" })
         tags: z.array(z.string().min(1).max(40)).max(20).optional(),
         start_time: isoDate.optional(),
         end_time: isoDate.optional(),
-        timezone: z.string().min(1).max(100).optional(),
+        timezone: ianaTimeZone.optional(),
         visibility: z.enum(["public", "unlisted"]).optional(),
       })
       .parse(data),
@@ -244,11 +245,14 @@ export const deleteMyEvent = createServerFn({ method: "POST" })
   .inputValidator((data) => z.object({ event_id: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     await assertEventAccess(context.supabase, context.userId, data.event_id);
-    const { data: ev, error: readErr } = await context.supabase
+    // timezone isn't in the generated types yet (see other biome-ignore notes);
+    // selected so the refund email states the event's own local time.
+    const { data: evRow, error: readErr } = await (context.supabase as any)
       .from("events")
-      .select("title, start_time, coordinator_id")
+      .select("title, start_time, coordinator_id, timezone")
       .eq("id", data.event_id)
       .single();
+    const ev = evRow as { title: string; start_time: string; coordinator_id: string; timezone: string | null };
     if (readErr) throw new Error(readErr.message);
     const { error } = await context.supabase
       .from("events")
@@ -264,7 +268,7 @@ export const deleteMyEvent = createServerFn({ method: "POST" })
     // cancelled at this point and the coordinator shouldn't be blocked by
     // a Stripe hiccup on someone else's ticket.
     const { autoRefundConfirmedTickets } = await import("@/lib/monetization.functions");
-    const refundResult = await autoRefundConfirmedTickets(data.event_id, ev.title, ev.start_time);
+    const refundResult = await autoRefundConfirmedTickets(data.event_id, ev.title, ev.start_time, ev.timezone);
     await notifyEventCancelled(context.supabase, data.event_id, ev, refundResult.refunded);
     return { ok: true };
   });

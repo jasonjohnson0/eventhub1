@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import type { CalendarEvent } from "@/queries/events";
-import { fmtTime, isMultiDay, occupiesDay } from "@/queries/events";
+import { eventWall, fmtTime, isMultiDay, occupiesDay } from "@/queries/events";
 import { categoryClasses } from "@/lib/categories";
 import { useWeekView, WEEK_START_HOUR, WEEK_END_HOUR } from "@/hooks/useWeekView";
 import { packWeek } from "@/components/CalendarViews/shared";
+import { TzBadge } from "@/components/tz-badge";
 
 /**
  * 7-day grid with hourly slots. Mobile-first: stacks into day columns
@@ -38,7 +39,9 @@ export function WeekView({
   const byCell = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     for (const e of timedEvents) {
-      const d = new Date(e.start_time);
+      // Day column and hour row both on the event's own wall clock, the same
+      // clock its chip label reads in (not the viewer's local getters).
+      const d = eventWall(e.start_time, e.timezone);
       const hour = Math.min(Math.max(d.getHours(), WEEK_START_HOUR), WEEK_END_HOUR);
       const key = `${d.toDateString()}|${hour}`;
       map.set(key, [...(map.get(key) ?? []), e]);
@@ -177,6 +180,7 @@ export function WeekView({
               {days.map((d) => (
                 <div
                   key={d.toISOString() + h}
+                  data-cell={`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}|${h}`}
                   className={`min-h-12 min-w-0 space-y-1 overflow-hidden border-r border-slate-100 p-1 last:border-0 ${
                     week.isToday(d) ? "bg-fuchsia-50/40" : ""
                   }`}
@@ -212,13 +216,22 @@ function Slot({
     <Link
       to="/events/$id"
       params={{ id: event.id }}
-      title={`${event.title} · ${fmtTime(event.start_time, event.timezone)}`}
+      title={`${event.title} · ${fmtTime(event.start_time, event.timezone, { abbr: true })}`}
+      data-event-id={event.id}
       className={`block truncate px-2 py-1 text-xs font-semibold transition-transform hover:scale-[1.01] ${
         spanning ? "rounded-md" : "rounded-lg"
       } ${categoryClasses(event.category)}`}
     >
-      {!compact && <span className="mr-1 opacity-70">{fmtTime(event.start_time, event.timezone)}</span>}
+      {!compact && (
+        <span className="mr-1 opacity-70">
+          {fmtTime(event.start_time, event.timezone)}
+          <TzBadge iso={event.start_time} timeZone={event.timezone} />
+        </span>
+      )}
       {event.title}
+      {/* A compact slot shows no clock time, but its hour ROW is one -- so
+          flag the zone here too when the viewer's clock reads differently. */}
+      {compact && !spanning && <TzBadge iso={event.start_time} timeZone={event.timezone} />}
       {note && <span className="ml-1 opacity-60">· {note}</span>}
     </Link>
   );

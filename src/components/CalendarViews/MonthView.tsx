@@ -66,6 +66,8 @@ export function MonthView({ cursor, events }: { cursor: Date; events: CalendarEv
                   key={s.event.id}
                   style={{ gridColumn: `${s.startCol + 1} / span ${s.span}`, gridRow: s.lane + 2 }}
                   className="px-1.5 pb-1"
+                  data-month-event={s.event.id}
+                  data-start-date={`${week[s.startCol].getFullYear()}-${String(week[s.startCol].getMonth() + 1).padStart(2, "0")}-${String(week[s.startCol].getDate()).padStart(2, "0")}`}
                 >
                   <EventChip event={s.event} compact spanning={isMultiDay(s.event) && s.span > 1} />
                 </div>

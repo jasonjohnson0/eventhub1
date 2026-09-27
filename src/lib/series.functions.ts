@@ -1,9 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { RRule, rrulestr } from "rrule";
+import { ianaTimeZone } from "@/lib/timezone-schema";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
-import { DEFAULT_TIMEZONE, toFloating, fromFloating } from "@/lib/timezone";
+import { DEFAULT_TIMEZONE } from "@/lib/timezone";
+import { computeOccurrences } from "@/lib/recurrence";
 
 type EventUpdate = Database["public"]["Tables"]["events"]["Update"];
 type SeriesUpdate = Database["public"]["Tables"]["event_series"]["Update"];
@@ -19,44 +20,8 @@ const categoryEnum = z.enum([
   "other",
 ]);
 
-// A year of daily events is 365 occurrences, and coordinators schedule a year
-// ahead, so 100 cut those series off after about fourteen weeks. The cap still
-// exists to bound a runaway rule like FREQ=HOURLY, which would otherwise try to
-// insert tens of thousands of rows.
-const MAX_OCCURRENCES = 400;
-
-// toFloating/fromFloating (spec 03: now shared with one-off events'
-// datetime-local composition, imported from lib/timezone.ts) convert
-// between a real instant and a "floating" Date whose UTC getters read as
-// that instant's wall-clock time in a given IANA zone. rrule only
-// understands calendar arithmetic on UTC getters, so recurrence is computed
-// entirely in that floating representation and converted back to a real
-// instant per occurrence below -- otherwise "every day at 11pm" is really
-// "every 24 hours" and silently drifts an hour across a DST change, which is
-// most visible for exactly the late-night events that sit near a day
-// boundary.
-
-function computeOccurrences(
-  rrule: string,
-  dtstart: Date,
-  until: Date | null,
-  timezone: string,
-): { dates: Date[]; truncated: boolean } {
-  const floatingStart = toFloating(dtstart, timezone);
-  // Ensure RRULE has DTSTART for rrulestr
-  const rule = rrulestr(
-    `DTSTART:${floatingStart.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "")}\nRRULE:${rrule}`,
-    { forceset: false },
-  ) as RRule;
-  const floatingHardCap = until
-    ? toFloating(until, timezone)
-    : new Date(floatingStart.getTime() + 2 * 365 * 24 * 60 * 60 * 1000);
-  const all = rule.between(floatingStart, floatingHardCap, true);
-  return {
-    dates: all.slice(0, MAX_OCCURRENCES).map((f) => fromFloating(f, timezone)),
-    truncated: all.length > MAX_OCCURRENCES,
-  };
-}
+// MAX_OCCURRENCES and computeOccurrences live in lib/recurrence.ts (pure, so
+// the DST unit suite imports the real code), same behavior as before.
 
 export const createSeries = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -72,7 +37,7 @@ export const createSeries = createServerFn({ method: "POST" })
         duration_minutes: z.number().int().positive().max(60 * 24 * 30),
         rrule: z.string().min(3).max(500),
         until: isoDate.nullable().optional(),
-        timezone: z.string().min(1).max(100).default(DEFAULT_TIMEZONE),
+        timezone: ianaTimeZone.default(DEFAULT_TIMEZONE),
         visibility: z.enum(["public", "unlisted"]).default("public"),
       })
       .parse(data),

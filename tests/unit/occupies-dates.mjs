@@ -1,53 +1,10 @@
-// Standalone verification of occupiesDates()/occupiesDay()/isMultiDay() in
-// src/queries/events.ts (spec 02, multi-day rendering). Copied verbatim
-// (no app-specific imports) since that file isn't loadable outside the
-// Vite/TanStack build. If the real implementation changes, mirror the
-// change here too.
+// Verification of occupiesDates/occupiesDay/isMultiDay in
+// src/lib/event-dates.ts (re-exported by src/queries/events.ts). Imports the
+// real module rather than a hand-copied duplicate. The fixtures below carry
+// no `timezone`, which exercises the legacy viewer-local path; the
+// event-own-zone behavior is covered in tests/unit/event-dates.mjs.
 // Run: node tests/unit/occupies-dates.mjs
-
-function startOfDay(d) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-function addDays(d, n) {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return x;
-}
-function sameDay(a, b) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function occupiesDates(event) {
-  const start = startOfDay(new Date(event.start_time));
-  const endRaw = new Date(event.end_time);
-  const endIsExactMidnight =
-    endRaw.getHours() === 0 && endRaw.getMinutes() === 0 && endRaw.getSeconds() === 0 && endRaw.getMilliseconds() === 0;
-  let end = startOfDay(endRaw);
-  if (endIsExactMidnight && end.getTime() > start.getTime()) {
-    end = addDays(end, -1);
-  }
-  if (end.getTime() <= start.getTime()) return [start];
-
-  const durationHours = (new Date(event.end_time).getTime() - new Date(event.start_time).getTime()) / 3_600_000;
-  const dayGap = Math.round((end.getTime() - start.getTime()) / 86_400_000);
-  if (durationHours < 12 && dayGap < 2) return [start];
-
-  const dates = [];
-  let cur = start;
-  while (cur.getTime() <= end.getTime()) {
-    dates.push(cur);
-    cur = addDays(cur, 1);
-  }
-  return dates;
-}
-function occupiesDay(event, day) {
-  return occupiesDates(event).some((d) => sameDay(d, day));
-}
-function isMultiDay(event) {
-  return occupiesDates(event).length > 1;
-}
+import { addDays, isMultiDay, occupiesDates, occupiesDay, sameDay, startOfDay } from "../../src/lib/event-dates.ts";
 
 let failures = 0;
 const check = (name, cond, extra = "") => {

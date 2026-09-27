@@ -2,20 +2,33 @@
 // communications.functions.ts; the rest return plain HTML/text strings
 // still awaiting their own call site.
 
+import { safeTimeZone } from "./timezone.ts";
+
 export type EventLite = {
   id: string;
   title: string;
   start_time: string;
   location: string | null;
+  /** IANA zone the event is scheduled in. Optional only so an old caller
+   *  can't crash a send; every current caller passes it. */
+  timezone?: string | null;
 };
 
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleString([], {
+/** "Saturday, September 19, 6:00 PM CDT" -- in the EVENT's zone, labelled.
+ *  This used to format with no zone at all, which on the server means the
+ *  server's zone: on Vercel (UTC) every reminder read 11:00 PM for a 6 PM
+ *  Chicago event. Neither the sender's nor the recipient's zone is right for
+ *  an in-person event; the event's own is, and the label removes doubt.
+ *  en-US is pinned so the server's default locale can't change the wording. */
+export const fmtDate = (iso: string, timeZone?: string | null) =>
+  new Date(iso).toLocaleString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: safeTimeZone(timeZone ?? "UTC"),
+    timeZoneName: "short",
   });
 
 function shell(title: string, body: string) {
@@ -40,11 +53,11 @@ export function invitationTemplate(opts: {
     `
     ${fromName ? `<p>${fromName} invited you.</p>` : ""}
     ${customMessage ? `<p style="white-space:pre-line">${escape(customMessage)}</p>` : ""}
-    <p><strong>When:</strong> ${fmtDate(event.start_time)}</p>
+    <p><strong>When:</strong> ${fmtDate(event.start_time, event.timezone)}</p>
     ${event.location ? `<p><strong>Where:</strong> ${escape(event.location)}</p>` : ""}
     <p><a href="${invitationUrl}" style="display:inline-block;background:#111;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">View event & RSVP</a></p>`,
   );
-  const text = `You're invited to ${event.title}\nWhen: ${fmtDate(event.start_time)}\n${event.location ? "Where: " + event.location + "\n" : ""}${customMessage ? "\n" + customMessage + "\n" : ""}\nRSVP: ${invitationUrl}`;
+  const text = `You're invited to ${event.title}\nWhen: ${fmtDate(event.start_time, event.timezone)}\n${event.location ? "Where: " + event.location + "\n" : ""}${customMessage ? "\n" + customMessage + "\n" : ""}\nRSVP: ${invitationUrl}`;
   return { subject, html, text };
 }
 
@@ -52,11 +65,11 @@ export function rsvpConfirmationTemplate(opts: { event: EventLite; status: strin
   const subject = `RSVP confirmed: ${opts.event.title}`;
   const html = shell(
     `You're ${opts.status} — ${opts.event.title}`,
-    `<p><strong>When:</strong> ${fmtDate(opts.event.start_time)}</p>
+    `<p><strong>When:</strong> ${fmtDate(opts.event.start_time, opts.event.timezone)}</p>
      ${opts.event.location ? `<p><strong>Where:</strong> ${escape(opts.event.location)}</p>` : ""}
      <p>We'll remind you before it starts.</p>`,
   );
-  return { subject, html, text: `${subject}\n${fmtDate(opts.event.start_time)}` };
+  return { subject, html, text: `${subject}\n${fmtDate(opts.event.start_time, opts.event.timezone)}` };
 }
 
 export function reminderTemplate(opts: { event: EventLite; when: "7d" | "1d" | "1h" }) {
@@ -65,10 +78,10 @@ export function reminderTemplate(opts: { event: EventLite; when: "7d" | "1d" | "
   const html = shell(
     `Coming up ${label}`,
     `<h2 style="font-size:16px">${escape(opts.event.title)}</h2>
-     <p><strong>When:</strong> ${fmtDate(opts.event.start_time)}</p>
+     <p><strong>When:</strong> ${fmtDate(opts.event.start_time, opts.event.timezone)}</p>
      ${opts.event.location ? `<p><strong>Where:</strong> ${escape(opts.event.location)}</p>` : ""}`,
   );
-  return { subject, html, text: `${subject}\n${fmtDate(opts.event.start_time)}` };
+  return { subject, html, text: `${subject}\n${fmtDate(opts.event.start_time, opts.event.timezone)}` };
 }
 
 export function updateTemplate(opts: { event: EventLite; message: string; cancelled?: boolean }) {
@@ -78,7 +91,7 @@ export function updateTemplate(opts: { event: EventLite; message: string; cancel
   const html = shell(
     subject,
     `<p style="white-space:pre-line">${escape(opts.message)}</p>
-     <p><strong>Event:</strong> ${escape(opts.event.title)} — ${fmtDate(opts.event.start_time)}</p>`,
+     <p><strong>Event:</strong> ${escape(opts.event.title)} — ${fmtDate(opts.event.start_time, opts.event.timezone)}</p>`,
   );
   return { subject, html, text: `${subject}\n${opts.message}` };
 }
@@ -101,7 +114,7 @@ export function ticketRefundTemplate(opts: { event: EventLite; amountCents: numb
       : `Your ticket for ${opts.event.title} was refunded`;
   const body =
     opts.reason === "event_cancelled"
-      ? `<p>The event <strong>${escape(opts.event.title)}</strong> (${fmtDate(opts.event.start_time)}) has been cancelled by its organizer.</p>
+      ? `<p>The event <strong>${escape(opts.event.title)}</strong> (${fmtDate(opts.event.start_time, opts.event.timezone)}) has been cancelled by its organizer.</p>
          <p>You've been refunded <strong>${amount}</strong>. It should appear on your original payment method within 5–10 business days.</p>`
       : `<p>Your ticket for <strong>${escape(opts.event.title)}</strong> has been refunded.</p>
          <p>Amount refunded: <strong>${amount}</strong>. It should appear on your original payment method within 5–10 business days.</p>`;

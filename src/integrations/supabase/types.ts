@@ -961,6 +961,7 @@ export type Database = {
           start_time: string
           status: Database["public"]["Enums"]["event_status"]
           tags: string[]
+          timezone: string
           title: string
           updated_at: string
           venue_id: string | null
@@ -987,6 +988,7 @@ export type Database = {
           start_time: string
           status?: Database["public"]["Enums"]["event_status"]
           tags?: string[]
+          timezone?: string
           title: string
           updated_at?: string
           venue_id?: string | null
@@ -1013,6 +1015,7 @@ export type Database = {
           start_time?: string
           status?: Database["public"]["Enums"]["event_status"]
           tags?: string[]
+          timezone?: string
           title?: string
           updated_at?: string
           venue_id?: string | null

@@ -63,11 +63,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  COMMON_TIMEZONES,
   DEFAULT_TIMEZONE,
   instantToWallTimeInput,
   zonedWallTimeToInstant,
 } from "@/lib/timezone";
+import { TimezonePicker } from "@/components/timezone-picker";
 
 export const Route = createFileRoute("/_authenticated/events/$id/manage")({
   component: EventPage,
@@ -961,19 +961,13 @@ function EventPage() {
               </div>
             </div>
             <div className="space-y-1">
-              <Label>Timezone</Label>
-              <Select value={eTimezone} onValueChange={setETimezone}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {COMMON_TIMEZONES.map((tz) => (
-                    <SelectItem key={tz} value={tz}>
-                      {tz.replace(/_/g, " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="edit-timezone">Timezone</Label>
+              <TimezonePicker
+                id="edit-timezone"
+                value={eTimezone}
+                onChange={setETimezone}
+                at={eStart ? new Date(`${eStart}:00Z`) : undefined}
+              />
             </div>
             <div className="space-y-1">
               <Label>Category</Label>

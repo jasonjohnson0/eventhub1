@@ -5,90 +5,11 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const providerEnum = z.enum(["zoom", "google_meet", "youtube", "none"]);
 const formatEnum = z.enum(["in_person", "virtual", "hybrid"]);
 
-function pad(n: number): string {
-  return n < 10 ? `0${n}` : String(n);
-}
-
-/** Format a Date as an iCalendar UTC timestamp: YYYYMMDDTHHMMSSZ */
-export function toIcalDate(d: Date): string {
-  return (
-    d.getUTCFullYear().toString() +
-    pad(d.getUTCMonth() + 1) +
-    pad(d.getUTCDate()) +
-    "T" +
-    pad(d.getUTCHours()) +
-    pad(d.getUTCMinutes()) +
-    pad(d.getUTCSeconds()) +
-    "Z"
-  );
-}
-
-/** Escape a text value for iCalendar per RFC 5545 §3.3.11 */
-export function icalEscape(v: string | null | undefined): string {
-  if (!v) return "";
-  return v
-    .replace(/\\/g, "\\\\")
-    .replace(/;/g, "\\;")
-    .replace(/,/g, "\\,")
-    .replace(/\r?\n/g, "\\n");
-}
-
-/** Fold long lines to 75 octets per RFC 5545 §3.1 */
-function fold(line: string): string {
-  if (line.length <= 75) return line;
-  const parts: string[] = [];
-  let i = 0;
-  parts.push(line.slice(0, 75));
-  i = 75;
-  while (i < line.length) {
-    parts.push(" " + line.slice(i, i + 74));
-    i += 74;
-  }
-  return parts.join("\r\n");
-}
-
-type IcalEvent = {
-  id: string;
-  title: string;
-  description: string | null;
-  location: string | null;
-  start_time: string;
-  end_time: string;
-  event_format?: string | null;
-  virtual_link?: string | null;
-};
-
-export function buildIcs(calendarName: string, events: IcalEvent[]): string {
-  const now = toIcalDate(new Date());
-  const lines: string[] = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//EventHub//Distribution//EN",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-    fold(`X-WR-CALNAME:${icalEscape(calendarName)}`),
-  ];
-  for (const ev of events) {
-    const start = toIcalDate(new Date(ev.start_time));
-    const end = toIcalDate(new Date(ev.end_time));
-    const descParts: string[] = [];
-    if (ev.description) descParts.push(ev.description);
-    if (ev.virtual_link) descParts.push(`Join: ${ev.virtual_link}`);
-    const description = descParts.join("\n\n");
-    lines.push("BEGIN:VEVENT");
-    lines.push(fold(`UID:${ev.id}@eventhub`));
-    lines.push(`DTSTAMP:${now}`);
-    lines.push(`DTSTART:${start}`);
-    lines.push(`DTEND:${end}`);
-    lines.push(fold(`SUMMARY:${icalEscape(ev.title)}`));
-    if (description) lines.push(fold(`DESCRIPTION:${icalEscape(description)}`));
-    if (ev.location) lines.push(fold(`LOCATION:${icalEscape(ev.location)}`));
-    if (ev.virtual_link) lines.push(fold(`URL:${icalEscape(ev.virtual_link)}`));
-    lines.push("END:VEVENT");
-  }
-  lines.push("END:VCALENDAR");
-  return lines.join("\r\n") + "\r\n";
-}
+// iCalendar serialization lives in lib/ical.ts (pure and unit-tested; writes
+// each event in its own zone with a VTIMEZONE). Re-exported for existing
+// importers of these names.
+import { buildIcs, type IcalEvent } from "@/lib/ical";
+export { buildIcs, icalEscape, toIcalDate, type IcalEvent } from "@/lib/ical";
 
 const VIRTUAL_HOSTS = [
   "zoom.us",
@@ -166,7 +87,7 @@ export const generateEventIcal = createServerFn({ method: "POST" })
     const sb = context.supabase as any;
     const { data: ev, error } = await sb
       .from("events")
-      .select("id, title, description, location, start_time, end_time, event_format, virtual_link")
+      .select("id, title, description, location, start_time, end_time, event_format, virtual_link, timezone")
       .eq("id", data.event_id)
       .maybeSingle();
     if (error) throw new Error(error.message);

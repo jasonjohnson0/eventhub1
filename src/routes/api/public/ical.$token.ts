@@ -27,6 +27,8 @@ export const Route = createFileRoute("/api/public/ical/$token")({
           end_time: string;
           event_format: string | null;
           virtual_link: string | null;
+          /** Returned since migration 20260927100000 (per-event VTIMEZONE). */
+          timezone?: string | null;
         }>;
         const ics = buildIcs("EventHub — My events", events);
         return new Response(ics, {

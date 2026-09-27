@@ -17,6 +17,7 @@ import {
   type TimelineBar,
   type TimelineZoom,
 } from "@/views/timeline-layout";
+import { TzBadge } from "@/components/tz-badge";
 
 const NO_VENUE = "No venue";
 const AXIS_HEIGHT_PX = 36;
@@ -86,6 +87,7 @@ const Bar = memo(function Bar({ bar, top }: { bar: TimelineBar<CalendarEvent>; t
           tooltip and the accessible name. */}
       {width >= 48 && <span className="truncate">{event.title}</span>}
       {width > 150 && <span className="shrink-0 font-normal opacity-70">{range}</span>}
+      {width > 90 && <TzBadge iso={event.start_time} timeZone={event.timezone} />}
       {clippedEnd && <span aria-hidden className="ml-auto">›</span>}
     </Link>
   );

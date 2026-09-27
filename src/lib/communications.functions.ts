@@ -10,7 +10,7 @@ async function assertCoordinatorOrAdmin(
 ) {
   const { data: ev, error } = await supabase
     .from("events")
-    .select("id, coordinator_id, title, start_time, location")
+    .select("id, coordinator_id, title, start_time, location, timezone")
     .eq("id", eventId)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -78,6 +78,7 @@ export const sendEventInvitations = createServerFn({ method: "POST" })
           title: ev.title,
           start_time: ev.start_time,
           location: ev.location ?? null,
+          timezone: ev.timezone,
         },
         invitationUrl: `${base}/invite/${inv.token}`,
         customMessage: data.custom_message ?? null,
@@ -248,7 +249,7 @@ export const sendEventAnnouncement = createServerFn({ method: "POST" })
     const { sendAndLogEmails, logEmailSends } = await import("@/lib/platform-mailer.server");
     const directory = await loadUserDirectory(supabaseAdmin, targets);
     const tpl = updateTemplate({
-      event: { id: ev.id as string, title: ev.title as string, start_time: ev.start_time as string, location: (ev.location as string | null) ?? null },
+      event: { id: ev.id as string, title: ev.title as string, start_time: ev.start_time as string, location: (ev.location as string | null) ?? null, timezone: ev.timezone as string | null },
       message: data.message,
     });
     const entries: { message: { to: string; subject: string; html: string; text: string }; log: { coordinator_id: string; event_id: string; type: "announcement" | "update"; recipient_user_id: string } }[] = [];
@@ -436,11 +437,11 @@ export async function drainDueEmailReminders(
   const eventIds = Array.from(new Set<string>(due.map((r: { event_id: string }) => r.event_id)));
   const { data: events } = await admin
     .from("events")
-    .select("id, coordinator_id, title, start_time, location")
+    .select("id, coordinator_id, title, start_time, location, timezone")
     .in("id", eventIds);
   const eventById = new Map(
     (events ?? []).map((e: { id: string }) => [e.id, e]),
-  ) as Map<string, { id: string; coordinator_id: string; title: string; start_time: string; location: string | null }>;
+  ) as Map<string, { id: string; coordinator_id: string; title: string; start_time: string; location: string | null; timezone: string | null }>;
 
   const userIds = Array.from(new Set<string>(due.map((r: { user_id: string }) => r.user_id)));
   const directory = await loadUserDirectory(admin, userIds);
@@ -491,7 +492,7 @@ export async function drainDueEmailReminders(
       continue;
     }
     const tpl = reminderTemplate({
-      event: { id: ev.id, title: ev.title, start_time: ev.start_time, location: ev.location },
+      event: { id: ev.id, title: ev.title, start_time: ev.start_time, location: ev.location, timezone: ev.timezone },
       when: reminderOffsetLabel(ev.start_time, row.scheduled_for),
     });
     entries.push({
