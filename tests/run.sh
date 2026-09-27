@@ -6,6 +6,8 @@
 #   tests/run.sh unit     pure-function logic only (no DB, no browser)
 #   tests/run.sh db       schema, RLS, grants and the billing rules only
 #   tests/run.sh browser  the rendered pages and HTTP endpoints only
+#   tests/run.sh browser timeline   only files whose name contains "timeline"
+#                                   (the name filter works for unit and db too)
 #
 # Nothing here touches the live database. The db suites boot a throwaway
 # Postgres and replay supabase/migrations into it; the browser suites run the
@@ -14,6 +16,8 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 WHICH="${1:-all}"
+FILTER="${2:-}"
+want() { [ -z "$FILTER" ] || [[ "$(basename "$1")" == *"$FILTER"* ]]; }
 MOCK_PORT=54199  # dashboard.mjs derives the supabase storage key from this host
 APP_PORT=5199
 fails=0
@@ -39,7 +43,7 @@ if [ "$WHICH" = "all" ] || [ "$WHICH" = "lint" ]; then
 fi
 
 if [ "$WHICH" = "all" ] || [ "$WHICH" = "unit" ]; then
-  for f in tests/unit/*.mjs; do run "unit/$(basename "$f")" node "$f"; done
+  for f in tests/unit/*.mjs; do want "$f" || continue; run "unit/$(basename "$f")" node "$f"; done
 fi
 
 if [ "$WHICH" = "all" ] || [ "$WHICH" = "db" ]; then
@@ -47,7 +51,7 @@ if [ "$WHICH" = "all" ] || [ "$WHICH" = "db" ]; then
   python3 -c "import pgserver" 2>/dev/null || {
     echo "SKIP db suites: pip install pgserver"; }
   if python3 -c "import pgserver" 2>/dev/null; then
-    for f in tests/db/*.py; do run "db/$(basename "$f")" python3 "$f"; done
+    for f in tests/db/*.py; do want "$f" || continue; run "db/$(basename "$f")" python3 "$f"; done
   fi
 fi
 
@@ -70,10 +74,10 @@ if [ "$WHICH" = "all" ] || [ "$WHICH" = "browser" ]; then
   done
 
   export APP_URL="http://127.0.0.1:$APP_PORT" MOCK_URL="http://127.0.0.1:$MOCK_PORT"
-  for f in tests/browser/*.mjs; do run "browser/$(basename "$f")" node "$f"; done
+  for f in tests/browser/*.mjs; do want "$f" || continue; run "browser/$(basename "$f")" node "$f"; done
 
   # The WordPress plugin fetches the embed over HTTP, so it needs the app up too.
-  command -v php >/dev/null && \
+  command -v php >/dev/null && want wordpress-plugin && \
     run "wordpress-plugin" php wordpress-plugin/eventhub-calendar/test-wp-plugin.php "http://127.0.0.1:$APP_PORT"
 fi
 

@@ -691,6 +691,49 @@ function handle(req, res) {
   if (path === '/__adlog') return send(AD_LOG);
   if (path === '/__adlog/reset') { AD_LOG.length = 0; return send([]); }
 
+  // Timeline fixtures (tests/browser/timeline-view.mjs). Injected on demand
+  // and removed again by /reset, rather than living in EVENTS permanently:
+  //  - the day(n)-relative fixtures above drift across month boundaries as
+  //    the calendar date moves (on the 27th, day(2..4) is next month), which
+  //    silently clipped the old multi-day width check; these are pinned to
+  //    fixed days of the *current* month instead;
+  //  - 250 extra events would change counts other suites assert on.
+  // ?n=<count> adds that many deterministic "dense" events on top.
+  if (path === '/__events/timeline') {
+    const n = Math.min(Number(url.searchParams.get('n') ?? 0) || 0, 2000);
+    const now = new Date();
+    const at = (d, h, m = 0) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), d, h, m)).toISOString();
+    const base = { coordinator_id: COORD, status: 'approved', timezone: 'UTC', __timeline: true };
+    EVENTS.push(
+      { ...base, id: 'tl-multi', title: 'Timeline Three-Day Fair', description: '', location: 'Fairgrounds', start_time: at(10, 18), end_time: at(13, 14), category: 'community', venue_id: 'venue-1' },
+      { ...base, id: 'tl-short', title: 'Timeline Evening Talk', description: '', location: 'Library', start_time: at(20, 18), end_time: at(20, 22), category: 'education' },
+      { ...base, id: 'tl-overlap', title: 'Timeline Overlapping Mixer', description: '', location: 'Library', start_time: at(20, 19), end_time: at(20, 21), category: 'networking' },
+    );
+    let seed = 1234;
+    const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+    for (let i = 0; i < n; i++) {
+      const day = 1 + Math.floor(rand() * 27);
+      const hour = Math.floor(rand() * 20);
+      const s = Date.parse(at(day, hour));
+      const hours = rand() < 0.1 ? 24 + Math.floor(rand() * 48) : 1 + Math.floor(rand() * 4);
+      EVENTS.push({
+        ...base,
+        id: `tl-dense-${i}`,
+        title: `Dense Event ${i}`,
+        description: '',
+        location: 'Somewhere',
+        start_time: new Date(s).toISOString(),
+        end_time: new Date(s + hours * 3_600_000).toISOString(),
+        category: ['community', 'music', 'sports', 'education'][i % 4],
+      });
+    }
+    return send({ added: n + 3 });
+  }
+  if (path === '/__events/timeline/reset') {
+    for (let i = EVENTS.length - 1; i >= 0; i--) if (EVENTS[i].__timeline) EVENTS.splice(i, 1);
+    return send([]);
+  }
+
   // Backs the /submit-event "which community is this for?" picker.
   if (path === '/rest/v1/rpc/get_public_coordinator_list') {
     return send(
