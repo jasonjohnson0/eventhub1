@@ -5,6 +5,7 @@ import { CATEGORIES, categoryLabel, categoryClasses } from "@/lib/categories";
 import { useEventFilters } from "@/hooks/useEventFilters";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, MapPin, RotateCcw } from "lucide-react";
+import { TzBadge } from "@/components/tz-badge";
 
 /** Compact sidebar-style summary list with persisted date/category/venue filters. */
 export function SummaryView({ events }: { events: CalendarEvent[] }) {
@@ -114,6 +115,7 @@ export function SummaryView({ events }: { events: CalendarEvent[] }) {
                         timeZone: e.timezone,
                       })}{" "}
                       · {fmtTime(e.start_time, e.timezone)}
+                      <TzBadge iso={e.start_time} timeZone={e.timezone} />
                       {isMultiDay(e) &&
                         ` – ${new Date(e.end_time).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: e.timezone })}`}
                     </span>

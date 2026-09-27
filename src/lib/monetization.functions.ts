@@ -583,6 +583,9 @@ export async function autoRefundConfirmedTickets(
   eventId: string,
   eventTitle: string,
   eventStartTime: string,
+  /** The event's IANA zone, so the refund email states its time as the
+   *  event's own calendar reads it (see email-templates fmtDate). */
+  eventTimezone?: string | null,
 ): Promise<{ refunded: number; cancelled: number; failed: number }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
@@ -622,7 +625,7 @@ export async function autoRefundConfirmedTickets(
         const email = userRes?.user?.email;
         if (email) {
           const tpl = ticketRefundTemplate({
-            event: { id: eventId, title: eventTitle, start_time: eventStartTime, location: null },
+            event: { id: eventId, title: eventTitle, start_time: eventStartTime, location: null, timezone: eventTimezone },
             amountCents: p.amount_cents,
             reason: "event_cancelled",
           });

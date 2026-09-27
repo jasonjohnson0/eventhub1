@@ -2,8 +2,9 @@ import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { MapPin, Users } from "lucide-react";
 import type { CalendarEvent } from "@/queries/events";
-import { fmtTime, occupiesDates, occupiesDay, sameDay } from "@/queries/events";
+import { eventWall, fmtTime, occupiesDates, occupiesDay, sameDay } from "@/queries/events";
 import { CategoryTag, EmptyState } from "./shared";
+import { TzBadge } from "@/components/tz-badge";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -42,7 +43,10 @@ export function DayView({ cursor, events }: { cursor: Date; events: CalendarEven
       // Its start hour if cursor is the actual start day; otherwise this is
       // the end day of an event that started earlier, so it reads as
       // running from midnight up to its end time today.
-      const h = info.isStartDay ? new Date(e.start_time).getHours() : 0;
+      // On the event's own wall clock (eventWall), matching its label --
+      // getHours() on the raw instant put a 6pm Chicago event in the 8am
+      // slot for a viewer in Tokyo.
+      const h = info.isStartDay ? eventWall(e.start_time, e.timezone).getHours() : 0;
       map.set(h, [...(map.get(h) ?? []), e]);
     }
     return map;
@@ -76,7 +80,7 @@ export function DayView({ cursor, events }: { cursor: Date; events: CalendarEven
       {HOURS.map((h) => {
         const items = byHour.get(h) ?? [];
         return (
-          <div key={h} className="flex border-b border-slate-100 last:border-0">
+          <div key={h} data-hour={h} className="flex border-b border-slate-100 last:border-0">
             <div className="w-20 shrink-0 border-r border-slate-100 px-3 py-3 text-right text-xs font-medium text-slate-400">
               {h % 12 === 0 ? 12 : h % 12}
               {h < 12 ? "am" : "pm"}
@@ -90,17 +94,18 @@ export function DayView({ cursor, events }: { cursor: Date; events: CalendarEven
                 // real start_time (which would make the card absurdly tall
                 // and the label read as spanning back into the wrong day).
                 const effectiveStart = info.isStartDay
-                  ? new Date(e.start_time)
+                  ? eventWall(e.start_time, e.timezone)
                   : new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate());
                 const mins = Math.max(
                   30,
-                  (new Date(e.end_time).getTime() - effectiveStart.getTime()) / 60000,
+                  (eventWall(e.end_time, e.timezone).getTime() - effectiveStart.getTime()) / 60000,
                 );
                 return (
                   <Link
                     key={e.id}
                     to="/events/$id"
                     params={{ id: e.id }}
+                    data-event-id={e.id}
                     className="block rounded-2xl bg-gradient-to-r from-fuchsia-50 to-amber-50 p-3 ring-1 ring-slate-200 transition-all hover:-translate-y-0.5 hover:shadow-md"
                     style={{ minHeight: `${Math.min(220, 44 + (mins / 60) * 26)}px` }}
                   >
@@ -125,6 +130,7 @@ export function DayView({ cursor, events }: { cursor: Date; events: CalendarEven
                         ) : (
                           <>until {fmtTime(e.end_time, e.timezone)} today</>
                         )}
+                        <TzBadge iso={e.start_time} timeZone={e.timezone} />
                       </span>
                       {e.location && (
                         <span className="inline-flex items-center gap-1">

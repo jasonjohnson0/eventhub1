@@ -21,6 +21,7 @@ import { Route as EmbedRouteImport } from './routes/embed'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PrivateInviteTokenRouteImport } from './routes/private-invite.$token'
 import { Route as MarketingUnsubscribeRouteImport } from './routes/marketing.unsubscribe'
 import { Route as MarketingSubscribeRouteImport } from './routes/marketing.subscribe'
 import { Route as MarketingConfirmRouteImport } from './routes/marketing.confirm'
@@ -130,6 +131,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivateInviteTokenRoute = PrivateInviteTokenRouteImport.update({
+  id: '/private-invite/$token',
+  path: '/private-invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MarketingUnsubscribeRoute = MarketingUnsubscribeRouteImport.update({
@@ -432,6 +438,7 @@ export interface FileRoutesByFullPath {
   '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
+  '/private-invite/$token': typeof PrivateInviteTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
@@ -495,6 +502,7 @@ export interface FileRoutesByTo {
   '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
+  '/private-invite/$token': typeof PrivateInviteTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
@@ -561,6 +569,7 @@ export interface FileRoutesById {
   '/marketing/confirm': typeof MarketingConfirmRoute
   '/marketing/subscribe': typeof MarketingSubscribeRoute
   '/marketing/unsubscribe': typeof MarketingUnsubscribeRoute
+  '/private-invite/$token': typeof PrivateInviteTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/billing': typeof AuthenticatedAdminBillingRoute
@@ -627,6 +636,7 @@ export interface FileRouteTypes {
     | '/marketing/confirm'
     | '/marketing/subscribe'
     | '/marketing/unsubscribe'
+    | '/private-invite/$token'
     | '/.lovable/oauth/consent'
     | '/admin/audit'
     | '/admin/billing'
@@ -690,6 +700,7 @@ export interface FileRouteTypes {
     | '/marketing/confirm'
     | '/marketing/subscribe'
     | '/marketing/unsubscribe'
+    | '/private-invite/$token'
     | '/.lovable/oauth/consent'
     | '/admin/audit'
     | '/admin/billing'
@@ -755,6 +766,7 @@ export interface FileRouteTypes {
     | '/marketing/confirm'
     | '/marketing/subscribe'
     | '/marketing/unsubscribe'
+    | '/private-invite/$token'
     | '/.lovable/oauth/consent'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/billing'
@@ -812,6 +824,7 @@ export interface RootRouteChildren {
   MarketingConfirmRoute: typeof MarketingConfirmRoute
   MarketingSubscribeRoute: typeof MarketingSubscribeRoute
   MarketingUnsubscribeRoute: typeof MarketingUnsubscribeRoute
+  PrivateInviteTokenRoute: typeof PrivateInviteTokenRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiCronEmailRemindersRoute: typeof ApiCronEmailRemindersRoute
   ApiEmbedSlugRoute: typeof ApiEmbedSlugRoute
@@ -911,6 +924,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/private-invite/$token': {
+      id: '/private-invite/$token'
+      path: '/private-invite/$token'
+      fullPath: '/private-invite/$token'
+      preLoaderRoute: typeof PrivateInviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marketing/unsubscribe': {
@@ -1439,6 +1459,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarketingConfirmRoute: MarketingConfirmRoute,
   MarketingSubscribeRoute: MarketingSubscribeRoute,
   MarketingUnsubscribeRoute: MarketingUnsubscribeRoute,
+  PrivateInviteTokenRoute: PrivateInviteTokenRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiCronEmailRemindersRoute: ApiCronEmailRemindersRoute,
   ApiEmbedSlugRoute: ApiEmbedSlugRoute,

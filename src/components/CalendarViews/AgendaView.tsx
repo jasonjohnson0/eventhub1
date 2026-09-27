@@ -4,6 +4,7 @@ import { MapPin, Ticket } from "lucide-react";
 import { fetchMyEvents, fmtTime, isMultiDay, type CalendarEvent, type EventFilters } from "@/queries/events";
 import { CategoryTag, EmptyState } from "./shared";
 import { Button } from "@/components/ui/button";
+import { TzBadge } from "@/components/tz-badge";
 
 type MyEvent = CalendarEvent & { rsvp_status: string };
 
@@ -86,6 +87,7 @@ export function AgendaView({ signedIn, filters }: { signedIn: boolean; filters?:
               >
                 <div className="w-20 shrink-0 text-sm font-bold text-slate-900">
                   {fmtTime(e.start_time, e.timezone)}
+                  <TzBadge iso={e.start_time} timeZone={e.timezone} className="ml-0 mt-0.5" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">

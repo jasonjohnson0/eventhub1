@@ -11,7 +11,6 @@ import { getCoordinatorProfile } from "@/lib/onboarding.functions";
 import { CATEGORIES, categoryLabel, type EventCategory } from "@/lib/categories";
 import { listVenues, searchVenuesPublic, type Venue } from "@/lib/venues.functions";
 import {
-  COMMON_TIMEZONES,
   DEFAULT_TIMEZONE,
   instantToWallTimeInput,
   zonedWallTimeToInstant,
@@ -38,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TimezonePicker } from "@/components/timezone-picker";
 
 export function EventModal({
   open,
@@ -56,7 +56,7 @@ export function EventModal({
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE);
-  const [visibility, setVisibility] = useState<"public" | "unlisted">("public");
+  const [visibility, setVisibility] = useState<"public" | "unlisted" | "private">("public");
   const [imageUrl, setImageUrl] = useState("");
   const [category, setCategory] = useState<EventCategory>("other");
   const [tagsText, setTagsText] = useState("");
@@ -440,19 +440,13 @@ export function EventModal({
             </div>
           </div>
           <div>
-            <Label>Timezone</Label>
-            <Select value={timezone} onValueChange={setTimezone}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {COMMON_TIMEZONES.map((tz) => (
-                  <SelectItem key={tz} value={tz}>
-                    {tz.replace(/_/g, " ")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="event-timezone">Timezone</Label>
+            <TimezonePicker
+              id="event-timezone"
+              value={timezone}
+              onChange={setTimezone}
+              at={start ? new Date(`${start}:00Z`) : undefined}
+            />
             <p className="mt-1 text-xs text-muted-foreground">
               The start/end times above are in this zone. Defaults to your profile's timezone --
               change it for an out-of-town event.
@@ -460,18 +454,22 @@ export function EventModal({
           </div>
           <div>
             <Label>Visibility</Label>
-            <Select value={visibility} onValueChange={(v) => setVisibility(v as "public" | "unlisted")}>
+            <Select value={visibility} onValueChange={(v) => setVisibility(v as "public" | "unlisted" | "private")}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="public">Public</SelectItem>
                 <SelectItem value="unlisted">Unlisted — hidden from your calendar, reachable by link</SelectItem>
+                <SelectItem value="private">Private — invite-only</SelectItem>
               </SelectContent>
             </Select>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Anyone with the link can view and RSVP. It will not appear on your public calendar,
-              embed, or iCal feed.
+            <p className="mt-1 text-xs text-muted-foreground" data-visibility-help={visibility}>
+              {visibility === "public"
+                ? "Listed on your public calendar, embed, iCal feed and search."
+                : visibility === "unlisted"
+                  ? "Anyone with the link can view and RSVP. It will not appear on your public calendar, embed, or iCal feed."
+                  : "Only your team and guests you invite can see it -- not listed anywhere, and the link alone isn't enough. After saving, invite guests from the event's manage page."}
             </p>
           </div>
           <div>

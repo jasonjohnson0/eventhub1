@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { listMyEvents, rescheduleEvent, listEventCounts } from "@/lib/events.functions";
 import { colorForEvent } from "@/lib/event-colors";
 import { EventModal } from "@/components/event-modal";
+import { eventWall, fmtTime as fmtEventTime } from "@/lib/event-dates";
+import { DEFAULT_TIMEZONE, zonedWallTimeToInstant } from "@/lib/timezone";
 
 // TanStack Router's own URL parser coerces a numeric-looking query value --
 // ?new=1 becomes the number 1, not the string "1" -- confirmed by actually
@@ -37,6 +39,11 @@ type EventRow = {
   end_time: string;
   status: string;
   coordinator_id: string;
+  /** IANA zone (spec 03). Every cell, hour row, label and drag-reschedule on
+   *  this page works on the event's own wall clock via eventWall(), the same
+   *  rule as the public views -- a coordinator travelling in another zone
+   *  still sees (and moves) "6 PM" as 6 PM where the event happens. */
+  timezone?: string | null;
 };
 
 type View = "month" | "week" | "day";
@@ -67,8 +74,8 @@ function sameDay(a: Date, b: Date) {
     a.getDate() === b.getDate()
   );
 }
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+function fmtTime(ev: EventRow) {
+  return fmtEventTime(ev.start_time, ev.timezone);
 }
 
 function CalendarPage() {
@@ -133,10 +140,15 @@ function CalendarPage() {
     if (!id) return;
     const ev = events.find((x) => x.id === id);
     if (!ev) return;
-    const oldStart = new Date(ev.start_time);
-    const duration = new Date(ev.end_time).getTime() - oldStart.getTime();
-    const newStart = new Date(day);
-    newStart.setHours(oldStart.getHours(), oldStart.getMinutes(), 0, 0);
+    // Keep the event's wall-clock time in ITS zone and change only the date:
+    // "6 PM Chicago on the 15th" dragged to the 18th is 6 PM Chicago on the
+    // 18th, whatever zone the coordinator's laptop is in (setHours on the raw
+    // instant used the laptop's zone, shifting the event by the difference).
+    const zone = ev.timezone || DEFAULT_TIMEZONE;
+    const oldWall = eventWall(ev.start_time, zone);
+    const duration = new Date(ev.end_time).getTime() - new Date(ev.start_time).getTime();
+    const wallInput = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}T${String(oldWall.getHours()).padStart(2, "0")}:${String(oldWall.getMinutes()).padStart(2, "0")}`;
+    const newStart = zonedWallTimeToInstant(wallInput, zone).instant;
     const newEnd = new Date(newStart.getTime() + duration);
     // optimistic
     setEvents((prev) =>
@@ -224,7 +236,7 @@ function EventChip({ ev, onSelect }: { ev: EventRow; onSelect: (e: EventRow) => 
       style={{ backgroundColor: c.hex }}
     >
       <span className="truncate">
-        {fmtTime(ev.start_time)} · {ev.title}
+        {fmtTime(ev)} · {ev.title}
       </span>
     </button>
   );
@@ -256,7 +268,7 @@ function MonthView({
       </div>
       <div className="grid grid-cols-7 auto-rows-[minmax(6rem,1fr)]">
         {days.map((day, i) => {
-          const dayEvents = events.filter((ev) => sameDay(new Date(ev.start_time), day));
+          const dayEvents = events.filter((ev) => sameDay(eventWall(ev.start_time, ev.timezone), day));
           const inMonth = day.getMonth() === cursor.getMonth();
           const isToday = sameDay(day, new Date());
           return (
@@ -326,7 +338,7 @@ function HourGrid({
               const cellDate = new Date(day);
               cellDate.setHours(h, 0, 0, 0);
               const dayEvents = events.filter((ev) => {
-                const s = new Date(ev.start_time);
+                const s = eventWall(ev.start_time, ev.timezone);
                 return sameDay(s, day) && s.getHours() === h;
               });
               return (

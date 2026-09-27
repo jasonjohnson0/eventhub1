@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Calendar, MapPin, Users, ArrowRight } from "lucide-react";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
 import { fmtTime } from "@/queries/events";
+import { TzBadge } from "@/components/tz-badge";
 
 export type PublicEvent = {
   id: string;
@@ -91,7 +92,10 @@ export function EventCardPublic({ event, index = 0 }: { event: PublicEvent; inde
         <div className="mt-3 space-y-1.5 text-sm text-slate-600">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 shrink-0 text-fuchsia-500" />
-            <span>{dateLabel} · {timeLabel}</span>
+            <span>
+              {dateLabel} · {timeLabel}
+              <TzBadge iso={event.start_time} timeZone={event.timezone} />
+            </span>
           </div>
           {event.location && (
             <div className="flex items-center gap-2">

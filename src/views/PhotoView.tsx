@@ -5,6 +5,7 @@ import { fmtTime, isMultiDay } from "@/queries/events";
 import { CategoryTag } from "@/components/CalendarViews/shared";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, MapPin, Users, X } from "lucide-react";
+import { TzBadge } from "@/components/tz-badge";
 
 /** Image-first gallery grid. Lazy-loaded covers, modal with full details. */
 export function PhotoView({ events }: { events: CalendarEvent[] }) {
@@ -48,6 +49,7 @@ export function PhotoView({ events }: { events: CalendarEvent[] }) {
                   timeZone: e.timezone,
                 })}{" "}
                 · {fmtTime(e.start_time, e.timezone)}
+                <TzBadge iso={e.start_time} timeZone={e.timezone} />
                 {isMultiDay(e) &&
                   ` – ${new Date(e.end_time).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: e.timezone })}`}
               </span>
