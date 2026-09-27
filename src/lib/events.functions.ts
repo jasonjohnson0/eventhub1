@@ -86,7 +86,7 @@ export const createEvent = createServerFn({ method: "POST" })
         // Coordinator-only creation path (this server fn), never exposed on
         // /submit-event -- public submitters cannot hide an event from the
         // coordinator's own calendar (spec 04, F4).
-        visibility: z.enum(["public", "unlisted"]).default("public"),
+        visibility: z.enum(["public", "unlisted", "private"]).default("public"),
       })
       .parse(data),
   )
@@ -213,7 +213,7 @@ export const updateEvent = createServerFn({ method: "POST" })
         start_time: isoDate.optional(),
         end_time: isoDate.optional(),
         timezone: ianaTimeZone.optional(),
-        visibility: z.enum(["public", "unlisted"]).optional(),
+        visibility: z.enum(["public", "unlisted", "private"]).optional(),
       })
       .parse(data),
   )

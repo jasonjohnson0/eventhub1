@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 import { CATEGORIES, categoryClasses, categoryLabel, type EventCategory } from "@/lib/categories";
 import { deleteSeriesInstance } from "@/lib/series.functions";
-import { Repeat, ClipboardCheck, UserCheck, ImageIcon, Pencil, Trash2 } from "lucide-react";
+import { Repeat, ClipboardCheck, UserCheck, ImageIcon, Pencil, Trash2, Lock, ChevronDown } from "lucide-react";
 import { leaveWaitlist } from "@/lib/attendee.functions";
 import { useNavigate } from "@tanstack/react-router";
 import { InviteAttendeesModal } from "@/components/invite-attendees-modal";
@@ -68,6 +68,15 @@ import {
   zonedWallTimeToInstant,
 } from "@/lib/timezone";
 import { TimezonePicker } from "@/components/timezone-picker";
+import { GuestListCard } from "@/components/guest-list";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
+type Visibility = "public" | "unlisted" | "private";
+const VISIBILITY_UI: Record<Visibility, { label: string; hint: string; icon: React.ReactNode }> = {
+  public: { label: "Public", hint: "Listed on your calendar, embed, iCal and search.", icon: <Eye className="mr-1 h-3.5 w-3.5" /> },
+  unlisted: { label: "Unlisted", hint: "Hidden from listings; anyone with the link can view.", icon: <EyeOff className="mr-1 h-3.5 w-3.5" /> },
+  private: { label: "Private", hint: "Invite-only. Guests must accept an invite to see it.", icon: <Lock className="mr-1 h-3.5 w-3.5" /> },
+};
 
 export const Route = createFileRoute("/_authenticated/events/$id/manage")({
   component: EventPage,
@@ -258,6 +267,8 @@ function EventPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [visibilityConfirmOpen, setVisibilityConfirmOpen] = useState(false);
+  // Which level the open confirm dialog would switch to.
+  const [pendingVisibility, setPendingVisibility] = useState<Visibility>("public");
   const [visibilityBusy, setVisibilityBusy] = useState(false);
 
   useEffect(() => {
@@ -330,7 +341,7 @@ function EventPage() {
   const eventTimezone =
     (event as unknown as { timezone?: string | null }).timezone || DEFAULT_TIMEZONE;
   const eventVisibility =
-    (event as unknown as { visibility?: "public" | "unlisted" | null }).visibility ?? "public";
+    (event as unknown as { visibility?: Visibility | null }).visibility ?? "public";
   const waitlistCount = (counts as unknown as { waitlist?: number }).waitlist ?? 0;
   const myWaitlistPosition = (data as unknown as { myWaitlistPosition: number | null })
     .myWaitlistPosition;
@@ -485,16 +496,16 @@ function EventPage() {
     }
   }
 
-  /** Applies the actual visibility flip -- called either directly (going
+  /** Applies the actual visibility change -- called either directly (going
    *  public with no RSVPs, spec 04's "no confirmation beyond a toast" case)
    *  or from the confirm dialog. */
-  async function applyVisibilityChange(next: "public" | "unlisted") {
+  async function applyVisibilityChange(next: Visibility) {
     setVisibilityBusy(true);
     try {
       await updateEvent({ data: { event_id: id, visibility: next } });
       const fresh = await getEvent({ data: { id } });
       setData(fresh);
-      toast.success(next === "public" ? "Event is now public" : "Event is now unlisted");
+      toast.success(`Event is now ${next}`);
       setVisibilityConfirmOpen(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not update visibility");
@@ -503,16 +514,20 @@ function EventPage() {
     }
   }
 
-  /** Making public with existing RSVPs, and making unlisted at all, both get
-   *  a confirm dialog (spec 04 F3) -- going public with zero RSVPs is a
-   *  same-click flip with just a toast, since there's nobody to surprise. */
-  function handleToggleVisibility() {
-    const next = eventVisibility === "public" ? "unlisted" : "public";
+  /** Confirm rules (spec 04 F3, extended for private):
+   *   - going public with zero RSVPs: same-click flip, just a toast --
+   *     nobody to surprise;
+   *   - going public with RSVPs, going unlisted, going private: confirm.
+   *     Private always confirms because anyone who RSVP'd without an
+   *     invite loses access the moment it saves. */
+  function requestVisibility(next: Visibility) {
+    if (next === eventVisibility) return;
     const rsvpTotal = counts.going + counts.interested;
     if (next === "public" && rsvpTotal === 0) {
       void applyVisibilityChange(next);
       return;
     }
+    setPendingVisibility(next);
     setVisibilityConfirmOpen(true);
   }
 
@@ -620,6 +635,12 @@ function EventPage() {
                 Unlisted
               </Badge>
             )}
+            {eventVisibility === "private" && (
+              <Badge variant="secondary" className="gap-1" data-private-badge="">
+                <Lock className="h-3 w-3" />
+                Private
+              </Badge>
+            )}
             {waitlistCount > 0 && <Badge variant="secondary">{waitlistCount} on waitlist</Badge>}
             {eventFormat !== "in_person" && (
               <Badge variant="secondary" className="gap-1 capitalize">
@@ -640,17 +661,32 @@ function EventPage() {
         </div>
         <div className="flex shrink-0 gap-2">
           {isCoordinator && (
-            <Button variant="outline" size="sm" onClick={handleToggleVisibility}>
-              {eventVisibility === "unlisted" ? (
-                <>
-                  <Eye className="mr-1 h-3.5 w-3.5" /> Make public
-                </>
-              ) : (
-                <>
-                  <EyeOff className="mr-1 h-3.5 w-3.5" /> Make unlisted
-                </>
-              )}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" data-visibility-menu={eventVisibility}>
+                  {VISIBILITY_UI[eventVisibility].icon}
+                  {VISIBILITY_UI[eventVisibility].label}
+                  <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                {(["public", "unlisted", "private"] as const)
+                  .filter((v) => v !== eventVisibility)
+                  .map((v) => (
+                    <DropdownMenuItem
+                      key={v}
+                      onSelect={() => requestVisibility(v)}
+                      className="flex-col items-start gap-0.5"
+                      data-visibility-option={v}
+                    >
+                      <span className="flex items-center font-medium">
+                        {VISIBILITY_UI[v].icon}Make {v}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{VISIBILITY_UI[v].hint}</span>
+                    </DropdownMenuItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           {isCoordinator && (
             <Button variant="outline" size="sm" onClick={openEdit}>
@@ -666,6 +702,8 @@ function EventPage() {
       {event.description && (
         <p className="whitespace-pre-line text-sm text-foreground/80">{event.description}</p>
       )}
+
+      {isCoordinator && eventVisibility === "private" && <GuestListCard eventId={id} />}
 
       <div className="flex flex-wrap gap-2">
         {eventFormat !== "in_person" && virtualLink && (
@@ -1022,13 +1060,17 @@ function EventPage() {
       <Dialog open={visibilityConfirmOpen} onOpenChange={setVisibilityConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {eventVisibility === "public" ? "Make this event unlisted?" : "Make this event public?"}
-            </DialogTitle>
+            <DialogTitle>Make this event {pendingVisibility}?</DialogTitle>
             <DialogDescription>
-              {eventVisibility === "public"
+              {pendingVisibility === "unlisted"
                 ? "It will disappear from your public calendar, embed, and iCal. Direct links still work. Existing RSVPs keep access."
-                : `This event has ${counts.going + counts.interested} RSVP${counts.going + counts.interested === 1 ? "" : "s"} who treated it as unlisted. Making it public lists it on your calendar. Continue?`}
+                : pendingVisibility === "private"
+                  ? `Only your team and guests you invite (who accept) will be able to see it. It disappears from your calendar, embed, iCal and search, and direct links stop working for everyone else.${
+                      counts.going + counts.interested > 0
+                        ? ` ${counts.going + counts.interested} ${counts.going + counts.interested === 1 ? "person has" : "people have"} RSVP'd; anyone without an accepted invite loses access. Invite them from the guest list after saving.`
+                        : ""
+                    }`
+                  : `This event has ${counts.going + counts.interested} RSVP${counts.going + counts.interested === 1 ? "" : "s"} who treated it as ${eventVisibility}. Making it public lists it on your calendar. Continue?`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1039,15 +1081,8 @@ function EventPage() {
             >
               Cancel
             </Button>
-            <Button
-              onClick={() => applyVisibilityChange(eventVisibility === "public" ? "unlisted" : "public")}
-              disabled={visibilityBusy}
-            >
-              {visibilityBusy
-                ? "Saving…"
-                : eventVisibility === "public"
-                  ? "Make unlisted"
-                  : "Make public"}
+            <Button onClick={() => applyVisibilityChange(pendingVisibility)} disabled={visibilityBusy}>
+              {visibilityBusy ? "Saving…" : `Make ${pendingVisibility}`}
             </Button>
           </DialogFooter>
         </DialogContent>

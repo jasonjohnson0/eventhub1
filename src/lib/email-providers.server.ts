@@ -3,7 +3,7 @@
 // All providers use fetch (HTTP APIs) so they run on Cloudflare Workers.
 // TODO: AWS SES as paid add-on — implement in Phase 3b (signature matches others).
 
-export type EmailProvider = "lovable" | "sendgrid" | "postmark" | "mailgun" | "none";
+export type EmailProvider = "lovable" | "sendgrid" | "postmark" | "mailgun" | "none" | "outbox";
 
 export type EmailCredentials = {
   provider: EmailProvider;
@@ -111,8 +111,27 @@ async function sendViaLovable(_c: EmailCredentials, _m: EmailMessage): Promise<S
   return { ok: true };
 }
 
+/** Test-only transport: POSTs the full message to TEST_EMAIL_OUTBOX_URL so a
+ *  browser test can open the link an email really carried (e.g. a private-
+ *  event invite's accept link). Triple-gated, so it can never deliver -- or
+ *  silently swallow -- mail in production:
+ *   1. `outbox` isn't a value of the email_provider_type enum, so no
+ *      production platform_config row can select it (only the test mock can);
+ *   2. it requires TEST_EMAIL_OUTBOX_URL, which only tests/run.sh sets;
+ *   3. it refuses to run when NODE_ENV is "production". */
+async function sendViaOutbox(m: EmailMessage): Promise<SendResult> {
+  const url = process.env["TEST_EMAIL_OUTBOX_URL"];
+  if (!url || process.env["NODE_ENV"] === "production") {
+    return { ok: false, error: "Test outbox is not available here" };
+  }
+  const res = await fetch(url, { method: "POST", body: JSON.stringify(m) });
+  return res.ok ? { ok: true, messageId: `outbox-${Date.now()}` } : { ok: false, error: `Outbox ${res.status}` };
+}
+
 export async function sendEmail(c: EmailCredentials, m: EmailMessage): Promise<SendResult> {
   switch (c.provider) {
+    case "outbox":
+      return sendViaOutbox(m);
     case "sendgrid":
       return sendViaSendGrid(c, m);
     case "postmark":

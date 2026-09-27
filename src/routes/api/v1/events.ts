@@ -17,7 +17,7 @@ const createEventBody = z.object({
     .default("other"),
   tags: z.array(z.string().min(1).max(40)).max(20).default([]),
   timezone: ianaTimeZone.optional(),
-  visibility: z.enum(["public", "unlisted"]).default("public"),
+  visibility: z.enum(["public", "unlisted", "private"]).default("public"),
 });
 
 export const Route = createFileRoute("/api/v1/events")({

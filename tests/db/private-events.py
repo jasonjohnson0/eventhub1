@@ -63,13 +63,27 @@ def apply_mine():
 
 
 sql(open(os.path.join(os.path.dirname(__file__), "..", "support", "pg-bootstrap.sql")).read())
-others = [m for m in sorted(glob.glob(f"{REPO}/supabase/migrations/*.sql")) if MINE not in m]
-for m in others:
+# Replay in true timestamp order, applying MINE at its own position. This
+# used to replay every OTHER migration first and MINE last, which only worked
+# while nothing after MINE touched `visibility`; the gap-closure private-events
+# migrations (20260927110*) do, and replayed ahead of the column they failed
+# half-way -- after dropping the public read policy -- leaving anon unable to
+# read anything. Production applies migrations in order; so does this now.
+result = None
+for m in sorted(glob.glob(f"{REPO}/supabase/migrations/*.sql")):
+    if MINE in m:
+        result = apply_mine()
+        # Idempotency is checked HERE, while MINE is the newest migration --
+        # the situation Lovable's replay creates. Re-running it after later
+        # migrations have legitimately changed a function it also defines
+        # (20260927100000 widened get_ical_feed_events' return type) would
+        # fail for reasons unrelated to MINE's own idempotency.
+        result2 = apply_mine()
+        continue
     ok, out, err = sql(open(m).read())
     if not ok:
         print(f"(tolerated, pre-existing) {os.path.basename(m)}: {err[:160]}")
 
-result = apply_mine()
 check(f"{MINE} applies (or fails only at the known PostGIS-dependent statement)",
       result is True or result == "tolerated", str(result))
 
@@ -83,7 +97,6 @@ ok, out, err = sql("""
 SELECT count(*) FROM pg_indexes WHERE schemaname='public' AND tablename='events' AND indexname='events_visibility_idx';""")
 check("events_visibility_idx exists", last(out) == "1", err[:200])
 
-result2 = apply_mine()
 check("migration is safe to re-run (same tolerated-or-clean outcome both times)",
       result2 is True or result2 == "tolerated", str(result2))
 

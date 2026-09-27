@@ -38,7 +38,7 @@ export const createSeries = createServerFn({ method: "POST" })
         rrule: z.string().min(3).max(500),
         until: isoDate.nullable().optional(),
         timezone: ianaTimeZone.default(DEFAULT_TIMEZONE),
-        visibility: z.enum(["public", "unlisted"]).default("public"),
+        visibility: z.enum(["public", "unlisted", "private"]).default("public"),
       })
       .parse(data),
   )

@@ -17,7 +17,7 @@ const patchEventBody = z.object({
     .optional(),
   tags: z.array(z.string().min(1).max(40)).max(20).optional(),
   timezone: ianaTimeZone.optional(),
-  visibility: z.enum(["public", "unlisted"]).optional(),
+  visibility: z.enum(["public", "unlisted", "private"]).optional(),
 });
 
 export const Route = createFileRoute("/api/v1/events/$id")({

@@ -70,6 +70,13 @@ export const upsertRsvp = createServerFn({ method: "POST" })
       .select("max_capacity, has_waitlist, coordinator_id, title")
       .eq("id", data.event_id)
       .maybeSingle();
+    // Read under the caller's RLS: no row means they can't see this event
+    // (e.g. a private event they aren't an accepted guest of). This used to
+    // fall through and RSVP anyway -- which then scheduled reminder emails
+    // carrying the event's title and time. The database now also rejects it
+    // ("RSVP only to visible events", migration 20260927110100); this gives
+    // the caller a clean error instead of an RLS violation.
+    if (!ev) throw new Error("Event not found");
 
     if (existing?.status === data.status) {
       // Toggle off

@@ -56,7 +56,7 @@ export function EventModal({
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE);
-  const [visibility, setVisibility] = useState<"public" | "unlisted">("public");
+  const [visibility, setVisibility] = useState<"public" | "unlisted" | "private">("public");
   const [imageUrl, setImageUrl] = useState("");
   const [category, setCategory] = useState<EventCategory>("other");
   const [tagsText, setTagsText] = useState("");
@@ -454,18 +454,22 @@ export function EventModal({
           </div>
           <div>
             <Label>Visibility</Label>
-            <Select value={visibility} onValueChange={(v) => setVisibility(v as "public" | "unlisted")}>
+            <Select value={visibility} onValueChange={(v) => setVisibility(v as "public" | "unlisted" | "private")}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="public">Public</SelectItem>
                 <SelectItem value="unlisted">Unlisted — hidden from your calendar, reachable by link</SelectItem>
+                <SelectItem value="private">Private — invite-only</SelectItem>
               </SelectContent>
             </Select>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Anyone with the link can view and RSVP. It will not appear on your public calendar,
-              embed, or iCal feed.
+            <p className="mt-1 text-xs text-muted-foreground" data-visibility-help={visibility}>
+              {visibility === "public"
+                ? "Listed on your public calendar, embed, iCal feed and search."
+                : visibility === "unlisted"
+                  ? "Anyone with the link can view and RSVP. It will not appear on your public calendar, embed, or iCal feed."
+                  : "Only your team and guests you invite can see it -- not listed anywhere, and the link alone isn't enough. After saving, invite guests from the event's manage page."}
             </p>
           </div>
           <div>

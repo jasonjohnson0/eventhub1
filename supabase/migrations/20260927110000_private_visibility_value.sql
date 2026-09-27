@@ -1,0 +1,14 @@
+-- Gap closure, phase 3 (1 of 2): add 'private' to event_visibility.
+--
+-- On its own file on purpose: Postgres refuses to USE an enum value in the
+-- same transaction that added it ("unsafe use of new value"), and each
+-- migration file runs as one transaction. The policies and functions that
+-- compare against 'private' live in 20260927110100_private_events_access.sql.
+--
+-- Visibility now has three levels:
+--   public   -- listed everywhere (unchanged)
+--   unlisted -- omitted from every listing, opens by direct link (spec 04,
+--               unchanged: a listing filter, not an ACL)
+--   private  -- an ACL enforced by RLS: only the coordinator's workspace,
+--               admins, and guests with an ACCEPTED invite can read the row
+ALTER TYPE public.event_visibility ADD VALUE IF NOT EXISTS 'private';

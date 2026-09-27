@@ -9,6 +9,7 @@
  *   node mock-supabase.mjs [port]
  */
 import { createServer } from 'node:http';
+import { createHash, randomUUID } from 'node:crypto';
 
 const PORT = Number(process.argv[2] || 54321);
 
@@ -181,6 +182,20 @@ const ADMIN_USERS = [
   { id: OTHER, email: 'other@example.com', created_at: '2026-02-01T00:00:00.000Z', last_sign_in_at: null },
 ];
 const USER_ROLES = [{ user_id: COORD, role: 'admin' }];
+// Private-event personas (gap-closure phase 3). Deliberately NOT admins --
+// has_role below treats every fixture user as admin unless listed here, and
+// an "admin" invitee would see everything and prove nothing.
+export const INVITEE = '77777777-7777-4777-8777-777777777777';
+export const INVITEE_EMAIL = 'invitee@example.com';
+const NON_ADMINS = new Set([OTHER, INVITEE]);
+// event_invites rows, as the service role sees them (token_hash, never the token).
+const EVENT_INVITES = [];
+// Test email outbox (see sendViaOutbox in src/lib/email-providers.server.ts).
+// Off by default -- other suites assert on "No email provider configured" --
+// and switched on per test via /__outbox/enable.
+const OUTBOX = [];
+let outboxEnabled = false;
+export const PRIVATE_EVENT = 'cccccccc-1111-4111-8111-111111111111';
 let nextEventId = 1;
 let nextVenueId = 1;
 let nextTicketId = 1;
@@ -264,6 +279,61 @@ function handle(req, res) {
   // Enough GoTrue for an authenticated page to render: getUser() reads /user,
   // and the server functions' middleware verifies a token against the same.
   if (path === '/auth/v1/user') return send(userFromAuthHeader());
+  // supabaseAdmin.auth.admin.getUserById(id) -- requestEventAccess emails the
+  // coordinator at their account address.
+  {
+    const m = /^\/auth\/v1\/admin\/users\/([0-9a-f-]{36})$/.exec(path);
+    if (m) {
+      const known = ADMIN_USERS.find((u) => u.id === m[1]);
+      return send({ user: known ?? { id: m[1], email: m[1] === INVITEE ? INVITEE_EMAIL : `${m[1].slice(0, 8)}@example.com` } });
+    }
+  }
+
+  // ---- RLS emulation for private events (gap-closure phase 3) --------------
+  // Who is asking, the way Postgres RLS would see it: the service role (the
+  // server's supabaseAdmin, which bypasses RLS), a signed-in user (JWT sub),
+  // or anon. Stricter than userFromAuthHeader(), which falls back to COORD
+  // for GoTrue's sake -- for RLS, "no valid JWT" must mean anon.
+  function rlsIdentity() {
+    const bearer = (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+    if (bearer === 'test-service-key' || req.headers['apikey'] === 'test-service-key') return { service: true, sub: null };
+    const parts = bearer.split('.');
+    if (parts.length === 3) {
+      try {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+        if (payload.sub) return { service: false, sub: payload.sub };
+      } catch {}
+    }
+    return { service: false, sub: null };
+  }
+  const isAdmin = (sub) => !!sub && !NON_ADMINS.has(sub) && USER_ROLES.some((r) => r.user_id === sub && r.role === 'admin');
+  // Mirrors "Public reads approved events" (not private) + "Invited guests
+  // read private events" + workspace/admin policies, for one event row.
+  function canReadEvent(ev, who) {
+    if (who.service || (ev.visibility ?? 'public') !== 'private') return true;
+    if (!who.sub) return false;
+    if (who.sub === ev.coordinator_id || isAdmin(who.sub)) return true;
+    return EVENT_INVITES.some((i) => i.event_id === ev.id && i.user_id === who.sub && i.status === 'accepted');
+  }
+  // Generic PostgREST filter subset: eq / neq / in / is.null over every query
+  // param that isn't a modifier.
+  function applyFilters(rows) {
+    const skip = new Set(['select', 'order', 'limit', 'offset', 'on_conflict', 'columns']);
+    for (const [k, raw] of new URLSearchParams(url.search)) {
+      if (skip.has(k)) continue;
+      const m = /^(eq|neq|in|is)\.(.*)$/.exec(raw);
+      if (!m) continue;
+      const [, op, val] = m;
+      if (op === 'eq') rows = rows.filter((r) => String(r[k]) === val);
+      else if (op === 'neq') rows = rows.filter((r) => String(r[k]) !== val);
+      else if (op === 'is') rows = rows.filter((r) => (val === 'null' ? r[k] == null : String(r[k]) === val));
+      else if (op === 'in') {
+        const set = new Set(val.replace(/^\(|\)$/g, '').split(',').map((x) => x.replace(/^"|"$/g, '')));
+        rows = rows.filter((r) => set.has(String(r[k])));
+      }
+    }
+    return rows;
+  }
   if (path === '/auth/v1/.well-known/jwks.json') return send({ keys: [] });
   // supabaseAdmin.auth.admin.listUsers() -- the admin Users page's fixture
   // list. Must come before the /auth/v1 catch-all below, which would
@@ -457,6 +527,86 @@ function handle(req, res) {
     return send(wantsObject ? (rows[0] ?? null) : rows);
   }
 
+
+  // event_invites (gap-closure phase 3). Service role: everything. Others:
+  // mirrors the table's RLS -- the event's coordinator/admin read and write
+  // all of an event's rows; a guest reads only rows carrying their user_id.
+  if (path === '/rest/v1/event_invites') {
+    const who = rlsIdentity();
+    const canManage = (row) => {
+      if (who.service) return true;
+      const ev = EVENTS.find((e) => e.id === row.event_id);
+      return !!who.sub && !!ev && (ev.coordinator_id === who.sub || isAdmin(who.sub));
+    };
+    const visibleRow = (row) => canManage(row) || (!!who.sub && row.user_id === who.sub);
+    let body = null;
+    try { body = JSON.parse(req.__body || 'null'); } catch {}
+    if (req.method === 'POST') {
+      const incoming = (Array.isArray(body) ? body : [body]).filter(Boolean);
+      if (!incoming.every(canManage)) {
+        res.writeHead(403, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
+        return res.end(JSON.stringify({ message: 'new row violates row-level security policy' }));
+      }
+      const now = new Date().toISOString();
+      const rows = incoming.map((r) => ({ id: randomUUID(), created_at: now, updated_at: now, user_id: null, email: null, token_hash: null, message: null, responded_at: null, status: 'pending', ...r }));
+      EVENT_INVITES.push(...rows);
+      return send(wantsObject ? rows[0] : rows);
+    }
+    const matched = applyFilters(EVENT_INVITES).filter(visibleRow);
+    if (req.method === 'PATCH') {
+      const writable = matched.filter(canManage);
+      for (const r of writable) Object.assign(r, body ?? {}, { updated_at: new Date().toISOString() });
+      return send(wantsObject ? (writable[0] ?? null) : writable);
+    }
+    if (req.method === 'DELETE') {
+      const writable = matched.filter(canManage);
+      for (const r of writable) EVENT_INVITES.splice(EVENT_INVITES.indexOf(r), 1);
+      return send(wantsObject ? (writable[0] ?? null) : writable);
+    }
+    const out = matched.slice().sort((a, b) => a.created_at.localeCompare(b.created_at));
+    return send(wantsObject ? (out[0] ?? null) : out);
+  }
+  // Test hooks: a private event owned by COORD, and invites seeded with a
+  // KNOWN token (stored hashed, like the real table) so a test can open the
+  // accept link the email would have carried.
+  if (path === '/__private/setup') {
+    const now = new Date();
+    const at = (d, h) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), d, h)).toISOString();
+    if (!EVENTS.some((e) => e.id === PRIVATE_EVENT)) {
+      EVENTS.push({ id: PRIVATE_EVENT, coordinator_id: COORD, title: 'Board Retreat (Private)', description: 'Strategy offsite for the board.', location: 'Lake House', start_time: at(20, 15), end_time: at(20, 20), category: 'networking', status: 'approved', visibility: 'private', timezone: 'UTC', __private: true });
+    }
+    return send({ ok: true });
+  }
+  if (path === '/__private/invite') {
+    let b = {};
+    try { b = JSON.parse(req.__body || '{}'); } catch {}
+    const now = new Date().toISOString();
+    const row = { id: randomUUID(), event_id: b.event_id ?? PRIVATE_EVENT, email: b.email ?? null, user_id: b.user_id ?? null,
+      token_hash: b.token ? createHash('sha256').update(b.token).digest('hex') : null, status: b.status ?? 'pending',
+      invited_by: COORD, message: b.message ?? null, responded_at: null, created_at: now, updated_at: now };
+    EVENT_INVITES.push(row);
+    return send(row);
+  }
+  if (path === '/__private/invites') return send(EVENT_INVITES);
+  if (path === '/__outbox/enable') { outboxEnabled = true; return send({ ok: true }); }
+  if (path === '/__outbox/disable') { outboxEnabled = false; OUTBOX.length = 0; return send({ ok: true }); }
+  if (path === '/__outbox' && req.method === 'POST') {
+    try { OUTBOX.push(JSON.parse(req.__body || '{}')); } catch {}
+    return send({ ok: true });
+  }
+  if (path === '/__outbox') return send(OUTBOX);
+  // platform_config: only ever answers with the test outbox, and only while
+  // a test has enabled it; otherwise "no row" (email unconfigured), as before.
+  if (path === '/rest/v1/platform_config' && req.method === 'GET' && outboxEnabled) {
+    const row = { email_provider: 'outbox', email_api_key: null, email_from_name: 'EventHub Test',
+      email_from_address: 'noreply@events.example', email_extra: null, email_configured: true };
+    return send(wantsObject ? row : [row]);
+  }
+  if (path === '/__private/reset') {
+    EVENT_INVITES.length = 0;
+    for (let i = EVENTS.length - 1; i >= 0; i--) if (EVENTS[i].__private) EVENTS.splice(i, 1);
+    return send([]);
+  }
   if (path === '/rest/v1/events') {
     const coordinator = parseEq(url.search, 'coordinator_id');
     const id = parseEq(url.search, 'id');
@@ -515,6 +665,9 @@ function handle(req, res) {
     if (coordinator) rows = rows.filter((e) => e.coordinator_id === coordinator);
     if (id) rows = rows.filter((e) => e.id === id);
     if (visibility) rows = rows.filter((e) => (e.visibility ?? 'public') === visibility);
+    // Private events: only the coordinator, admins and accepted guests.
+    const who = rlsIdentity();
+    rows = rows.filter((e) => canReadEvent(e, who));
     rows = rows.slice().sort((a, b) => a.start_time.localeCompare(b.start_time));
     return send(wantsObject ? (rows[0] ?? null) : rows);
   }
@@ -611,7 +764,7 @@ function handle(req, res) {
   if (path === '/rest/v1/rpc/has_role') {
     let b = {};
     try { b = JSON.parse(req.__body || '{}'); } catch {}
-    return send(b._user_id !== OTHER);
+    return send(!NON_ADMINS.has(b._user_id));
   }
   // getEvent's authorization gate: the caller must own the event's coordinator
   // account or be accepted staff there. is_workspace_member's real definition

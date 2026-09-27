@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,7 @@ import { upsertRsvp } from "@/lib/tracking.functions";
 import { purchaseTicket, createTicketCheckout, listMyPurchases } from "@/lib/monetization.functions";
 import { getEventOrganizers, type Organizer, type PersonKind } from "@/lib/organizers.functions";
 import { Button } from "@/components/ui/button";
+import { PrivateEventGate } from "@/components/private-event-gate";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
 import { fmtTime } from "@/queries/events";
 import { viewerTimeZone } from "@/lib/timezone";
@@ -71,7 +72,7 @@ type Detail = {
     event_format?: string | null;
     virtual_link?: string | null;
     timezone?: string | null;
-    visibility?: "public" | "unlisted" | null;
+    visibility?: "public" | "unlisted" | "private" | null;
   };
   image: string | null;
   photos: { id: string; photo_url: string; caption: string | null }[];
@@ -199,6 +200,12 @@ function PublicEventDetail() {
   const [data, setData] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
   const [signedIn, setSignedIn] = useState(false);
+  // Whether the session lookup has finished -- the private-event gate must not
+  // tell a signed-in guest "sign in" during the first render.
+  const [authReady, setAuthReady] = useState(false);
+  // Bumped to re-run the event load (e.g. the gate learns access was granted).
+  const [reloadKey, setReloadKey] = useState(0);
+  const reloadEvent = useCallback(() => setReloadKey((k) => k + 1), []);
   const [userId, setUserId] = useState<string | null>(null);
   const [rsvpOpen, setRsvpOpen] = useState(false);
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -222,6 +229,7 @@ function PublicEventDetail() {
     supabase.auth.getSession().then(({ data }) => {
       setSignedIn(!!data.session);
       setUserId(data.session?.user.id ?? null);
+      setAuthReady(true);
     });
   }, []);
 
@@ -323,6 +331,12 @@ function PublicEventDetail() {
         .select("id, title, start_time, category")
         .eq("coordinator_id", ev.coordinator_id)
         .eq("status", "approved")
+        // A listing surface like any other: only this coordinator's PUBLIC
+        // events. Without this it listed their unlisted events (spec 04 says
+        // those appear in no listing) and, for a viewer allowed to read them,
+        // their private ones.
+        // biome-ignore lint/suspicious/noExplicitAny: visibility not in generated types
+        .eq("visibility" as any, "public")
         .neq("id", id)
         .gte("end_time", nowIso)
         .order("start_time", { ascending: true })
@@ -352,7 +366,7 @@ function PublicEventDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id, userId]);
+  }, [id, userId, reloadKey]);
 
   /** Returning from Stripe Checkout with ?purchase=success -- the webhook
    *  confirms the purchase async, so this polls rather than trusting the
@@ -444,18 +458,10 @@ function PublicEventDetail() {
   }
 
   if (!data) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-amber-50 to-white">
-        <div className="text-center">
-          <div className="text-6xl">🎈</div>
-          <h1 className="mt-4 text-2xl font-bold">Event not found</h1>
-          <p className="mt-2 text-slate-500">It may have been removed or is no longer public.</p>
-          <Button asChild className="mt-6 rounded-full">
-            <Link to="/events">Back to events</Link>
-          </Button>
-        </div>
-      </div>
-    );
+    // No readable row: removed, never existed, or a private event this viewer
+    // isn't an accepted guest of. RLS already withheld every detail; the gate
+    // only decides what to say (see PrivateEventGate).
+    return <PrivateEventGate eventId={id} authReady={authReady} signedIn={signedIn} onGranted={reloadEvent} />;
   }
 
   const {
@@ -600,6 +606,14 @@ function PublicEventDetail() {
               >
                 {categoryLabel(event.category ?? "other")}
               </span>
+              {event.visibility === "private" && (
+                <span
+                  className="ml-2 inline-flex items-center rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white shadow"
+                  data-private-chip=""
+                >
+                  Private · invite only
+                </span>
+              )}
               {event.visibility === "unlisted" && (
                 // Quiet, not a scare banner -- someone with a shared link
                 // shouldn't expect to find this on the public calendar later,

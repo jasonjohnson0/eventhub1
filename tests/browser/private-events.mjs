@@ -91,10 +91,17 @@ const browser = await chromium.launch({
   const body = await page.innerText('body');
   check('the manage page shows the Unlisted badge', body.includes('Unlisted'), body.slice(0, 300));
 
-  const makePublicBtn = page.locator('button:has-text("Make public")').first();
-  check('a "Make public" action is offered for an unlisted event', (await makePublicBtn.count()) > 0);
-  if (await makePublicBtn.count()) {
-    await makePublicBtn.click();
+  // Visibility is a three-level menu now (public / unlisted / private,
+  // gap-closure phase 3); the confirm rules spec 04 set are unchanged.
+  const menu = page.locator('[data-visibility-menu]').first();
+  const openMenu = async () => { await menu.click(); await page.waitForTimeout(250); };
+  check('a visibility menu is offered', (await menu.count()) > 0);
+  if (await menu.count()) {
+    await openMenu();
+    const makePublic = page.locator('[data-visibility-option="public"]');
+    check('a "Make public" action is offered for an unlisted event', (await makePublic.count()) > 0);
+    check('"Make private" is offered too', (await page.locator('[data-visibility-option="private"]').count()) > 0);
+    await makePublic.click();
     await page.waitForTimeout(500);
     // This fixture has 0 RSVPs, so spec 04 says: no confirm dialog, just a
     // same-click flip -- the dialog should not appear.
@@ -105,10 +112,11 @@ const browser = await chromium.launch({
     check('the badge is gone after making it public', !afterBody.includes('Unlisted'), afterBody.slice(0, 300));
 
     // Flip it back to unlisted -- this direction always confirms.
-    const makeUnlistedBtn = page.locator('button:has-text("Make unlisted")').first();
-    check('the button now offers "Make unlisted"', (await makeUnlistedBtn.count()) > 0);
-    if (await makeUnlistedBtn.count()) {
-      await makeUnlistedBtn.click();
+    await openMenu();
+    const makeUnlisted = page.locator('[data-visibility-option="unlisted"]');
+    check('the menu now offers "Make unlisted"', (await makeUnlisted.count()) > 0);
+    if (await makeUnlisted.count()) {
+      await makeUnlisted.click();
       await page.waitForTimeout(500);
       const confirmDialog = page.locator('[role=dialog]:has-text("Make this event unlisted")');
       check('making unlisted always shows a confirm dialog', (await confirmDialog.count()) > 0);

@@ -18,7 +18,7 @@ export default defineTool({
     tags: z.array(z.string().min(1).max(40)).max(20).default([]),
     event_format: z.enum(["in_person", "virtual", "hybrid"]).default("in_person"),
     virtual_link: z.string().url().max(500).optional(),
-    visibility: z.enum(["public", "unlisted"]).default("public"),
+    visibility: z.enum(["public", "unlisted", "private"]).default("public"),
   },
   annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
   handler: async (input, ctx) => {

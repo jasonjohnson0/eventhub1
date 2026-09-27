@@ -61,6 +61,56 @@ export function invitationTemplate(opts: {
   return { subject, html, text };
 }
 
+/** Invite to a PRIVATE event (gap-closure phase 3). The link carries a
+ *  one-time bearer token; accepting also requires signing in with this same
+ *  address, so a forwarded email can't be used by someone else. */
+export function privateInviteTemplate(opts: {
+  event: EventLite;
+  acceptUrl: string;
+  message?: string | null;
+  fromName?: string | null;
+}) {
+  const { event, acceptUrl, message, fromName } = opts;
+  const subject = `Private invitation: ${event.title}`;
+  const html = shell(
+    `You're invited to a private event`,
+    `
+    <h2 style="font-size:16px">${escape(event.title)}</h2>
+    ${fromName ? `<p>${escape(fromName)} invited you. This event is invite-only.</p>` : "<p>This event is invite-only.</p>"}
+    ${message ? `<p style="white-space:pre-line">${escape(message)}</p>` : ""}
+    <p><strong>When:</strong> ${fmtDate(event.start_time, event.timezone)}</p>
+    ${event.location ? `<p><strong>Where:</strong> ${escape(event.location)}</p>` : ""}
+    <p><a href="${acceptUrl}" style="display:inline-block;background:#111;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">Accept invitation</a></p>
+    <p style="font-size:12px;color:#666">Sign in (or create an account) with this email address to accept. The link is personal -- please don't forward it.</p>`,
+  );
+  const text = `You're invited to a private event: ${event.title}\nWhen: ${fmtDate(event.start_time, event.timezone)}\n${event.location ? "Where: " + event.location + "\n" : ""}${message ? "\n" + message + "\n" : ""}\nAccept (sign in with this email address): ${acceptUrl}`;
+  return { subject, html, text };
+}
+
+/** Sent to a guest when the coordinator approves their access request. */
+export function accessApprovedTemplate(opts: { event: EventLite; eventUrl: string }) {
+  const subject = `You're in: ${opts.event.title}`;
+  const html = shell(
+    `Your access request was approved`,
+    `<h2 style="font-size:16px">${escape(opts.event.title)}</h2>
+     <p><strong>When:</strong> ${fmtDate(opts.event.start_time, opts.event.timezone)}</p>
+     <p><a href="${opts.eventUrl}" style="display:inline-block;background:#111;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">View event</a></p>`,
+  );
+  return { subject, html, text: `${subject}\n${fmtDate(opts.event.start_time, opts.event.timezone)}\n${opts.eventUrl}` };
+}
+
+/** Sent to the coordinator when someone asks for access to a private event. */
+export function accessRequestedTemplate(opts: { event: EventLite; requester: string; message?: string | null; manageUrl: string }) {
+  const subject = `Access request: ${opts.event.title}`;
+  const html = shell(
+    subject,
+    `<p><strong>${escape(opts.requester)}</strong> asked to join your private event <strong>${escape(opts.event.title)}</strong>.</p>
+     ${opts.message ? `<p style="white-space:pre-line">${escape(opts.message)}</p>` : ""}
+     <p><a href="${opts.manageUrl}" style="display:inline-block;background:#111;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none">Review guest list</a></p>`,
+  );
+  return { subject, html, text: `${opts.requester} asked to join ${opts.event.title}.\n${opts.message ?? ""}\nReview: ${opts.manageUrl}` };
+}
+
 export function rsvpConfirmationTemplate(opts: { event: EventLite; status: string }) {
   const subject = `RSVP confirmed: ${opts.event.title}`;
   const html = shell(
