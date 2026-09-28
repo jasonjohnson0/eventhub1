@@ -38,20 +38,16 @@ export const listMyEvents = createServerFn({ method: "GET" })
     const coordinatorIds = [context.userId, ...(staff ?? []).map((s) => s.coordinator_id)];
     const columns =
       "id, title, description, location, start_time, end_time, status, coordinator_id, category, tags, series_id, timezone";
-    // Own/workspace events (any status except removed) plus every approved event on the
-    // platform, so the calendar is never empty for viewers who don't own the events.
-    const [owned, approved] = await Promise.all([
-      context.supabase
-        .from("events")
-        .select(columns)
-        .in("coordinator_id", coordinatorIds)
-        .neq("status", "removed"),
-      context.supabase.from("events").select(columns).eq("status", "approved"),
-    ]);
+    // Only own/workspace events (any status except removed). Other calendars'
+    // events must not appear in a coordinator's own calendar.
+    const owned = await context.supabase
+      .from("events")
+      .select(columns)
+      .in("coordinator_id", coordinatorIds)
+      .neq("status", "removed");
     if (owned.error) throw new Error(owned.error.message);
-    if (approved.error) throw new Error(approved.error.message);
-    const byId = new Map<string, (typeof owned.data)[number]>();
-    for (const row of [...(owned.data ?? []), ...(approved.data ?? [])]) byId.set(row.id, row);
+    const byId = new Map<string, NonNullable<typeof owned.data>[number]>();
+    for (const row of owned.data ?? []) byId.set(row.id, row);
     return [...byId.values()].sort(
       (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime(),
     );
