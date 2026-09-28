@@ -369,6 +369,7 @@ export type Database = {
           currency: string
           custom_css: string | null
           custom_domain: string | null
+          demo_seeded_at: string | null
           description: string | null
           dns_records_acknowledged: boolean
           email_provider: Database["public"]["Enums"]["email_provider_type"]
@@ -398,6 +399,7 @@ export type Database = {
           currency?: string
           custom_css?: string | null
           custom_domain?: string | null
+          demo_seeded_at?: string | null
           description?: string | null
           dns_records_acknowledged?: boolean
           email_provider?: Database["public"]["Enums"]["email_provider_type"]
@@ -427,6 +429,7 @@ export type Database = {
           currency?: string
           custom_css?: string | null
           custom_domain?: string | null
+          demo_seeded_at?: string | null
           description?: string | null
           dns_records_acknowledged?: boolean
           email_provider?: Database["public"]["Enums"]["email_provider_type"]
@@ -480,6 +483,39 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      demo_event_templates: {
+        Row: {
+          category: Database["public"]["Enums"]["event_category"]
+          description: string | null
+          duration: string
+          id: string
+          location: string | null
+          start_offset: string
+          tags: string[]
+          title: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["event_category"]
+          description?: string | null
+          duration: string
+          id?: string
+          location?: string | null
+          start_offset: string
+          tags?: string[]
+          title: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["event_category"]
+          description?: string | null
+          duration?: string
+          id?: string
+          location?: string | null
+          start_offset?: string
+          tags?: string[]
+          title?: string
         }
         Relationships: []
       }
@@ -1222,6 +1258,7 @@ export type Database = {
           event_format: Database["public"]["Enums"]["event_format"]
           has_waitlist: boolean
           id: string
+          is_demo: boolean
           is_exception: boolean
           livestream_provider: Database["public"]["Enums"]["livestream_provider"]
           location: string | null
@@ -1250,6 +1287,7 @@ export type Database = {
           event_format?: Database["public"]["Enums"]["event_format"]
           has_waitlist?: boolean
           id?: string
+          is_demo?: boolean
           is_exception?: boolean
           livestream_provider?: Database["public"]["Enums"]["livestream_provider"]
           location?: string | null
@@ -1278,6 +1316,7 @@ export type Database = {
           event_format?: Database["public"]["Enums"]["event_format"]
           has_waitlist?: boolean
           id?: string
+          is_demo?: boolean
           is_exception?: boolean
           livestream_provider?: Database["public"]["Enums"]["livestream_provider"]
           location?: string | null
@@ -2823,6 +2862,7 @@ export type Database = {
           title: string
         }[]
       }
+      seed_demo_events: { Args: { _coordinator_id: string }; Returns: number }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown

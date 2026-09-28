@@ -180,7 +180,50 @@ export const completeOnboarding = createServerFn({ method: "POST" })
       .select("slug")
       .single();
     if (error) throw new Error(error.message);
-    return { ok: true, slug: (row?.slug as string | null) ?? null };
+
+    // New calendars start with sample events (from demo_event_templates) so
+    // the page isn't empty; seed_demo_events is idempotent per coordinator.
+    let demoCount = 0;
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      // biome-ignore lint/suspicious/noExplicitAny: rpc typing
+      const { data: n } = await (supabaseAdmin as any).rpc("seed_demo_events", {
+        _coordinator_id: context.userId,
+      });
+      demoCount = (n as number | null) ?? 0;
+    } catch {
+      // demo seeding is best-effort; going live must not fail because of it
+    }
+    return { ok: true, slug: (row?.slug as string | null) ?? null, demoCount };
+  });
+
+/** Permanently deletes the caller's own sample (is_demo) events. */
+export const deleteMyDemoEvents = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
+    const { data, error } = await (supabaseAdmin as any)
+      .from("events")
+      .delete()
+      .eq("coordinator_id", context.userId)
+      .eq("is_demo", true)
+      .select("id");
+    if (error) throw new Error(error.message);
+    return { deleted: (data ?? []).length };
+  });
+
+/** How many sample events the caller's calendar still has. */
+export const countMyDemoEvents = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
+    const { count } = await (context.supabase as any)
+      .from("events")
+      .select("id", { count: "exact", head: true })
+      .eq("coordinator_id", context.userId)
+      .eq("is_demo", true);
+    return { count: count ?? 0 };
   });
 
 /**
