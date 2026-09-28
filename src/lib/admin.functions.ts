@@ -69,3 +69,58 @@ export const getMyRoles = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return (data ?? []).map((r) => r.role);
   });
+async function requireAdmin(context: { supabase: any; userId: string }) {
+  const { data: isAdmin, error } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+  if (error) throw new Error(error.message);
+  if (!isAdmin) throw new Error("Forbidden");
+}
+
+/** Lock (disable sign-in) or unlock a user account. */
+export const setUserLocked = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z.object({ user_id: z.string().uuid(), locked: z.boolean() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context);
+    if (data.user_id === context.userId) throw new Error("You can't lock your own account");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      ban_duration: data.locked ? "876000h" : "none",
+    });
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("admin_audit_log").insert({
+      admin_id: context.userId,
+      action: data.locked ? "lock_user" : "unlock_user",
+      table_name: "auth.users",
+      record_id: data.user_id,
+      change_details: {},
+    });
+    return { ok: true };
+  });
+
+/** Set a new password for a user. */
+export const adminSetUserPassword = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data) =>
+    z.object({ user_id: z.string().uuid(), password: z.string().min(8).max(128) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      password: data.password,
+    });
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("admin_audit_log").insert({
+      admin_id: context.userId,
+      action: "set_user_password",
+      table_name: "auth.users",
+      record_id: data.user_id,
+      change_details: {},
+    });
+    return { ok: true };
+  });

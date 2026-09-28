@@ -167,6 +167,9 @@ export const adminListUsers = createServerFn({ method: "POST" })
       created_at: u.created_at,
       last_sign_in_at: u.last_sign_in_at ?? null,
       roles: rolesByUser.get(u.id) ?? ["user"],
+      locked:
+        !!(u as { banned_until?: string | null }).banned_until &&
+        new Date((u as { banned_until?: string }).banned_until!).getTime() > Date.now(),
     }));
     if (data.search) {
       const q = data.search.toLowerCase();
