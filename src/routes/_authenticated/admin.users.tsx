@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { adminListUsers } from "@/lib/admin.stats.functions";
-import { promoteUser } from "@/lib/admin.functions";
+import { promoteUser, setUserLocked, adminSetUserPassword } from "@/lib/admin.functions";
 import { banUser } from "@/lib/moderation.functions";
 import {
   Dialog,
@@ -43,6 +43,43 @@ function UsersPage() {
   const [banSubmitting, setBanSubmitting] = useState(false);
   const [promotingId, setPromotingId] = useState<string | null>(null);
   const [promoteTarget, setPromoteTarget] = useState<UserRow | null>(null);
+  const [lockingId, setLockingId] = useState<string | null>(null);
+  const [pwTarget, setPwTarget] = useState<UserRow | null>(null);
+  const [newPw, setNewPw] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
+
+  async function toggleLock(u: UserRow) {
+    setLockingId(u.id);
+    try {
+      await setUserLocked({ data: { user_id: u.id, locked: !u.locked } });
+      toast.success(`${u.email} ${u.locked ? "unlocked" : "locked"}`);
+      await reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setLockingId(null);
+    }
+  }
+
+  async function savePassword() {
+    if (!pwTarget) return;
+    if (newPw.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    setPwSaving(true);
+    try {
+      await adminSetUserPassword({ data: { user_id: pwTarget.id, password: newPw } });
+      toast.success(`Password updated for ${pwTarget.email}`);
+      setPwTarget(null);
+      setNewPw("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setPwSaving(false);
+    }
+  }
+
 
   async function reload() {
     setLoading(true);
@@ -146,6 +183,7 @@ function UsersPage() {
                       {r}
                     </Badge>
                   ))}
+                  {u.locked && <Badge variant="destructive">Locked</Badge>}
                 </TableCell>
                 <TableCell>{new Date(u.created_at).toLocaleDateString()}</TableCell>
                 <TableCell>{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString() : "—"}</TableCell>
@@ -157,6 +195,12 @@ function UsersPage() {
                     onClick={() => openPromote(u)}
                   >
                     Promote to coordinator
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { setPwTarget(u); setNewPw(""); }}>
+                    Change password
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={lockingId === u.id} onClick={() => toggleLock(u)}>
+                    {u.locked ? "Unlock" : "Lock account"}
                   </Button>
                   <Button size="sm" variant="destructive" onClick={() => openBan(u)}>
                     Ban user
@@ -230,6 +274,22 @@ function UsersPage() {
             <Button onClick={confirmPromote} disabled={promotingId === promoteTarget?.id}>
               {promotingId === promoteTarget?.id ? "Promoting…" : "Confirm promotion"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!pwTarget} onOpenChange={(o) => !o && setPwTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change password for {pwTarget?.email}</DialogTitle>
+            <DialogDescription>The user will need this new password to sign in.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1">
+            <Label>New password</Label>
+            <Input type="password" minLength={8} value={newPw} onChange={(e) => setNewPw(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPwTarget(null)} disabled={pwSaving}>Cancel</Button>
+            <Button onClick={savePassword} disabled={pwSaving}>{pwSaving ? "Saving…" : "Save password"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
