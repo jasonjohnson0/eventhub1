@@ -44,6 +44,7 @@ import {
   saveCoordinatorProfile,
   checkSlugAvailable,
   completeOnboarding,
+  deleteMyDemoEvents,
   type CoordinatorProfile,
 } from "@/lib/onboarding.functions";
 import { savePlatformConfig, saveCustomStripeKeys } from "@/lib/setup.functions";
@@ -306,11 +307,14 @@ function OnboardingWizard() {
     return goTo(6);
   };
 
+  const [demoCount, setDemoCount] = useState(0);
+  const [deletingDemo, setDeletingDemo] = useState(false);
   const finish = async () => {
     setSaving(true);
     try {
       await persist(draft);
-      await completeOnboarding();
+      const res = await completeOnboarding();
+      setDemoCount(res.demoCount ?? 0);
       confetti({ particleCount: 160, spread: 90, origin: { y: 0.6 } });
       setDone(true);
     } catch (e) {
@@ -342,6 +346,33 @@ function OnboardingWizard() {
             <p className="text-muted-foreground">
               {(value("company_name") as string) || "Your community calendar"} is ready for events.
             </p>
+            {demoCount > 0 && (
+              <div className="space-y-2 rounded-lg border p-3 text-sm">
+                <p>
+                  We added {demoCount} sample events so you can see how your calendar looks. Keep
+                  them for now, or remove them before sharing.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={deletingDemo}
+                  onClick={async () => {
+                    setDeletingDemo(true);
+                    try {
+                      const r = await deleteMyDemoEvents();
+                      toast.success(`Removed ${r.deleted} sample events`);
+                      setDemoCount(0);
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : "Could not delete sample events");
+                    } finally {
+                      setDeletingDemo(false);
+                    }
+                  }}
+                >
+                  {deletingDemo ? "Deleting…" : "Delete sample events"}
+                </Button>
+              </div>
+            )}
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
               <Button onClick={() => navigate({ to: "/dashboard" })}>Go to dashboard</Button>
               <Button variant="outline" onClick={() => navigate({ to: "/events" })}>
