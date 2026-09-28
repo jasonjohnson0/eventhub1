@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -50,14 +50,24 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthLayout() {
-  const { isAdmin, coordinatorState } = Route.useRouteContext();
+  const { user, isAdmin, coordinatorState } = Route.useRouteContext();
+  const initial = (user.email ?? "?").charAt(0).toUpperCase();
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar isAdmin={isAdmin} coordinatorState={coordinatorState} />
         <div className="flex flex-1 flex-col">
-          <header className="flex h-12 items-center border-b bg-background/95 px-2 backdrop-blur">
+          <header className="flex h-12 items-center justify-between border-b bg-background/95 px-2 backdrop-blur">
             <SidebarTrigger />
+            <Link
+              to="/profile"
+              className="flex items-center gap-2 rounded-full border px-2 py-1 text-sm hover:bg-muted"
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                {initial}
+              </span>
+              <span className="hidden sm:inline">My profile</span>
+            </Link>
           </header>
           <main className="flex-1 bg-muted/30">
             <Outlet />
