@@ -1,14 +1,11 @@
 import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
-import { getMyRoles } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
-  beforeLoad: async () => {
-    try {
-      const roles = await getMyRoles();
-      if (!roles.includes("admin")) throw redirect({ to: "/dashboard" });
-    } catch (e) {
-      throw redirect({ to: "/dashboard" });
-    }
+  // The parent layout already looked up the signed-in user's roles; reuse it
+  // instead of a second server round-trip. Every admin server function still
+  // re-checks the admin role on the server.
+  beforeLoad: ({ context }) => {
+    if (!context.isAdmin) throw redirect({ to: "/dashboard" });
   },
   component: AdminLayout,
   head: () => ({ meta: [{ title: "Admin — EventHub" }] }),
