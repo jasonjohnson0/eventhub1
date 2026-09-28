@@ -44,6 +44,32 @@ export type Database = {
         }
         Relationships: []
       }
+      api_rate_buckets: {
+        Row: {
+          count: number
+          key_id: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          key_id: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          key_id?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_rate_buckets_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "coordinator_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auth_oauth_emails: {
         Row: {
           added_to_marketing_list: boolean
@@ -217,6 +243,39 @@ export type Database = {
           },
         ]
       }
+      coordinator_api_keys: {
+        Row: {
+          coordinator_id: string
+          created_at: string
+          id: string
+          last_used_at: string | null
+          name: string
+          prefix: string
+          revoked_at: string | null
+          secret_hash: string
+        }
+        Insert: {
+          coordinator_id: string
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          name: string
+          prefix: string
+          revoked_at?: string | null
+          secret_hash: string
+        }
+        Update: {
+          coordinator_id?: string
+          created_at?: string
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          prefix?: string
+          revoked_at?: string | null
+          secret_hash?: string
+        }
+        Relationships: []
+      }
       coordinator_billing_settings: {
         Row: {
           coordinator_id: string
@@ -243,6 +302,39 @@ export type Database = {
           monthly_fee_cents?: number
           sponsored_enabled?: boolean
           stripe_customer_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coordinator_chat_hooks: {
+        Row: {
+          coordinator_id: string
+          discord_webhook_url: string | null
+          notify_event_cancelled: boolean
+          notify_rsvp_going: boolean
+          notify_submission: boolean
+          notify_ticket_sold: boolean
+          slack_webhook_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          coordinator_id: string
+          discord_webhook_url?: string | null
+          notify_event_cancelled?: boolean
+          notify_rsvp_going?: boolean
+          notify_submission?: boolean
+          notify_ticket_sold?: boolean
+          slack_webhook_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          coordinator_id?: string
+          discord_webhook_url?: string | null
+          notify_event_cancelled?: boolean
+          notify_rsvp_going?: boolean
+          notify_submission?: boolean
+          notify_ticket_sold?: boolean
+          slack_webhook_url?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -275,12 +367,14 @@ export type Database = {
           coordinator_id: string
           created_at: string
           currency: string
+          custom_css: string | null
           custom_domain: string | null
           description: string | null
           dns_records_acknowledged: boolean
           email_provider: Database["public"]["Enums"]["email_provider_type"]
           favicon_url: string | null
           full_name: string | null
+          header_image_url: string | null
           language: string
           logo_url: string | null
           phone: string | null
@@ -289,6 +383,7 @@ export type Database = {
           server_config: Json
           setup_completed_at: string | null
           setup_step: number
+          show_nearby_events: boolean
           slug: string | null
           terms_accepted_at: string | null
           timezone: string
@@ -301,12 +396,14 @@ export type Database = {
           coordinator_id: string
           created_at?: string
           currency?: string
+          custom_css?: string | null
           custom_domain?: string | null
           description?: string | null
           dns_records_acknowledged?: boolean
           email_provider?: Database["public"]["Enums"]["email_provider_type"]
           favicon_url?: string | null
           full_name?: string | null
+          header_image_url?: string | null
           language?: string
           logo_url?: string | null
           phone?: string | null
@@ -315,6 +412,7 @@ export type Database = {
           server_config?: Json
           setup_completed_at?: string | null
           setup_step?: number
+          show_nearby_events?: boolean
           slug?: string | null
           terms_accepted_at?: string | null
           timezone?: string
@@ -327,12 +425,14 @@ export type Database = {
           coordinator_id?: string
           created_at?: string
           currency?: string
+          custom_css?: string | null
           custom_domain?: string | null
           description?: string | null
           dns_records_acknowledged?: boolean
           email_provider?: Database["public"]["Enums"]["email_provider_type"]
           favicon_url?: string | null
           full_name?: string | null
+          header_image_url?: string | null
           language?: string
           logo_url?: string | null
           phone?: string | null
@@ -341,6 +441,7 @@ export type Database = {
           server_config?: Json
           setup_completed_at?: string | null
           setup_step?: number
+          show_nearby_events?: boolean
           slug?: string | null
           terms_accepted_at?: string | null
           timezone?: string
@@ -348,6 +449,118 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      coordinator_subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean
+          coordinator_id: string
+          created_at: string
+          current_period_end: string | null
+          status: Database["public"]["Enums"]["annual_plan_status"]
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean
+          coordinator_id: string
+          created_at?: string
+          current_period_end?: string | null
+          status?: Database["public"]["Enums"]["annual_plan_status"]
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean
+          coordinator_id?: string
+          created_at?: string
+          current_period_end?: string | null
+          status?: Database["public"]["Enums"]["annual_plan_status"]
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_sends: {
+        Row: {
+          clicked_at: string | null
+          coordinator_id: string
+          created_at: string
+          error: string | null
+          event_id: string | null
+          id: string
+          invitation_id: string | null
+          opened_at: string | null
+          provider: string | null
+          provider_message_id: string | null
+          recipient_email: string
+          recipient_user_id: string | null
+          sent_at: string | null
+          status: string
+          subject: string | null
+          type: string
+        }
+        Insert: {
+          clicked_at?: string | null
+          coordinator_id: string
+          created_at?: string
+          error?: string | null
+          event_id?: string | null
+          id?: string
+          invitation_id?: string | null
+          opened_at?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          recipient_email: string
+          recipient_user_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          type: string
+        }
+        Update: {
+          clicked_at?: string | null
+          coordinator_id?: string
+          created_at?: string
+          error?: string | null
+          event_id?: string | null
+          id?: string
+          invitation_id?: string | null
+          opened_at?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          recipient_email?: string
+          recipient_user_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_sends_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "email_sends_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "event_invitations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_details: {
         Row: {
@@ -536,6 +749,63 @@ export type Database = {
           },
         ]
       }
+      event_invites: {
+        Row: {
+          created_at: string
+          email: string | null
+          event_id: string
+          id: string
+          invited_by: string | null
+          message: string | null
+          responded_at: string | null
+          status: Database["public"]["Enums"]["event_invite_status"]
+          token_hash: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          event_id: string
+          id?: string
+          invited_by?: string | null
+          message?: string | null
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["event_invite_status"]
+          token_hash?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          event_id?: string
+          id?: string
+          invited_by?: string | null
+          message?: string | null
+          responded_at?: string | null
+          status?: Database["public"]["Enums"]["event_invite_status"]
+          token_hash?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_invites_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "event_invites_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_locations: {
         Row: {
           created_at: string
@@ -591,6 +861,7 @@ export type Database = {
           event_id: string
           id: string
           organizer_id: string
+          role: Database["public"]["Enums"]["person_kind"]
         }
         Insert: {
           created_at?: string
@@ -598,6 +869,7 @@ export type Database = {
           event_id: string
           id?: string
           organizer_id: string
+          role?: Database["public"]["Enums"]["person_kind"]
         }
         Update: {
           created_at?: string
@@ -605,6 +877,7 @@ export type Database = {
           event_id?: string
           id?: string
           organizer_id?: string
+          role?: Database["public"]["Enums"]["person_kind"]
         }
         Relationships: [
           {
@@ -966,6 +1239,7 @@ export type Database = {
           updated_at: string
           venue_id: string | null
           virtual_link: string | null
+          visibility: Database["public"]["Enums"]["event_visibility"]
         }
         Insert: {
           category?: Database["public"]["Enums"]["event_category"]
@@ -988,11 +1262,12 @@ export type Database = {
           start_time: string
           status?: Database["public"]["Enums"]["event_status"]
           tags?: string[]
-          timezone?: string
+          timezone: string
           title: string
           updated_at?: string
           venue_id?: string | null
           virtual_link?: string | null
+          visibility?: Database["public"]["Enums"]["event_visibility"]
         }
         Update: {
           category?: Database["public"]["Enums"]["event_category"]
@@ -1020,6 +1295,7 @@ export type Database = {
           updated_at?: string
           venue_id?: string | null
           virtual_link?: string | null
+          visibility?: Database["public"]["Enums"]["event_visibility"]
         }
         Relationships: [
           {
@@ -1108,6 +1384,7 @@ export type Database = {
           created_at: string
           credentials: string | null
           id: string
+          kind: Database["public"]["Enums"]["person_kind"]
           name: string
           photo_url: string | null
           social_links: Json
@@ -1120,6 +1397,7 @@ export type Database = {
           created_at?: string
           credentials?: string | null
           id?: string
+          kind?: Database["public"]["Enums"]["person_kind"]
           name: string
           photo_url?: string | null
           social_links?: Json
@@ -1132,6 +1410,7 @@ export type Database = {
           created_at?: string
           credentials?: string | null
           id?: string
+          kind?: Database["public"]["Enums"]["person_kind"]
           name?: string
           photo_url?: string | null
           social_links?: Json
@@ -1516,8 +1795,12 @@ export type Database = {
           purchased_at: string
           qr_token: string
           quantity: number
+          refund_stripe_id: string | null
+          refunded_at: string | null
+          reserved_until: string | null
           status: string
           stripe_charge_id: string | null
+          stripe_checkout_session_id: string | null
           ticket_id: string
           user_id: string
         }
@@ -1530,8 +1813,12 @@ export type Database = {
           purchased_at?: string
           qr_token?: string
           quantity?: number
+          refund_stripe_id?: string | null
+          refunded_at?: string | null
+          reserved_until?: string | null
           status?: string
           stripe_charge_id?: string | null
+          stripe_checkout_session_id?: string | null
           ticket_id: string
           user_id: string
         }
@@ -1544,8 +1831,12 @@ export type Database = {
           purchased_at?: string
           qr_token?: string
           quantity?: number
+          refund_stripe_id?: string | null
+          refunded_at?: string | null
+          reserved_until?: string | null
           status?: string
           stripe_charge_id?: string | null
+          stripe_checkout_session_id?: string | null
           ticket_id?: string
           user_id?: string
         }
@@ -1652,6 +1943,7 @@ export type Database = {
         Row: {
           accessibility_info: string | null
           address: string | null
+          address_verified: boolean
           capacity: number | null
           coordinator_id: string
           created_at: string
@@ -1662,12 +1954,15 @@ export type Database = {
           parking_info: string | null
           phone: string | null
           photo_url: string | null
+          unit: string | null
           updated_at: string
+          verified_label: string | null
           website: string | null
         }
         Insert: {
           accessibility_info?: string | null
           address?: string | null
+          address_verified?: boolean
           capacity?: number | null
           coordinator_id: string
           created_at?: string
@@ -1678,12 +1973,15 @@ export type Database = {
           parking_info?: string | null
           phone?: string | null
           photo_url?: string | null
+          unit?: string | null
           updated_at?: string
+          verified_label?: string | null
           website?: string | null
         }
         Update: {
           accessibility_info?: string | null
           address?: string | null
+          address_verified?: boolean
           capacity?: number | null
           coordinator_id?: string
           created_at?: string
@@ -1694,7 +1992,9 @@ export type Database = {
           parking_info?: string | null
           phone?: string | null
           photo_url?: string | null
+          unit?: string | null
           updated_at?: string
+          verified_label?: string | null
           website?: string | null
         }
         Relationships: []
@@ -2038,6 +2338,33 @@ export type Database = {
           user_id: string
         }[]
       }
+      confirm_ticket_purchase: {
+        Args: { _purchase_id: string; _stripe_charge_id: string }
+        Returns: {
+          amount_cents: number
+          check_in_count: number
+          created_at: string
+          event_id: string
+          id: string
+          purchased_at: string
+          qr_token: string
+          quantity: number
+          refund_stripe_id: string | null
+          refunded_at: string | null
+          reserved_until: string | null
+          status: string
+          stripe_charge_id: string | null
+          stripe_checkout_session_id: string | null
+          ticket_id: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ticket_purchases"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       count_active_sponsorships: {
         Args: { p_coordinator_id: string; p_month?: string }
         Returns: number
@@ -2214,6 +2541,10 @@ export type Database = {
           state: string
         }[]
       }
+      get_coordinator_slug: {
+        Args: { p_coordinator_id: string }
+        Returns: string
+      }
       get_event_rsvp_counts: {
         Args: { p_event_id: string }
         Returns: {
@@ -2240,6 +2571,7 @@ export type Database = {
           id: string
           location: string
           start_time: string
+          timezone: string
           title: string
           virtual_link: string
         }[]
@@ -2273,11 +2605,14 @@ export type Database = {
         Returns: {
           company_name: string
           coordinator_id: string
+          custom_css: string
           description: string
           favicon_url: string
+          header_image_url: string
           logo_url: string
           primary_color: string
           secondary_color: string
+          show_nearby_events: boolean
           slug: string
         }[]
       }
@@ -2328,6 +2663,10 @@ export type Database = {
         }[]
       }
       gettransactionid: { Args: never; Returns: unknown }
+      has_accepted_event_invite: {
+        Args: { _event_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2344,6 +2683,33 @@ export type Database = {
         Returns: boolean
       }
       longtransactionsenabled: { Args: never; Returns: boolean }
+      mark_ticket_refunded: {
+        Args: { _purchase_id: string; _refund_stripe_id: string }
+        Returns: {
+          amount_cents: number
+          check_in_count: number
+          created_at: string
+          event_id: string
+          id: string
+          purchased_at: string
+          qr_token: string
+          quantity: number
+          refund_stripe_id: string | null
+          refunded_at: string | null
+          reserved_until: string | null
+          status: string
+          stripe_charge_id: string | null
+          stripe_checkout_session_id: string | null
+          ticket_id: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ticket_purchases"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
@@ -2396,6 +2762,43 @@ export type Database = {
           p_visitor_hash: string
         }
         Returns: boolean
+      }
+      release_ticket_hold: {
+        Args: { _purchase_id: string }
+        Returns: undefined
+      }
+      reserve_ticket: {
+        Args: {
+          _amount_cents: number
+          _hold_minutes?: number
+          _quantity: number
+          _ticket_id: string
+          _user_id: string
+        }
+        Returns: {
+          amount_cents: number
+          check_in_count: number
+          created_at: string
+          event_id: string
+          id: string
+          purchased_at: string
+          qr_token: string
+          quantity: number
+          refund_stripe_id: string | null
+          refunded_at: string | null
+          reserved_until: string | null
+          status: string
+          stripe_charge_id: string | null
+          stripe_checkout_session_id: string | null
+          ticket_id: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ticket_purchases"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       search_events_nearby: {
         Args: {
@@ -3014,6 +3417,7 @@ export type Database = {
       }
     }
     Enums: {
+      annual_plan_status: "none" | "active" | "past_due" | "canceled"
       app_role: "admin" | "coordinator" | "staff" | "user"
       ban_scope: "user" | "event"
       consent_status: "pending" | "confirmed" | "unsubscribed"
@@ -3033,12 +3437,20 @@ export type Database = {
         | "workshop"
         | "other"
       event_format: "in_person" | "virtual" | "hybrid"
+      event_invite_status:
+        | "pending"
+        | "requested"
+        | "accepted"
+        | "declined"
+        | "revoked"
       event_status: "draft" | "approved" | "removed"
+      event_visibility: "public" | "unlisted" | "private"
       invitation_rsvp_status: "pending" | "going" | "interested" | "declined"
       livestream_provider: "zoom" | "google_meet" | "youtube" | "none"
       notification_type: "reminder" | "announcement" | "update"
       oauth_provider: "google" | "apple" | "facebook" | "email"
       payment_status: "pending" | "succeeded" | "failed" | "refunded"
+      person_kind: "organizer" | "speaker" | "both"
       rsvp_status: "going" | "interested" | "declined"
       share_platform: "facebook" | "twitter" | "email" | "link" | "other"
       slot_status: "available" | "reserved" | "paid" | "expired"
@@ -3181,6 +3593,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      annual_plan_status: ["none", "active", "past_due", "canceled"],
       app_role: ["admin", "coordinator", "staff", "user"],
       ban_scope: ["user", "event"],
       consent_status: ["pending", "confirmed", "unsubscribed"],
@@ -3202,12 +3615,21 @@ export const Constants = {
         "other",
       ],
       event_format: ["in_person", "virtual", "hybrid"],
+      event_invite_status: [
+        "pending",
+        "requested",
+        "accepted",
+        "declined",
+        "revoked",
+      ],
       event_status: ["draft", "approved", "removed"],
+      event_visibility: ["public", "unlisted", "private"],
       invitation_rsvp_status: ["pending", "going", "interested", "declined"],
       livestream_provider: ["zoom", "google_meet", "youtube", "none"],
       notification_type: ["reminder", "announcement", "update"],
       oauth_provider: ["google", "apple", "facebook", "email"],
       payment_status: ["pending", "succeeded", "failed", "refunded"],
+      person_kind: ["organizer", "speaker", "both"],
       rsvp_status: ["going", "interested", "declined"],
       share_platform: ["facebook", "twitter", "email", "link", "other"],
       slot_status: ["available", "reserved", "paid", "expired"],

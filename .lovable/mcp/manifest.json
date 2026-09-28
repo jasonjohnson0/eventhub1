@@ -170,6 +170,15 @@
               "type": "string",
               "format": "uri",
               "maxLength": 500
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "public",
+                "unlisted",
+                "private"
+              ],
+              "default": "public"
             }
           },
           "required": [
@@ -247,6 +256,14 @@
                 "pending",
                 "approved",
                 "rejected"
+              ]
+            },
+            "visibility": {
+              "type": "string",
+              "enum": [
+                "public",
+                "unlisted",
+                "private"
               ]
             }
           },
