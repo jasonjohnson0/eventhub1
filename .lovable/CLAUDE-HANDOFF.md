@@ -160,3 +160,57 @@ that's the case, the rules below apply.
   convenience. If a tool returns empty under RLS, that's correct fail-closed
   behavior — escalate, don't bypass.
 - If unsure whether something exists, search `src/` before creating it.
+
+## 7. Session log — recent work done in Lovable (as of 2026-09-29)
+
+- Domain: public origin is now **https://www.dothantoday.com** (apex redirects to www).
+  The old Vercel deployment is retired. `PUBLIC_SITE_URL` = `https://www.dothantoday.com`.
+- Verified `/submit-event` works in production with a real browser (row landed in
+  `event_submissions`). The earlier "Seroval Error" came from plain-JSON test tooling,
+  not a real bug. Deployed Worker has `process.env` populated.
+- Admin account tools: admins can **lock/unlock** accounts and **change passwords**
+  from Admin → Users (all actions written to `admin_audit_log`).
+- Every signed-in page has a **My profile** button (change own password).
+- Fixed a blank-screen crash on Admin pages (admin check now reuses the layout's
+  `isAdmin` from `_authenticated/route.tsx`; server fns still re-verify).
+- Jackson County Times calendar (slug `jctimes`) transferred from
+  jason@omegatechllc.com to **mary.jctimes@gmail.com** (coordinator role granted).
+  Its demo event was deleted and "Also happening nearby" turned off for it.
+- **Demo data for new calendars:** when a coordinator finishes onboarding, the 36
+  Jacksonville sample events are copied into their calendar (`events.is_demo = true`,
+  dated from the next day). The "Your calendar is live!" screen has a
+  **Delete sample events** button that removes only `is_demo` rows.
+  Known gap: no delete-demo button elsewhere after that screen.
+- The signed-in calendar page now shows **only the signed-in coordinator's own
+  events** (fix in `src/lib/events.functions.ts`), not every calendar's.
+
+## 8. Next task: finish Phase 1b — Sponsorships (Lovable builds it)
+
+Claude: **do not implement this yourself.** Ask Lovable to build it so the code base
+stays consistent. Existing pieces to extend (don't rebuild): `sponsored_slots`,
+`sponsors`, `sponsor_creatives`, `sponsor_ad_stats`, `billing`,
+`coordinator_billing_settings`, `get_public_sponsors`,
+`get_public_coordinator_sponsors`, ad endpoints `/api/ad/i/$slotId` and
+`/api/ad/c/$slotId`, `src/components/sponsor-creative-editor.tsx`,
+`src/components/sponsor-performance.tsx`, `/admin/sponsorship`, Stripe via
+`src/lib/stripe.server.ts`.
+
+Requirements:
+1. **Sponsor scope — a sponsor can buy any of these:**
+   - **Single event** (existing per-event slots).
+   - **One calendar or many calendars** (pick several coordinators' calendars in
+     one purchase).
+   - **Network-wide** (every calendar on the platform).
+   - **Geographic** — all calendars/events within an area, defined by:
+     - a **center ZIP code + radius** (miles), and/or
+     - a **list of individual ZIP codes**.
+2. Geographic targeting uses the existing PostGIS setup (`event_locations.geom`,
+   ZIP geocoding already used by the `/events` geo-filter).
+3. A self-serve **"Become a sponsor"** flow: choose scope → targeting → dates →
+   creative (logo, link, headline, body; https-only URLs) → pay with Stripe.
+4. Ads render on the matching event pages / calendar pages / embeds, with
+   impressions and clicks tracked through the existing ad endpoints.
+5. Admin (`/admin/sponsorship`) sees and manages all sponsorships; coordinators
+   see sponsorships running on their own calendars.
+6. Keep RLS strict: the public only sees creatives via the security-definer RPCs;
+   advertiser contact info and costs are never exposed publicly.
