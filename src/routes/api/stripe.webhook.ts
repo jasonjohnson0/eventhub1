@@ -163,6 +163,31 @@ async function refundTicketByPaymentIntent(admin: any, charge: Stripe.Charge) {
   }
 }
 
+/** Phase 1b sponsor campaigns. Only a confirmed payment moves a campaign on:
+ *  checkout.session.completed with payment_status "paid", or the later
+ *  async_payment_succeeded. It lands in pending_review for an admin to approve.
+ *  The RPCs are idempotent, so Stripe retries are harmless. */
+// biome-ignore lint/suspicious/noExplicitAny: RPCs not in generated types yet
+async function markCampaignPaid(admin: any, session: Stripe.Checkout.Session) {
+  const campaignId = session.metadata?.campaign_id as string | undefined;
+  if (!campaignId) return;
+  const pi = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;
+  const { error } = await admin.rpc("mark_campaign_paid", {
+    p_campaign_id: campaignId,
+    p_session_id: session.id,
+    p_payment_intent: pi ?? null,
+  });
+  if (error) console.error(`[stripe webhook] mark_campaign_paid failed for ${campaignId}:`, error.message);
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: RPCs not in generated types yet
+async function markCampaignFailed(admin: any, session: Stripe.Checkout.Session) {
+  const campaignId = session.metadata?.campaign_id as string | undefined;
+  if (!campaignId) return;
+  const { error } = await admin.rpc("mark_campaign_payment_failed", { p_campaign_id: campaignId });
+  if (error) console.error(`[stripe webhook] mark_campaign_payment_failed failed for ${campaignId}:`, error.message);
+}
+
 export const Route = createFileRoute("/api/stripe/webhook")({
   server: {
     handlers: {
@@ -197,6 +222,12 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                 await confirmTicketCheckout(supabaseAdmin, session);
                 break;
               }
+              if (session.metadata?.kind === "sponsor_campaign") {
+                // Delayed methods (bank debits) complete the session unpaid;
+                // wait for async_payment_succeeded in that case.
+                if (session.payment_status === "paid") await markCampaignPaid(supabaseAdmin, session);
+                break;
+              }
               if (session.mode === "subscription" && session.subscription) {
                 const subId =
                   typeof session.subscription === "string"
@@ -218,8 +249,22 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               }
               break;
             }
+            case "checkout.session.async_payment_succeeded": {
+              const session = event.data.object as Stripe.Checkout.Session;
+              if (session.metadata?.kind === "sponsor_campaign") await markCampaignPaid(supabaseAdmin, session);
+              break;
+            }
+            case "checkout.session.async_payment_failed": {
+              const session = event.data.object as Stripe.Checkout.Session;
+              if (session.metadata?.kind === "sponsor_campaign") await markCampaignFailed(supabaseAdmin, session);
+              break;
+            }
             case "checkout.session.expired": {
               const session = event.data.object as Stripe.Checkout.Session;
+              if (session.metadata?.kind === "sponsor_campaign") {
+                await markCampaignFailed(supabaseAdmin, session);
+                break;
+              }
               if (session.metadata?.kind === "ticket_purchase") {
                 await releaseExpiredTicketHold(supabaseAdmin, session);
               }
@@ -228,6 +273,12 @@ export const Route = createFileRoute("/api/stripe/webhook")({
             case "charge.refunded": {
               const charge = event.data.object as Stripe.Charge;
               await refundTicketByPaymentIntent(supabaseAdmin, charge);
+              const refundPi =
+                typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+              if (refundPi) {
+                const { error } = await supabaseAdmin.rpc("mark_campaign_refunded", { p_payment_intent: refundPi });
+                if (error) console.error("[stripe webhook] mark_campaign_refunded failed:", error.message);
+              }
               break;
             }
             case "customer.subscription.updated":
