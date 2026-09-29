@@ -275,8 +275,9 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               await refundTicketByPaymentIntent(supabaseAdmin, charge);
               const refundPi =
                 typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
-              if (refundPi) {
-                const { error } = await supabaseAdmin.rpc("mark_campaign_refunded", { p_payment_intent: refundPi });
+              if (refundPi && charge.refunded) {
+                // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+                const { error } = await (supabaseAdmin as any).rpc("mark_campaign_refunded", { p_payment_intent: refundPi });
                 if (error) console.error("[stripe webhook] mark_campaign_refunded failed:", error.message);
               }
               break;
