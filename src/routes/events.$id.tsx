@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { CampaignAds } from "@/components/campaign-ads";
 import { useCallback, useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -768,6 +769,9 @@ function PublicEventDetail() {
             </aside>
           </div>
         </div>
+
+        {/* Platform sponsor campaigns (never on private events) */}
+        {event.visibility !== "private" && <CampaignAds eventId={event.id} />}
 
         {/* Sponsorship / ad slots */}
         <section className="mt-10 rounded-3xl border border-amber-100 bg-gradient-to-b from-amber-50/70 to-white p-5 shadow-sm md:p-6">
