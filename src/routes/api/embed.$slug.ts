@@ -323,7 +323,27 @@ export const Route = createFileRoute("/api/embed/$slug")({
           "get_public_coordinator_sponsors",
           { p_coordinator_id: coordinator.coordinator_id, p_limit: 4 },
         );
-        const sponsors = (sponsorRows ?? []) as Sponsor[];
+        // Phase 1b: platform campaigns (calendars / geo / network) chosen by the
+        // calendar's ad policy. The coordinator's own slot sales come first;
+        // embeds show at most 2 ads in total.
+        // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+        const { data: campaignRows } = await (supabase as any).rpc(
+          "get_campaign_sponsors_for_calendar",
+          { p_coordinator_id: coordinator.coordinator_id, p_limit: 2 },
+        );
+        const campaignSponsors: Sponsor[] = (campaignRows ?? []).map(
+          (c: { ad_key: string; business_name: string; logo_url: string | null; link_url: string | null; headline: string | null; body: string | null }) => ({
+            slot_id: c.ad_key,
+            event_id: "",
+            event_title: "",
+            business_name: c.business_name,
+            logo_url: c.logo_url,
+            link_url: c.link_url,
+            headline: c.headline,
+            body: c.body,
+          }),
+        );
+        const sponsors = [...((sponsorRows ?? []) as Sponsor[]), ...campaignSponsors].slice(0, 2);
 
         const appUrl = siteOrigin() || url.origin.replace(/\/+$/, "");
         const self = `${appUrl}/api/embed/${encodeURIComponent(coordinator.slug)}`;

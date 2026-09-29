@@ -1,4 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { CampaignAds } from "@/components/campaign-ads";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
@@ -395,6 +396,7 @@ function CoordinatorCalendar() {
             </p>
           </div>
         )}
+        <CampaignAds coordinatorId={coordinator.coordinator_id} />
       </main>
 
       <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-400">

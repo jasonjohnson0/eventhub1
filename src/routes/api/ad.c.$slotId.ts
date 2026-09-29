@@ -2,11 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   NO_STORE,
   adDestination,
-  isUuid,
+  campaignDestination,
   recordAdEvent,
+  recordCampaignAdEvent,
   surfaceOf,
 } from "@/lib/ad-tracking.server";
 import { siteOrigin } from "@/lib/site-url";
+import { parseAdKey } from "@/lib/sponsor-pricing";
 
 /**
  * The click redirect: /api/ad/c/<slot>?s=embed
@@ -27,14 +29,16 @@ export const Route = createFileRoute("/api/ad/c/$slotId")({
         const url = new URL(request.url);
 
         const fallback = `${siteOrigin() || url.origin}/events`;
-        if (!isUuid(slotId)) {
+        const key = parseAdKey(slotId);
+        if (!key) {
           return Response.redirect(fallback, 302);
         }
 
-        const [destination] = await Promise.all([
-          adDestination(slotId),
-          recordAdEvent(slotId, "click", surfaceOf(url), request.headers),
-        ]);
+        const [destination] = await Promise.all(
+          key.kind === "campaign"
+            ? [campaignDestination(key.id), recordCampaignAdEvent(key.id, "click", surfaceOf(url), request.headers)]
+            : [adDestination(key.id), recordAdEvent(key.id, "click", surfaceOf(url), request.headers)],
+        );
 
         // No destination means the campaign ended, the slot was never paid, or
         // the advertiser left the link blank. Someone clicking a stale ad in a

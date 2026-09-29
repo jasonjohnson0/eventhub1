@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PIXEL, NO_STORE, isUuid, recordAdEvent, surfaceOf } from "@/lib/ad-tracking.server";
+import { PIXEL, NO_STORE, recordAdEvent, recordCampaignAdEvent, surfaceOf } from "@/lib/ad-tracking.server";
+import { parseAdKey } from "@/lib/sponsor-pricing";
 
 /**
  * The impression pixel: /api/ad/i/<slot>?s=embed
@@ -19,7 +20,11 @@ export const Route = createFileRoute("/api/ad/i/$slotId")({
     handlers: {
       GET: async ({ params, request }) => {
         const slotId = String(params.slotId ?? "");
-        if (isUuid(slotId)) {
+        // "c_<uuid>" is a sponsor campaign; a bare uuid or "s_<uuid>" is a slot.
+        const key = parseAdKey(slotId);
+        if (key?.kind === "campaign") {
+          await recordCampaignAdEvent(key.id, "impression", surfaceOf(new URL(request.url)), request.headers);
+        } else if (key) {
           // Awaited on purpose. Firing this off and returning early would be
           // faster, but on a serverless host the function can be frozen the
           // moment the response is sent, and the write would be lost for an
@@ -27,7 +32,7 @@ export const Route = createFileRoute("/api/ad/i/$slotId")({
           // is only discovered when an advertiser disputes the numbers. The
           // cost is one round trip on a request that carries no layout.
           await recordAdEvent(
-            slotId,
+            key.id,
             "impression",
             surfaceOf(new URL(request.url)),
             request.headers,
