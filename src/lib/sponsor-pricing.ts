@@ -55,3 +55,14 @@ export function parseZipList(text: string): string[] {
   return Array.from(new Set(text.split(/[\s,;]+/).map((z) => z.trim()).filter(Boolean)));
 }
 export const isZip = (z: string) => /^[0-9]{5}$/.test(z);
+
+export const STATUS_LABEL: Record<string, string> = {
+  draft: "Draft",
+  pending_payment: "Awaiting payment",
+  pending_review: "Paid — awaiting review",
+  active: "Live",
+  paused: "Paused",
+  ended: "Ended",
+  refunded: "Refunded",
+  rejected: "Declined (refunded)",
+};

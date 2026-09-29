@@ -9,8 +9,7 @@ import {
   deleteSponsorDraft,
   getMyCampaign,
 } from "@/lib/sponsor-campaigns.functions";
-import { formatCents } from "@/lib/sponsor-pricing";
-import { STATUS_LABEL } from "./sponsorships.index";
+import { formatCents, STATUS_LABEL } from "@/lib/sponsor-pricing";
 
 export const Route = createFileRoute("/_authenticated/sponsorships/$id")({
   head: () => ({

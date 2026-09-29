@@ -19,6 +19,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as EmbedRouteImport } from './routes/embed'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdvertiseRouteImport } from './routes/advertise'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PrivateInviteTokenRouteImport } from './routes/private-invite.$token'
@@ -39,6 +40,7 @@ import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as ApiV1IndexRouteImport } from './routes/api/v1/index'
+import { Route as AuthenticatedSponsorshipsIndexRouteImport } from './routes/_authenticated/sponsorships.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as CSlugSpeakersRouteImport } from './routes/c.$slug_.speakers'
 import { Route as ApiV1VenuesRouteImport } from './routes/api/v1/venues'
@@ -47,6 +49,8 @@ import { Route as ApiV1EventsRouteImport } from './routes/api/v1/events'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
 import { Route as ApiEmbedSlugRouteImport } from './routes/api/embed.$slug'
 import { Route as ApiCronEmailRemindersRouteImport } from './routes/api/cron.email-reminders'
+import { Route as AuthenticatedSponsorshipsNewRouteImport } from './routes/_authenticated/sponsorships.new'
+import { Route as AuthenticatedSponsorshipsIdRouteImport } from './routes/_authenticated/sponsorships.$id'
 import { Route as AuthenticatedCoordinatorSubmissionsRouteImport } from './routes/_authenticated/coordinator.submissions'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminSponsorshipRouteImport } from './routes/_authenticated/admin.sponsorship'
@@ -123,6 +127,11 @@ const EmbedRoute = EmbedRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdvertiseRoute = AdvertiseRouteImport.update({
+  id: '/advertise',
+  path: '/advertise',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -226,6 +235,12 @@ const ApiV1IndexRoute = ApiV1IndexRouteImport.update({
   path: '/api/v1/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSponsorshipsIndexRoute =
+  AuthenticatedSponsorshipsIndexRouteImport.update({
+    id: '/sponsorships/',
+    path: '/sponsorships/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -266,6 +281,18 @@ const ApiCronEmailRemindersRoute = ApiCronEmailRemindersRouteImport.update({
   path: '/api/cron/email-reminders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSponsorshipsNewRoute =
+  AuthenticatedSponsorshipsNewRouteImport.update({
+    id: '/sponsorships/new',
+    path: '/sponsorships/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSponsorshipsIdRoute =
+  AuthenticatedSponsorshipsIdRouteImport.update({
+    id: '/sponsorships/$id',
+    path: '/sponsorships/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCoordinatorSubmissionsRoute =
   AuthenticatedCoordinatorSubmissionsRouteImport.update({
     id: '/coordinator/submissions',
@@ -419,6 +446,7 @@ const ApiV1EventsIdTicketsTicketIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/advertise': typeof AdvertiseRoute
   '/auth': typeof AuthRouteWithChildren
   '/embed': typeof EmbedRoute
   '/events': typeof EventsRouteWithChildren
@@ -454,6 +482,8 @@ export interface FileRoutesByFullPath {
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
+  '/sponsorships/$id': typeof AuthenticatedSponsorshipsIdRoute
+  '/sponsorships/new': typeof AuthenticatedSponsorshipsNewRoute
   '/api/cron/email-reminders': typeof ApiCronEmailRemindersRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -462,6 +492,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/venues': typeof ApiV1VenuesRouteWithChildren
   '/c/$slug/speakers': typeof CSlugSpeakersRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
+  '/sponsorships/': typeof AuthenticatedSponsorshipsIndexRoute
   '/api/v1/': typeof ApiV1IndexRoute
   '/coordinator/settings/branding': typeof AuthenticatedCoordinatorSettingsBrandingRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
@@ -485,6 +516,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/advertise': typeof AdvertiseRoute
   '/auth': typeof AuthRouteWithChildren
   '/embed': typeof EmbedRoute
   '/events': typeof EventsRouteWithChildren
@@ -519,6 +551,8 @@ export interface FileRoutesByTo {
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
+  '/sponsorships/$id': typeof AuthenticatedSponsorshipsIdRoute
+  '/sponsorships/new': typeof AuthenticatedSponsorshipsNewRoute
   '/api/cron/email-reminders': typeof ApiCronEmailRemindersRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -527,6 +561,7 @@ export interface FileRoutesByTo {
   '/api/v1/venues': typeof ApiV1VenuesRouteWithChildren
   '/c/$slug/speakers': typeof CSlugSpeakersRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
+  '/sponsorships': typeof AuthenticatedSponsorshipsIndexRoute
   '/api/v1': typeof ApiV1IndexRoute
   '/coordinator/settings/branding': typeof AuthenticatedCoordinatorSettingsBrandingRoute
   '/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
@@ -552,6 +587,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/advertise': typeof AdvertiseRoute
   '/auth': typeof AuthRouteWithChildren
   '/embed': typeof EmbedRoute
   '/events': typeof EventsRouteWithChildren
@@ -587,6 +623,8 @@ export interface FileRoutesById {
   '/_authenticated/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
+  '/_authenticated/sponsorships/$id': typeof AuthenticatedSponsorshipsIdRoute
+  '/_authenticated/sponsorships/new': typeof AuthenticatedSponsorshipsNewRoute
   '/api/cron/email-reminders': typeof ApiCronEmailRemindersRoute
   '/api/embed/$slug': typeof ApiEmbedSlugRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -595,6 +633,7 @@ export interface FileRoutesById {
   '/api/v1/venues': typeof ApiV1VenuesRouteWithChildren
   '/c/$slug_/speakers': typeof CSlugSpeakersRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
+  '/_authenticated/sponsorships/': typeof AuthenticatedSponsorshipsIndexRoute
   '/api/v1/': typeof ApiV1IndexRoute
   '/_authenticated/coordinator/settings/branding': typeof AuthenticatedCoordinatorSettingsBrandingRoute
   '/_authenticated/coordinator/settings/custom-fields': typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
@@ -620,6 +659,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/advertise'
     | '/auth'
     | '/embed'
     | '/events'
@@ -655,6 +695,8 @@ export interface FileRouteTypes {
     | '/admin/sponsorship'
     | '/admin/users'
     | '/coordinator/submissions'
+    | '/sponsorships/$id'
+    | '/sponsorships/new'
     | '/api/cron/email-reminders'
     | '/api/embed/$slug'
     | '/api/stripe/webhook'
@@ -663,6 +705,7 @@ export interface FileRouteTypes {
     | '/api/v1/venues'
     | '/c/$slug/speakers'
     | '/admin/'
+    | '/sponsorships/'
     | '/api/v1/'
     | '/coordinator/settings/branding'
     | '/coordinator/settings/custom-fields'
@@ -686,6 +729,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/advertise'
     | '/auth'
     | '/embed'
     | '/events'
@@ -720,6 +764,8 @@ export interface FileRouteTypes {
     | '/admin/sponsorship'
     | '/admin/users'
     | '/coordinator/submissions'
+    | '/sponsorships/$id'
+    | '/sponsorships/new'
     | '/api/cron/email-reminders'
     | '/api/embed/$slug'
     | '/api/stripe/webhook'
@@ -728,6 +774,7 @@ export interface FileRouteTypes {
     | '/api/v1/venues'
     | '/c/$slug/speakers'
     | '/admin'
+    | '/sponsorships'
     | '/api/v1'
     | '/coordinator/settings/branding'
     | '/coordinator/settings/custom-fields'
@@ -752,6 +799,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/advertise'
     | '/auth'
     | '/embed'
     | '/events'
@@ -787,6 +835,8 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/sponsorship'
     | '/_authenticated/admin/users'
     | '/_authenticated/coordinator/submissions'
+    | '/_authenticated/sponsorships/$id'
+    | '/_authenticated/sponsorships/new'
     | '/api/cron/email-reminders'
     | '/api/embed/$slug'
     | '/api/stripe/webhook'
@@ -795,6 +845,7 @@ export interface FileRouteTypes {
     | '/api/v1/venues'
     | '/c/$slug_/speakers'
     | '/_authenticated/admin/'
+    | '/_authenticated/sponsorships/'
     | '/api/v1/'
     | '/_authenticated/coordinator/settings/branding'
     | '/_authenticated/coordinator/settings/custom-fields'
@@ -820,6 +871,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AdvertiseRoute: typeof AdvertiseRoute
   AuthRoute: typeof AuthRouteWithChildren
   EmbedRoute: typeof EmbedRoute
   EventsRoute: typeof EventsRouteWithChildren
@@ -922,6 +974,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/advertise': {
+      id: '/advertise'
+      path: '/advertise'
+      fullPath: '/advertise'
+      preLoaderRoute: typeof AdvertiseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -1064,6 +1123,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/sponsorships/': {
+      id: '/_authenticated/sponsorships/'
+      path: '/sponsorships'
+      fullPath: '/sponsorships/'
+      preLoaderRoute: typeof AuthenticatedSponsorshipsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
       path: '/'
@@ -1119,6 +1185,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/cron/email-reminders'
       preLoaderRoute: typeof ApiCronEmailRemindersRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/sponsorships/new': {
+      id: '/_authenticated/sponsorships/new'
+      path: '/sponsorships/new'
+      fullPath: '/sponsorships/new'
+      preLoaderRoute: typeof AuthenticatedSponsorshipsNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sponsorships/$id': {
+      id: '/_authenticated/sponsorships/$id'
+      path: '/sponsorships/$id'
+      fullPath: '/sponsorships/$id'
+      preLoaderRoute: typeof AuthenticatedSponsorshipsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/coordinator/submissions': {
       id: '/_authenticated/coordinator/submissions'
@@ -1345,6 +1425,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSubmissionsRoute: typeof AuthenticatedSubmissionsRoute
   AuthenticatedCoordinatorSubmissionsRoute: typeof AuthenticatedCoordinatorSubmissionsRoute
+  AuthenticatedSponsorshipsIdRoute: typeof AuthenticatedSponsorshipsIdRoute
+  AuthenticatedSponsorshipsNewRoute: typeof AuthenticatedSponsorshipsNewRoute
+  AuthenticatedSponsorshipsIndexRoute: typeof AuthenticatedSponsorshipsIndexRoute
   AuthenticatedCoordinatorSettingsBrandingRoute: typeof AuthenticatedCoordinatorSettingsBrandingRoute
   AuthenticatedCoordinatorSettingsCustomFieldsRoute: typeof AuthenticatedCoordinatorSettingsCustomFieldsRoute
   AuthenticatedCoordinatorSettingsEmbedRoute: typeof AuthenticatedCoordinatorSettingsEmbedRoute
@@ -1368,6 +1451,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSubmissionsRoute: AuthenticatedSubmissionsRoute,
   AuthenticatedCoordinatorSubmissionsRoute:
     AuthenticatedCoordinatorSubmissionsRoute,
+  AuthenticatedSponsorshipsIdRoute: AuthenticatedSponsorshipsIdRoute,
+  AuthenticatedSponsorshipsNewRoute: AuthenticatedSponsorshipsNewRoute,
+  AuthenticatedSponsorshipsIndexRoute: AuthenticatedSponsorshipsIndexRoute,
   AuthenticatedCoordinatorSettingsBrandingRoute:
     AuthenticatedCoordinatorSettingsBrandingRoute,
   AuthenticatedCoordinatorSettingsCustomFieldsRoute:
@@ -1463,6 +1549,7 @@ const ApiV1VenuesRouteWithChildren = ApiV1VenuesRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AdvertiseRoute: AdvertiseRoute,
   AuthRoute: AuthRouteWithChildren,
   EmbedRoute: EmbedRoute,
   EventsRoute: EventsRouteWithChildren,

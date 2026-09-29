@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { listMyCampaigns, type CampaignDetail } from "@/lib/sponsor-campaigns.functions";
-import { formatCents } from "@/lib/sponsor-pricing";
+import { formatCents, STATUS_LABEL } from "@/lib/sponsor-pricing";
 
 export const Route = createFileRoute("/_authenticated/sponsorships/")({
   head: () => ({
@@ -16,16 +16,6 @@ export const Route = createFileRoute("/_authenticated/sponsorships/")({
   component: MySponsorships,
 });
 
-export const STATUS_LABEL: Record<string, string> = {
-  draft: "Draft",
-  pending_payment: "Awaiting payment",
-  pending_review: "Paid — awaiting review",
-  active: "Live",
-  paused: "Paused",
-  ended: "Ended",
-  refunded: "Refunded",
-  rejected: "Declined (refunded)",
-};
 
 function MySponsorships() {
   const [rows, setRows] = useState<CampaignDetail[] | null>(null);
