@@ -362,6 +362,8 @@ export type Database = {
       }
       coordinator_profiles: {
         Row: {
+          ad_mode: string
+          ad_mode_last_choice: string
           company_name: string | null
           contact_email: string | null
           coordinator_id: string
@@ -392,6 +394,8 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          ad_mode?: string
+          ad_mode_last_choice?: string
           company_name?: string | null
           contact_email?: string | null
           coordinator_id: string
@@ -422,6 +426,8 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          ad_mode?: string
+          ad_mode_last_choice?: string
           company_name?: string | null
           contact_email?: string | null
           coordinator_id?: string
@@ -1688,6 +1694,224 @@ export type Database = {
           },
         ]
       }
+      sponsor_campaign_calendars: {
+        Row: {
+          campaign_id: string
+          coordinator_id: string
+        }
+        Insert: {
+          campaign_id: string
+          coordinator_id: string
+        }
+        Update: {
+          campaign_id?: string
+          coordinator_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsor_campaign_calendars_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "sponsor_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsor_campaign_creatives: {
+        Row: {
+          body: string | null
+          business_name: string
+          campaign_id: string
+          headline: string | null
+          link_url: string | null
+          logo_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          business_name: string
+          campaign_id: string
+          headline?: string | null
+          link_url?: string | null
+          logo_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          business_name?: string
+          campaign_id?: string
+          headline?: string | null
+          link_url?: string | null
+          logo_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsor_campaign_creatives_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "sponsor_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsor_campaign_geo: {
+        Row: {
+          campaign_id: string
+          center_zip: string | null
+          radius_miles: number | null
+          zips: string[]
+        }
+        Insert: {
+          campaign_id: string
+          center_zip?: string | null
+          radius_miles?: number | null
+          zips?: string[]
+        }
+        Update: {
+          campaign_id?: string
+          center_zip?: string | null
+          radius_miles?: number | null
+          zips?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsor_campaign_geo_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "sponsor_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsor_campaign_stats: {
+        Row: {
+          campaign_id: string
+          first_seen: string
+          hits: number
+          kind: string
+          last_seen: string
+          stat_date: string
+          surface: string
+          visitor_hash: string
+        }
+        Insert: {
+          campaign_id: string
+          first_seen?: string
+          hits?: number
+          kind: string
+          last_seen?: string
+          stat_date: string
+          surface: string
+          visitor_hash: string
+        }
+        Update: {
+          campaign_id?: string
+          first_seen?: string
+          hits?: number
+          kind?: string
+          last_seen?: string
+          stat_date?: string
+          surface?: string
+          visitor_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsor_campaign_stats_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "sponsor_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsor_campaigns: {
+        Row: {
+          buyer_user_id: string
+          contact_email: string | null
+          contact_name: string | null
+          created_at: string
+          currency: string
+          ends_on: string
+          event_id: string | null
+          id: string
+          paid_at: string | null
+          price_cents: number
+          refunded_at: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          scope: Database["public"]["Enums"]["sponsor_scope"]
+          starts_on: string
+          status: Database["public"]["Enums"]["campaign_status"]
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
+          tz: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_user_id: string
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          currency?: string
+          ends_on: string
+          event_id?: string | null
+          id?: string
+          paid_at?: string | null
+          price_cents?: number
+          refunded_at?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scope: Database["public"]["Enums"]["sponsor_scope"]
+          starts_on: string
+          status?: Database["public"]["Enums"]["campaign_status"]
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          tz?: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_user_id?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          created_at?: string
+          currency?: string
+          ends_on?: string
+          event_id?: string | null
+          id?: string
+          paid_at?: string | null
+          price_cents?: number
+          refunded_at?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          scope?: Database["public"]["Enums"]["sponsor_scope"]
+          starts_on?: string
+          status?: Database["public"]["Enums"]["campaign_status"]
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          tz?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsor_campaigns_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_analytics"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "sponsor_campaigns_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sponsor_creatives: {
         Row: {
           body: string | null
@@ -1731,6 +1955,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sponsor_pricing: {
+        Row: {
+          period: string
+          scope: Database["public"]["Enums"]["sponsor_scope"]
+          unit: string
+          unit_cents: number
+          updated_at: string
+        }
+        Insert: {
+          period: string
+          scope: Database["public"]["Enums"]["sponsor_scope"]
+          unit: string
+          unit_cents: number
+          updated_at?: string
+        }
+        Update: {
+          period?: string
+          scope?: Database["public"]["Enums"]["sponsor_scope"]
+          unit?: string
+          unit_cents?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       sponsored_slots: {
         Row: {
@@ -2080,6 +2328,24 @@ export type Database = {
         }
         Relationships: []
       }
+      zip_centroids: {
+        Row: {
+          lat: number
+          lng: number
+          zip: string
+        }
+        Insert: {
+          lat: number
+          lng: number
+          zip: string
+        }
+        Update: {
+          lat?: number
+          lng?: number
+          zip?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       event_analytics: {
@@ -2366,6 +2632,15 @@ export type Database = {
         Args: { p_coordinator_id: string; p_month?: string }
         Returns: number
       }
+      calendar_in_campaign_geo: {
+        Args: { _campaign_id: string; _coordinator_id: string }
+        Returns: boolean
+      }
+      campaign_is_live: {
+        Args: { c: Database["public"]["Tables"]["sponsor_campaigns"]["Row"] }
+        Returns: boolean
+      }
+      can_read_campaign: { Args: { _campaign_id: string }; Returns: boolean }
       check_in_ticket: {
         Args: { _actor_id: string; _qr_token: string }
         Returns: {
@@ -2403,6 +2678,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      coordinator_effective_ad_mode: {
+        Args: { _coordinator_id: string }
+        Returns: string
+      }
+      coordinator_is_paid: {
+        Args: { _coordinator_id: string }
+        Returns: boolean
       }
       count_active_sponsorships: {
         Args: { p_coordinator_id: string; p_month?: string }
@@ -2448,6 +2731,21 @@ export type Database = {
         | { Args: { table_name: string }; Returns: string }
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      event_point: {
+        Args: { _event_id: string }
+        Returns: {
+          lat: number
+          lng: number
+        }[]
+      }
+      geo_reach: {
+        Args: { p_center_zip: string; p_radius_miles: number; p_zips: string[] }
+        Returns: {
+          calendars: number
+          events: number
+          unknown_zips: string[]
+        }[]
+      }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
@@ -2563,6 +2861,54 @@ export type Database = {
           sponsored_enabled: boolean
           state: string
           unpaid_cents: number
+        }[]
+      }
+      get_campaign_ad_destination: {
+        Args: { p_campaign_id: string }
+        Returns: string
+      }
+      get_campaign_sponsors_for_calendar: {
+        Args: { p_coordinator_id: string; p_limit?: number }
+        Returns: {
+          ad_key: string
+          body: string
+          business_name: string
+          headline: string
+          link_url: string
+          logo_url: string
+          scope: Database["public"]["Enums"]["sponsor_scope"]
+        }[]
+      }
+      get_campaign_sponsors_for_event: {
+        Args: { p_event_id: string; p_limit?: number }
+        Returns: {
+          ad_key: string
+          body: string
+          business_name: string
+          headline: string
+          link_url: string
+          logo_url: string
+          scope: Database["public"]["Enums"]["sponsor_scope"]
+        }[]
+      }
+      get_campaign_stats: {
+        Args: { p_campaign_id: string }
+        Returns: {
+          clicks: number
+          unique_clickers: number
+          unique_viewers: number
+          views: number
+        }[]
+      }
+      get_campaigns_on_my_calendar: {
+        Args: { p_coordinator_id: string }
+        Returns: {
+          business_name: string
+          campaign_id: string
+          ends_on: string
+          scope: Database["public"]["Enums"]["sponsor_scope"]
+          starts_on: string
+          status: Database["public"]["Enums"]["campaign_status"]
         }[]
       }
       get_coordinator_billing_status: {
@@ -2713,6 +3059,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_own_draft_campaign: {
+        Args: { _campaign_id: string }
+        Returns: boolean
+      }
       is_slug_available: {
         Args: { _coordinator_id?: string; _slug: string }
         Returns: boolean
@@ -2722,6 +3072,22 @@ export type Database = {
         Returns: boolean
       }
       longtransactionsenabled: { Args: never; Returns: boolean }
+      mark_campaign_paid: {
+        Args: {
+          p_campaign_id: string
+          p_payment_intent: string
+          p_session_id: string
+        }
+        Returns: boolean
+      }
+      mark_campaign_payment_failed: {
+        Args: { p_campaign_id: string }
+        Returns: boolean
+      }
+      mark_campaign_refunded: {
+        Args: { p_payment_intent: string }
+        Returns: boolean
+      }
       mark_ticket_refunded: {
         Args: { _purchase_id: string; _refund_stripe_id: string }
         Returns: {
@@ -2748,6 +3114,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      miles_between: {
+        Args: { lat1: number; lat2: number; lng1: number; lng2: number }
+        Returns: number
+      }
+      point_in_campaign_geo: {
+        Args: { _campaign_id: string; _lat: number; _lng: number }
+        Returns: boolean
       }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
@@ -2797,6 +3171,15 @@ export type Database = {
         Args: {
           p_kind: string
           p_slot_id: string
+          p_surface: string
+          p_visitor_hash: string
+        }
+        Returns: boolean
+      }
+      record_campaign_ad_event: {
+        Args: {
+          p_campaign_id: string
+          p_kind: string
           p_surface: string
           p_visitor_hash: string
         }
@@ -3460,6 +3843,15 @@ export type Database = {
       annual_plan_status: "none" | "active" | "past_due" | "canceled"
       app_role: "admin" | "coordinator" | "staff" | "user"
       ban_scope: "user" | "event"
+      campaign_status:
+        | "draft"
+        | "pending_payment"
+        | "pending_review"
+        | "active"
+        | "paused"
+        | "ended"
+        | "refunded"
+        | "rejected"
       consent_status: "pending" | "confirmed" | "unsubscribed"
       custom_field_type: "text" | "dropdown" | "number" | "date" | "checkbox"
       email_provider_type:
@@ -3495,6 +3887,7 @@ export type Database = {
       share_platform: "facebook" | "twitter" | "email" | "link" | "other"
       slot_status: "available" | "reserved" | "paid" | "expired"
       slot_type: "banner" | "featured" | "sidebar"
+      sponsor_scope: "event" | "calendars" | "network" | "geo"
       staff_role: "coordinator" | "staff"
       submission_status: "pending" | "approved" | "rejected"
       waitlist_status: "waitlisted" | "promoted" | "declined"
@@ -3636,6 +4029,16 @@ export const Constants = {
       annual_plan_status: ["none", "active", "past_due", "canceled"],
       app_role: ["admin", "coordinator", "staff", "user"],
       ban_scope: ["user", "event"],
+      campaign_status: [
+        "draft",
+        "pending_payment",
+        "pending_review",
+        "active",
+        "paused",
+        "ended",
+        "refunded",
+        "rejected",
+      ],
       consent_status: ["pending", "confirmed", "unsubscribed"],
       custom_field_type: ["text", "dropdown", "number", "date", "checkbox"],
       email_provider_type: [
@@ -3674,6 +4077,7 @@ export const Constants = {
       share_platform: ["facebook", "twitter", "email", "link", "other"],
       slot_status: ["available", "reserved", "paid", "expired"],
       slot_type: ["banner", "featured", "sidebar"],
+      sponsor_scope: ["event", "calendars", "network", "geo"],
       staff_role: ["coordinator", "staff"],
       submission_status: ["pending", "approved", "rejected"],
       waitlist_status: ["waitlisted", "promoted", "declined"],
