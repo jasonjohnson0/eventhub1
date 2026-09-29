@@ -131,6 +131,48 @@ export async function recordAdEvent(
   }
 }
 
+/** Campaign counterpart of recordAdEvent (Phase 1b). Same rules, separate table. */
+export async function recordCampaignAdEvent(
+  campaignId: string,
+  kind: AdKind,
+  surface: AdSurface,
+  headers: Headers,
+): Promise<boolean> {
+  if (!isCountableAgent(headers)) return false;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+    const { data, error } = await (supabaseAdmin as any).rpc("record_campaign_ad_event", {
+      p_campaign_id: campaignId,
+      p_kind: kind,
+      p_surface: surface,
+      p_visitor_hash: visitorHash(headers),
+    });
+    if (error) {
+      console.error("record_campaign_ad_event failed", error.message);
+      return false;
+    }
+    return data === true;
+  } catch (err) {
+    console.error("record_campaign_ad_event threw", err);
+    return false;
+  }
+}
+
+export async function campaignDestination(campaignId: string): Promise<string | null> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+    const { data, error } = await (supabaseAdmin as any).rpc("get_campaign_ad_destination", {
+      p_campaign_id: campaignId,
+    });
+    if (error || typeof data !== "string") return null;
+    return /^https:\/\//i.test(data) ? data : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The destination for a click, straight from the database. The request never
  *  gets a say -- see get_ad_destination in the migration for why. */
 export async function adDestination(slotId: string): Promise<string | null> {
