@@ -121,7 +121,8 @@ export const fetchIcsFromUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ url: z.string().trim().min(1).max(2000) }).parse(d))
   .handler(async ({ data }) => {
-    let raw = data.url.replace(/^webcals?:\/\//i, (m) => (m.toLowerCase() === "webcals://" ? "https://" : "https://"));
+    // webcal:// is just a calendar-app hint for https.
+    let raw = data.url.replace(/^webcals?:\/\//i, "https://");
     if (!/^[a-z][a-z0-9+.-]*:/i.test(raw)) raw = `https://${raw}`;
     let url: URL;
     try {
