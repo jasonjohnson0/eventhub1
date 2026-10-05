@@ -91,9 +91,8 @@ export function parseCsv(text: string): string[][] {
     if (ch === '"') q = !q;
     else if (!q && ch in counts) counts[ch]++;
   }
-  const delim = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][1] > 0
-    ? Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0]
-    : ",";
+  const best = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  const delim = best[1] > 0 ? best[0] : ",";
 
   const rows: string[][] = [];
   let row: string[] = [];
@@ -200,6 +199,11 @@ const MONTHS: Record<string, number> = {
   jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12,
 };
 
+function monthOf(name: string): number | undefined {
+  const n = name.toLowerCase();
+  return MONTHS[n.slice(0, 4)] ?? MONTHS[n.slice(0, 3)];
+}
+
 function validYmd(v: Ymd): Ymd | null {
   if (v.m < 1 || v.m > 12 || v.d < 1 || v.d > 31 || v.y < 1900 || v.y > 2200) return null;
   const dt = new Date(Date.UTC(v.y, v.m - 1, v.d));
@@ -216,13 +220,13 @@ export function parseDatePart(raw: string): Ymd | null {
     return validYmd({ y, m: +m[1], d: +m[2] });
   }
   m = /^([a-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})$/i.exec(s); // Oct 8, 2026
-  if (m && MONTHS[m[1].slice(0, 4).toLowerCase()] ?? MONTHS[m?.[1].slice(0, 3).toLowerCase() ?? ""]) {
-    const mon = MONTHS[m[1].slice(0, 4).toLowerCase()] ?? MONTHS[m[1].slice(0, 3).toLowerCase()];
-    return validYmd({ y: +m[3], m: mon, d: +m[2] });
+  if (m) {
+    const mon = monthOf(m[1]);
+    if (mon) return validYmd({ y: +m[3], m: mon, d: +m[2] });
   }
   m = /^(\d{1,2})\s+([a-z]{3,9})\.?,?\s+(\d{4})$/i.exec(s); // 8 Oct 2026
   if (m) {
-    const mon = MONTHS[m[2].slice(0, 4).toLowerCase()] ?? MONTHS[m[2].slice(0, 3).toLowerCase()];
+    const mon = monthOf(m[2]);
     if (mon) return validYmd({ y: +m[3], m: mon, d: +m[1] });
   }
   m = /^(\d{4})(\d{2})(\d{2})$/.exec(s);
