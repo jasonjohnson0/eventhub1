@@ -149,13 +149,13 @@ export type ColumnMapping = Partial<Record<ImportField, number>>;
 
 const GUESSES: [ImportField, RegExp][] = [
   ["title", /^(title|event( ?name| ?title)?|name|summary|subject)$/],
-  ["start", /^(start|starts|start ?(date)? ?time|start ?datetime|begin|begins|when|datetime|date ?time|dtstart)$/],
   ["start_date", /^(date|start ?date|event ?date|day)$/],
   ["start_clock", /^(time|start ?time|starts? at|from)$/],
-  ["end", /^(end|ends|end ?(date)? ?time|end ?datetime|finish|dtend)$/],
   ["end_date", /^(end ?date)$/],
   ["end_clock", /^(end ?time|ends? at|to|until)$/],
-  ["description", /^(description|details?|desc|about|notes?|summary text|body)$/],
+  ["start", /^(start|starts|start ?datetime|start ?date ?time|begin|begins|when|datetime|date ?time|dtstart)$/],
+  ["end", /^(end|ends|end ?datetime|end ?date ?time|finish|dtend)$/],
+  ["description", /^(description|details?|desc|about|notes?|body)$/],
   ["location", /^(location|venue|place|address|where|venue ?name)$/],
   ["category", /^(category|type|event ?type|kind)$/],
   ["tags", /^(tags?|keywords?|labels?|categories)$/],
@@ -175,15 +175,14 @@ export function guessMapping(headers: string[]): ColumnMapping {
       used.add(idx);
     }
   }
-  // "Start Time" only means a clock when there's also a separate date column.
+  // Without a separate date column, "Start Time"/"End Time" hold the full value.
   if (mapping.start === undefined && mapping.start_date === undefined && mapping.start_clock !== undefined) {
     mapping.start = mapping.start_clock;
     delete mapping.start_clock;
   }
-  if (mapping.start !== undefined && mapping.start_clock !== undefined && mapping.start_date === undefined) {
-    // e.g. "Date" guessed as start and "Time" as clock: treat start as the date.
-    mapping.start_date = mapping.start;
-    delete mapping.start;
+  if (mapping.end === undefined && mapping.end_date === undefined && mapping.start_date === undefined && mapping.end_clock !== undefined) {
+    mapping.end = mapping.end_clock;
+    delete mapping.end_clock;
   }
   return mapping;
 }
@@ -270,11 +269,12 @@ export function parseDateTime(raw: string, zone: string): ParsedWhen | null {
   if (date) return { instant: wall(date, { h: 0, min: 0, s: 0 }, zone), dateOnly: true };
   // Split into date + time: "2026-10-08T11:00", "10/8/2026 11:00 AM", "Oct 8, 2026 7pm".
   const m =
+    /^(\d{4}[-/]\d{1,2}[-/]\d{1,2})(?:T|\s+(?:at\s+)?)(\d{1,2}(?::\d{2}){0,2}(?:\.\d+)?\s*(?:[ap]\.?m?\.?)?)$/i.exec(s) ||
     /^(.*?\d{4})(?:T|\s+(?:at\s+)?|,\s*)(\d{1,2}(?::\d{2}){0,2}\s*(?:[ap]\.?m?\.?)?)$/i.exec(s) ||
     /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?$/.exec(s);
   if (m) {
     const dp = parseDatePart(m[1].replace(/,\s*$/, ""));
-    const tp = parseTimePart(m[2]);
+    const tp = parseTimePart(m[2].replace(/\.\d+$/, ""));
     if (dp && tp) return { instant: wall(dp, tp, zone), dateOnly: false };
   }
   return null;
@@ -394,10 +394,15 @@ export function rowsFromCsv(
       endRaw = [cell(r, "end_date") || cell(r, "start_date"), cell(r, "end_clock")].filter(Boolean).join(" ");
     }
     // A bare time in the end column ("3:00 PM") means the start's day.
-    if (endRaw && start && parseTimePart(endRaw)) {
-      endRaw = `${cell(r, "start_date") || (startRaw.match(/^(.*?\d{4})/)?.[1] ?? "")} ${endRaw}`;
-    }
-    const end = endRaw ? parseDateTime(endRaw, zone) : null;
+    const endClockOnly = endRaw ? parseTimePart(endRaw) : null;
+    let end: ParsedWhen | null = null;
+    if (endClockOnly && start) {
+      const f = toFloating(start.instant, safeTimeZone(zone));
+      end = {
+        instant: wall({ y: f.getUTCFullYear(), m: f.getUTCMonth() + 1, d: f.getUTCDate() }, endClockOnly, zone),
+        dateOnly: false,
+      };
+    } else if (endRaw) end = parseDateTime(endRaw, zone);
     if (endRaw && !end) row.errors.push(`Couldn't read end "${endRaw}"`);
 
     if (start) {
