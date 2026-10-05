@@ -487,9 +487,9 @@ const WINDOWS_ZONES: Record<string, string> = {
 
 function resolveTzid(tzid: string | undefined, fallback: string): { zone: string; known: boolean } {
   if (!tzid) return { zone: fallback, known: true };
-  const cleaned = tzid.replace(/^\/[^/]+\/[^/]+\//, ""); // "/mozilla.org/20050126_1/America/New_York"
+  const cleaned: string = tzid.replace(/^\/[^/]+\/[^/]+\//, ""); // "/mozilla.org/20050126_1/America/New_York"
   if (isValidTimeZone(cleaned)) return { zone: cleaned, known: true };
-  const win = WINDOWS_ZONES[cleaned.toLowerCase()];
+  const win = WINDOWS_ZONES[String(cleaned).toLowerCase()];
   if (win) return { zone: win, known: true };
   return { zone: fallback, known: false };
 }
