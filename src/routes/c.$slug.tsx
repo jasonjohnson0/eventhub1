@@ -115,7 +115,10 @@ export const Route = createFileRoute("/c/$slug")({
         { name: "description", content: description },
         { property: "og:title", content: `${name} — Events` },
         { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
         ...(c?.logo_url ? [{ property: "og:image", content: c.logo_url }] : []),
+        ...(c?.logo_url ? [{ name: "twitter:image", content: c.logo_url }] : []),
       ],
       links: [
         // Every view and every month shows the same calendar in a different
