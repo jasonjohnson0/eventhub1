@@ -26,6 +26,7 @@ Confirmed working end to end (not just scaffolded) as of the commit above.
 | Feature | Where | Notes |
 |---|---|---|
 | Calendar views: Month, Week, Day, List, Agenda, Photo, Summary, Timeline | `src/components/CalendarViews/*`, `src/views/*`, `src/routes/c.$slug.tsx` (`VIEWS` const) | 8 views on the public coordinator page (and `/events`, minus the embed — see the Timeline row below). **Not** "Map" — that's a separate standalone `/map` route, not one of these tabs. |
+| Phone-first social feed | `src/components/social-feed.tsx`, `src/routes/c.$slug.tsx`, `src/routes/api/embed.$slug.ts`, `docs/SOCIAL_FEED.md` | Upcoming public events in 20-item pages, landscape cards, mobile default, scroll restoration, and existing sponsor campaigns placed every three events. The script-free embed uses URL pagination and the same tracked sponsor system. |
 | Recurring events (RRULE) | `src/lib/series.functions.ts` | Timezone-aware occurrence computation, capped at `MAX_OCCURRENCES`, "this/future/all" delete scoping. |
 | Virtual / hybrid event format | `event-modal.tsx`, `events.$id.manage.tsx` (`EventFormatEditor`) | In-person / virtual / hybrid + provider link (Zoom/Meet/YouTube/other). |
 | RSVP (going/interested/declined) + waitlist | `events.$id.manage.tsx`, `attendee.functions.ts` | Waitlist auto-promotion on a cancellation. |

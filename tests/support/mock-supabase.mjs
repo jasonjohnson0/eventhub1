@@ -24,6 +24,8 @@ export const SUBMISSIONS = [];
 
 const COORD = '11111111-1111-1111-1111-111111111111';
 const OTHER = '99999999-9999-9999-9999-999999999999';
+const EMPTY_COORD = '77777777-7777-4777-8777-777777777777';
+const TWO_COORD = '88888888-8888-4888-8888-888888888888';
 
 const COORDINATORS = [{
   coordinator_id: COORD,
@@ -36,6 +38,26 @@ const COORDINATORS = [{
   secondary_color: '#f97316',
   // A finished coordinator, for tests that sign in as COORD and expect the
   // full coordinator dashboard rather than the "not a coordinator yet" one.
+  setup_completed_at: '2026-01-01T00:00:00.000Z',
+}, {
+  coordinator_id: EMPTY_COORD,
+  slug: 'empty-feed',
+  company_name: 'Empty Feed Test',
+  description: 'No upcoming events.',
+  logo_url: null,
+  favicon_url: null,
+  primary_color: '#0f766e',
+  secondary_color: '#f97316',
+  setup_completed_at: '2026-01-01T00:00:00.000Z',
+}, {
+  coordinator_id: TWO_COORD,
+  slug: 'two-feed',
+  company_name: 'Two Event Test',
+  description: 'Exactly two upcoming events.',
+  logo_url: null,
+  favicon_url: null,
+  primary_color: '#0f766e',
+  secondary_color: '#f97316',
   setup_completed_at: '2026-01-01T00:00:00.000Z',
 }, {
   // A second, unrelated live coordinator -- so "is this slug taken by
@@ -84,6 +106,8 @@ const day = (n, h = 18) => {
 };
 
 const EVENTS = [
+  { id: 'two-1', coordinator_id: TWO_COORD, title: 'First Small Calendar Event', description: null, location: 'Test Hall', start_time: day(2, 10), end_time: day(2, 11), category: 'education', status: 'approved', timezone: 'America/Chicago' },
+  { id: 'two-2', coordinator_id: TWO_COORD, title: 'Second Small Calendar Event', description: null, location: 'Test Park', start_time: day(3, 14), end_time: day(3, 16), category: 'social', status: 'approved', timezone: 'America/Chicago' },
   // timezone: America/Chicago is deliberate here (spec 03) -- lets a browser
   // test assert the event page labels the event's own zone and, only when
   // the viewer is elsewhere, shows a secondary "your time" line.

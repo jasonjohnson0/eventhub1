@@ -24,8 +24,8 @@ import { safeTimeZone } from "@/lib/timezone";
  * the whole calendar.
  */
 
-type View = "month" | "week" | "list" | "agenda";
-const VIEWS: View[] = ["month", "week", "list", "agenda"];
+type View = "feed" | "month" | "week" | "list" | "agenda";
+const VIEWS: View[] = ["feed", "month", "week", "list", "agenda"];
 
 type Sponsor = {
   slot_id: string;
@@ -36,6 +36,7 @@ type Sponsor = {
   link_url: string | null;
   headline: string | null;
   body: string | null;
+  scope?: string;
 };
 
 /** This string is interpolated into a page we do not control. Everything from
@@ -174,6 +175,18 @@ const STYLE = armour(`
 .ehx-ad-body{font-size:13px;color:#52525b;margin:0}
 .ehx-spons{position:relative}
 .ehx-px{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;border:0}
+.ehx-feed{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.ehx-feed-card{position:relative;display:block;aspect-ratio:16/9;min-height:208px;max-height:448px;overflow:hidden;border-radius:8px;background:linear-gradient(135deg,#18181b,#0f766e,#0891b2);color:#fff}
+.ehx-feed-card>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ehx-feed-shade{position:absolute;inset:0;background:linear-gradient(0deg,rgba(9,9,11,.96),rgba(9,9,11,.1) 78%)}
+.ehx-feed-copy{position:absolute;inset:auto 0 0;padding:20px}
+.ehx-feed-cat,.ehx-feed-sponsored{display:inline-flex;width:max-content;border-radius:3px;background:rgba(255,255,255,.92);color:#18181b;padding:3px 7px;font-size:10px;font-weight:800;text-transform:uppercase}
+.ehx-feed-title{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:8px 0 0;color:#fff;font-size:clamp(22px,5vw,32px);font-weight:850;line-height:1.1}
+.ehx-feed-time{margin:7px 0 0;color:rgba(255,255,255,.9);font-size:14px;font-weight:650}
+.ehx-feed-ad{background:linear-gradient(135deg,#09090b,#27272a,#a16207);border:1px solid #d97706}
+.ehx-feed-adname{margin-top:8px;color:rgba(255,255,255,.78);font-size:13px;font-weight:750}
+.ehx-feed-adbody{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:5px 0 0;color:rgba(255,255,255,.84);font-size:13px}
+.ehx-feed-more{display:block;border:1px solid #d4d4d8;border-radius:6px;padding:12px;text-align:center;font-weight:700}
 .ehx-foot{margin-top:14px;text-align:center;font-size:11px;color:#a1a1aa}
 @media(max-width:640px){.ehx-grid{grid-template-columns:minmax(0,1fr);border-radius:12px}.ehx-dow{display:none}.ehx-cell{min-height:0;border-right:0}.ehx-cell.ehx-dim{display:none}}
 `);
@@ -287,6 +300,51 @@ function renderSponsors(sponsors: Sponsor[], appUrl: string): string {
   return `<div class="ehx-spons"><p class="ehx-spons-h">Sponsors</p>${ads}</div>`;
 }
 
+function feedSponsorCards(sponsors: Sponsor[], appUrl: string, includePixels: boolean): string {
+  return sponsors.map((s) => {
+    const slot = encodeURIComponent(s.slot_id);
+    const href = safeHttps(s.link_url) ? `${appUrl}/api/ad/c/${slot}?s=feed` : null;
+    const content = `<span class="ehx-feed-copy"><span class="ehx-feed-sponsored">Sponsored</span><span class="ehx-feed-adname">${esc(s.business_name)}</span>${s.headline ? `<span class="ehx-feed-title">${esc(s.headline)}</span>` : ""}${s.body ? `<span class="ehx-feed-adbody">${esc(s.body)}</span>` : ""}</span>`;
+    const card = href
+      ? `<a class="ehx-feed-card ehx-feed-ad" href="${esc(href)}" target="_blank" rel="sponsored noopener noreferrer">${content}</a>`
+      : `<div class="ehx-feed-card ehx-feed-ad">${content}</div>`;
+    const pixel = includePixels
+      ? `<img class="ehx-px" src="${esc(appUrl)}/api/ad/i/${slot}?s=feed" alt="" width="1" height="1" loading="lazy" referrerpolicy="no-referrer" aria-hidden="true">`
+      : "";
+    return `${card}${pixel}`;
+  }).join("");
+}
+
+function renderFeed(events: CalendarEvent[], sponsors: Sponsor[], appUrl: string, self: string, page: number): string {
+  const upcoming = events.filter((event) => +new Date(event.end_time) >= Date.now());
+  const start = (page - 1) * 20;
+  const shown = upcoming.slice(start, start + 20);
+  let pixelsAvailable = true;
+  const ads = () => {
+    const html = feedSponsorCards(sponsors, appUrl, pixelsAvailable);
+    pixelsAvailable = false;
+    return html;
+  };
+  const rows: string[] = [];
+  if (upcoming.length < 3 && sponsors.length > 0) rows.push(ads());
+  for (let index = 0; index < shown.length; index++) {
+    const event = shown[index];
+    if (!event) continue;
+    const image = safeHttps(event.image_url);
+    const date = fmtDay(new Date(event.start_time), event.timezone);
+    const multi = occupiesDates(event).length > 1;
+    const when = multi
+      ? `${date} · ${fmtTime(event.start_time, event.timezone)} – ${fmtDay(new Date(event.end_time), event.timezone)} · ${fmtTime(event.end_time, event.timezone)}`
+      : `${date} · ${fmtTime(event.start_time, event.timezone)} – ${fmtTime(event.end_time, event.timezone)}`;
+    rows.push(`<a class="ehx-feed-card" href="${esc(appUrl)}/events/${esc(event.id)}" target="_blank" rel="noopener">${image ? `<img src="${esc(image)}" alt="" loading="lazy">` : ""}<span class="ehx-feed-shade"></span><span class="ehx-feed-copy"><span class="ehx-feed-cat">${esc(event.category || "Other")}</span><span class="ehx-feed-title">${esc(event.title)}</span><span class="ehx-feed-time">${esc(when)}</span></span></a>`);
+    const globalPosition = start + index + 1;
+    if (upcoming.length >= 3 && globalPosition % 3 === 0 && sponsors.length > 0) rows.push(ads());
+  }
+  if (upcoming.length === 0) rows.push(`<div class="ehx-empty"><strong>No upcoming events yet</strong><br>Check back soon.</div>`);
+  if (start + shown.length < upcoming.length) rows.push(`<a class="ehx-feed-more" href="${esc(self)}?view=feed&amp;p=${page + 1}">Load more events</a>`);
+  return `<div class="ehx-feed" data-event-count="${upcoming.length}">${rows.join("")}</div>`;
+}
+
 function periodLabel(view: View, cursor: Date): string {
   if (view === "month") return cursor.toLocaleString(undefined, { month: "long", year: "numeric" });
   if (view === "week") {
@@ -304,6 +362,7 @@ export const Route = createFileRoute("/api/embed/$slug")({
         const raw = url.searchParams.get("view");
         const view: View = (VIEWS as string[]).includes(raw ?? "") ? (raw as View) : "month";
         const cursor = parseAnchor(url.searchParams.get("on"));
+        const page = Math.max(1, Math.min(100, Number.parseInt(url.searchParams.get("p") ?? "1", 10) || 1));
 
         const coordinator = await getPublicCoordinator({ data: { slug: params.slug } });
         if (!coordinator) {
@@ -329,10 +388,10 @@ export const Route = createFileRoute("/api/embed/$slug")({
         // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
         const { data: campaignRows } = await (supabase as any).rpc(
           "get_campaign_sponsors_for_calendar",
-          { p_coordinator_id: coordinator.coordinator_id, p_limit: 2 },
+          { p_coordinator_id: coordinator.coordinator_id, p_limit: 20 },
         );
         const campaignSponsors: Sponsor[] = (campaignRows ?? []).map(
-          (c: { ad_key: string; business_name: string; logo_url: string | null; link_url: string | null; headline: string | null; body: string | null }) => ({
+          (c: { ad_key: string; scope: string; business_name: string; logo_url: string | null; link_url: string | null; headline: string | null; body: string | null }) => ({
             slot_id: c.ad_key,
             event_id: "",
             event_title: "",
@@ -341,9 +400,19 @@ export const Route = createFileRoute("/api/embed/$slug")({
             link_url: c.link_url,
             headline: c.headline,
             body: c.body,
+            scope: c.scope,
           }),
         );
-        const sponsors = [...((sponsorRows ?? []) as Sponsor[]), ...campaignSponsors].slice(0, 2);
+        const eligible = [...((sponsorRows ?? []) as Sponsor[]), ...campaignSponsors];
+        const priority = eligible[0]?.scope;
+        const preferred = eligible.filter((s) => s.scope === priority);
+        const remainder = eligible.filter((s) => s.scope !== priority);
+        const rotation = preferred.length > 0 ? Math.floor(Date.now() / 86_400_000) % preferred.length : 0;
+        const sponsors = [
+          ...preferred.slice(rotation),
+          ...preferred.slice(0, rotation),
+          ...remainder,
+        ].slice(0, 2);
 
         const appUrl = siteOrigin() || url.origin.replace(/\/+$/, "");
         const self = `${appUrl}/api/embed/${encodeURIComponent(coordinator.slug)}`;
@@ -393,8 +462,11 @@ export const Route = createFileRoute("/api/embed/$slug")({
              </div>`
           : "";
 
-        const bodyHtml =
-          view === "month" ? renderMonth(cursor, events, appUrl) : renderList(shown, appUrl);
+        const bodyHtml = view === "feed"
+          ? renderFeed(events, sponsors, appUrl, self, page)
+          : view === "month"
+            ? renderMonth(cursor, events, appUrl)
+            : renderList(shown, appUrl);
 
         const brand = /^#[0-9a-f]{3,8}$/i.test(coordinator.primary_color)
           ? coordinator.primary_color
@@ -418,7 +490,7 @@ ${customCss}
     ${nav}
   </div>
   ${bodyHtml}
-  ${renderSponsors(sponsors, appUrl)}
+  ${view === "feed" ? "" : renderSponsors(sponsors, appUrl)}
   <p class="ehx-foot"><a href="${esc(canonical)}" target="_blank" rel="noopener">${badge}${esc(coordinator.company_name || coordinator.slug)} calendar</a> &middot; powered by EventHub</p>
 </div>`;
 

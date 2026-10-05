@@ -7,7 +7,7 @@
  */
 import { createHmac } from "node:crypto";
 
-export type AdSurface = "embed" | "site";
+export type AdSurface = "embed" | "site" | "feed";
 export type AdKind = "impression" | "click";
 
 /** A 1x1 transparent GIF: 42 bytes, understood by everything, and smaller than
@@ -195,5 +195,6 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export const isUuid = (v: unknown): v is string => typeof v === "string" && UUID_RE.test(v);
 
 export function surfaceOf(url: URL): AdSurface {
-  return url.searchParams.get("s") === "embed" ? "embed" : "site";
+  const surface = url.searchParams.get("s");
+  return surface === "embed" || surface === "feed" ? surface : "site";
 }

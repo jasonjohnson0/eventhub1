@@ -22,6 +22,13 @@
       "when": 1791230661295,
       "tag": "0002_calendar_ads_local_network_flags",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791241775278,
+      "tag": "0003_social_feed_ad_surface",
+      "breakpoints": true
     }
   ]
 }
