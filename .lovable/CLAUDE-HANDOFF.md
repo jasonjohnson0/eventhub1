@@ -192,3 +192,10 @@ Requirements:
 `.lovable/plan/phase-1b-sponsorships-scoped-geographic-network-wide-2026-09-29.md`.
 The build waits on Jason's answers to its open questions (pricing, revenue share,
 approval, ads per page, Stripe account, who can buy, coordinator opt-out).
+
+### 8.x Decision 7 revised (Jason, 2026-10-05) — calendar ad policy
+- Stored as two flags on `coordinator_profiles`: `ads_local`, `ads_network` (old `ad_mode` columns are DEPRECATED, kept only for compatibility).
+- Free calendars must have at least one on (trigger `coordinator_profiles_ads_guard`). Paid calendars may turn both off (ad-free).
+- `coordinator_effective_ads(id)` is what targeting uses; a lapsed paid calendar with both off renders its last non-empty choice (Local by default). `restore_lapsed_ad_settings()` (service role) writes that back.
+- Calendar-scope campaigns that named a calendar always render; geo needs Local; network needs Network. Caps and most-specific-first order unchanged.
+- DB tests: `tests/db/calendar-ad-flags.py`.
