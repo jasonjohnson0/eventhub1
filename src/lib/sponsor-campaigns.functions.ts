@@ -536,8 +536,12 @@ export const adminImportZipCentroids = createServerFn({ method: "POST" })
 // Coordinator ad policy
 // ---------------------------------------------------------------------------
 export type AdSettings = {
-  ad_mode: "local" | "network" | "ad_free";
-  effective_mode: "local" | "network" | "ad_free";
+  /** What the calendar has chosen. */
+  ads_local: boolean;
+  ads_network: boolean;
+  /** What actually renders (a lapsed paid calendar with both off falls back). */
+  effective_local: boolean;
+  effective_network: boolean;
   is_paid: boolean;
 };
 
@@ -547,31 +551,44 @@ export const getMyAdSettings = createServerFn({ method: "GET" })
     const sb = context.supabase as Sb;
     const { data: row } = await sb
       .from("coordinator_profiles")
-      .select("ad_mode")
+      .select("ads_local, ads_network")
       .eq("coordinator_id", context.userId)
       .maybeSingle();
     if (!row) return null;
     const [{ data: paid }, { data: eff }] = await Promise.all([
       sb.rpc("coordinator_is_paid", { _coordinator_id: context.userId }),
-      sb.rpc("coordinator_effective_ad_mode", { _coordinator_id: context.userId }),
+      sb.rpc("coordinator_effective_ads", { _coordinator_id: context.userId }),
     ]);
-    return { ad_mode: row.ad_mode, effective_mode: eff ?? row.ad_mode, is_paid: !!paid };
+    const e = Array.isArray(eff) ? eff[0] : eff;
+    return {
+      ads_local: !!row.ads_local,
+      ads_network: !!row.ads_network,
+      effective_local: e ? !!e.local : !!row.ads_local,
+      effective_network: e ? !!e.network : !!row.ads_network,
+      is_paid: !!paid,
+    };
   });
 
-export const setMyAdMode = createServerFn({ method: "POST" })
+export const setMyAdFlags = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ mode: z.enum(["local", "network", "ad_free"]) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ local: z.boolean(), network: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as Sb;
-    if (data.mode === "ad_free") {
+    if (!data.local && !data.network) {
       const { data: paid } = await sb.rpc("coordinator_is_paid", { _coordinator_id: context.userId });
-      if (!paid) throw new Error("Ad-free is only available on the paid plan.");
+      if (!paid) throw new Error("Free calendars must show local or network-wide ads (or both). Ad-free needs the paid plan.");
     }
     const { error } = await sb
       .from("coordinator_profiles")
-      .update({ ad_mode: data.mode })
+      .update({ ads_local: data.local, ads_network: data.network })
       .eq("coordinator_id", context.userId);
-    if (error) throw new Error(/paid/.test(error.message) ? "Ad-free is only available on the paid plan." : error.message);
+    if (error) {
+      throw new Error(
+        /free calendar/i.test(error.message)
+          ? "Free calendars must show local or network-wide ads (or both). Ad-free needs the paid plan."
+          : error.message,
+      );
+    }
     return { ok: true };
   });
 
