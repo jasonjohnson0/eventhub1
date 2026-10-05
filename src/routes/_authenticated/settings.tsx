@@ -35,6 +35,7 @@ import {
   updateCalendarSlug,
 } from "@/lib/onboarding.functions";
 import { AnnualPlanCard } from "@/components/annual-plan-card";
+import { AdPolicyCard } from "@/components/ad-policy-card";
 import {
   Dialog,
   DialogContent,
@@ -358,6 +359,7 @@ function SettingsPage() {
         </div>
 
         <AnnualPlanCard />
+        <AdPolicyCard />
         <CoordinatorAnalyticsCard />
 
         <Card>
