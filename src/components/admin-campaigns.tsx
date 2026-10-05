@@ -67,7 +67,7 @@ export function AdminCampaigns() {
     setBusy("zip");
     try {
       const r = await adminImportZipCentroids();
-      toast.success(`Loaded ${r.count.toLocaleString()} ZIP codes`);
+      toast.success(`Loaded ${r.imported.toLocaleString()} ZIP codes`);
       load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Import failed");
