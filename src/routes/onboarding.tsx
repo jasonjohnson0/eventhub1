@@ -49,6 +49,7 @@ import {
 } from "@/lib/onboarding.functions";
 import { savePlatformConfig, saveCustomStripeKeys } from "@/lib/setup.functions";
 import { NAMESERVERS, dnsRecordsFor } from "@/lib/dns-records";
+import { AdPolicyCard } from "@/components/ad-policy-card";
 
 export const Route = createFileRoute("/onboarding")({
   ssr: false,
@@ -774,6 +775,7 @@ function OnboardingWizard() {
             {step === 7 && (
               <section className="space-y-4">
                 <StepTitle title="Review & activate" subtitle="Everything look right?" />
+                <AdPolicyCard compact />
                 <div className="space-y-1.5 rounded-lg border p-3">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     Before you go live
