@@ -194,6 +194,9 @@ function CalendarPage() {
               </button>
             ))}
           </div>
+          <Button asChild variant="outline">
+            <Link to="/coordinator/import">Import</Link>
+          </Button>
           <Button
             onClick={() => {
               setModalStart(cursor);
