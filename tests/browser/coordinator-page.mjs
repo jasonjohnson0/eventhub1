@@ -45,7 +45,16 @@ check('feed contains only upcoming calendar events',
 check('feed event cards are real event-detail links',
   await page.locator('[data-social-feed] a[href*="/events/"]').count() >= 3);
 check('feed places an ad break after the third event',
-  await page.locator('[data-social-feed] [data-feed-event]:nth-of-type(3) [data-feed-ad-break]').count() >= 0);
+  await page.locator('[data-feed-event]').nth(2).locator('[data-feed-ad-break]').count() === 1);
+
+body = await go('/c/empty-feed?view=feed');
+check('zero-event feed shows its friendly empty message', body.includes('No upcoming events yet'));
+check('zero-event feed keeps its event count at zero',
+  await page.locator('[data-social-feed]').getAttribute('data-event-count') === '0');
+
+body = await go('/c/two-feed?view=feed');
+check('two-event feed shows exactly two upcoming events',
+  await page.locator('[data-feed-event]').count() === 2 && body.includes('First Small Calendar Event'));
 
 // ---- the view switcher is real links (crawlable, works without JS) -----------
 await go('/c/riverside?view=month');
