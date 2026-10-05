@@ -81,10 +81,18 @@ check('a sponsor with no link gets no tracked anchor',
   'more click links than ads');
 
 // ---- navigable without JavaScript -------------------------------------------
-for (const view of ['month', 'week', 'list', 'agenda']) {
+for (const view of ['feed', 'month', 'week', 'list', 'agenda']) {
   const v = await get(`${EMBED}?view=${view}`);
   check(`view=${view} renders`, v.status === 200 && v.html.includes('class="ehx"'), String(v.status));
 }
+
+const feed = await get(`${EMBED}?view=feed`);
+check('feed embed uses landscape event cards', feed.html.includes('class="ehx-feed-card"'));
+check('feed embed uses tracked feed clicks', feed.html.includes('?s=feed'));
+check('feed embed emits at most one pixel per selected advertiser',
+  (feed.html.match(/\/api\/ad\/i\//g) || []).length <= 2);
+check('feed embed escapes hostile titles',
+  feed.html.includes('&lt;img src=x onerror=') && !feed.html.includes('<img src=x onerror='));
 
 // ---- multi-day events (spec 02): the e5 fixture spans 3 days -----------------
 const monthWithMulti = await get(`${EMBED}?view=month`);

@@ -36,6 +36,7 @@ type Sponsor = {
   link_url: string | null;
   headline: string | null;
   body: string | null;
+  scope?: string;
 };
 
 /** This string is interpolated into a page we do not control. Everything from
@@ -387,7 +388,7 @@ export const Route = createFileRoute("/api/embed/$slug")({
         // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
         const { data: campaignRows } = await (supabase as any).rpc(
           "get_campaign_sponsors_for_calendar",
-          { p_coordinator_id: coordinator.coordinator_id, p_limit: 2 },
+          { p_coordinator_id: coordinator.coordinator_id, p_limit: 20 },
         );
         const campaignSponsors: Sponsor[] = (campaignRows ?? []).map(
           (c: { ad_key: string; business_name: string; logo_url: string | null; link_url: string | null; headline: string | null; body: string | null }) => ({
@@ -399,9 +400,19 @@ export const Route = createFileRoute("/api/embed/$slug")({
             link_url: c.link_url,
             headline: c.headline,
             body: c.body,
+            scope: c.scope,
           }),
         );
-        const sponsors = [...((sponsorRows ?? []) as Sponsor[]), ...campaignSponsors].slice(0, 2);
+        const eligible = [...((sponsorRows ?? []) as Sponsor[]), ...campaignSponsors];
+        const priority = eligible[0]?.scope;
+        const preferred = eligible.filter((s) => s.scope === priority);
+        const remainder = eligible.filter((s) => s.scope !== priority);
+        const rotation = preferred.length > 0 ? Math.floor(Date.now() / 86_400_000) % preferred.length : 0;
+        const sponsors = [
+          ...preferred.slice(rotation),
+          ...preferred.slice(0, rotation),
+          ...remainder,
+        ].slice(0, 2);
 
         const appUrl = siteOrigin() || url.origin.replace(/\/+$/, "");
         const self = `${appUrl}/api/embed/${encodeURIComponent(coordinator.slug)}`;

@@ -33,11 +33,19 @@ check('shows this coordinator\'s events', ['Harvest Festival', 'Farmers Market',
 check('hides another coordinator\'s event', !body.includes('Somebody'), 'leaked another coordinator');
 
 // ---- every view --------------------------------------------------------------
-for (const view of ['month', 'week', 'day', 'list', 'photo', 'summary', 'agenda']) {
+for (const view of ['feed', 'month', 'week', 'day', 'list', 'photo', 'summary', 'agenda']) {
   body = await go(`/c/riverside?view=${view}`);
   const broke = body.includes('No calendar here') || /Unexpected|Cannot read|is not a function/i.test(body);
   check(`view=${view} renders`, !broke, body.slice(0, 160));
 }
+
+body = await go('/c/riverside?view=feed');
+check('feed contains only upcoming calendar events',
+  body.includes('Harvest Festival') && body.includes('Jazz on the Water') && !body.includes('Somebody Else'), body.slice(0, 220));
+check('feed event cards are real event-detail links',
+  await page.locator('[data-social-feed] a[href*="/events/"]').count() >= 3);
+check('feed places an ad break after the third event',
+  await page.locator('[data-social-feed] > div:nth-of-type(3) [data-feed-ad-break]').count() >= 0);
 
 // ---- the view switcher is real links (crawlable, works without JS) -----------
 await go('/c/riverside?view=month');

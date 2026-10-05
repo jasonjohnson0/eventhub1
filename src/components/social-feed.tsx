@@ -18,6 +18,15 @@ type CampaignAd = {
   body: string | null;
 };
 
+type SlotAd = {
+  slot_id: string;
+  business_name: string;
+  logo_url: string | null;
+  link_url: string | null;
+  headline: string | null;
+  body: string | null;
+};
+
 const categoryFallback: Record<string, string> = {
   sports: "from-emerald-800 via-teal-700 to-cyan-600",
   networking: "from-sky-900 via-blue-700 to-cyan-600",
@@ -210,13 +219,29 @@ export function SocialFeed({
 
   useEffect(() => {
     let alive = true;
-    // The RPC exposes creative fields only and keeps campaign eligibility in the database.
+    // Both RPCs expose creative fields only and keep eligibility in the database.
     // biome-ignore lint/suspicious/noExplicitAny: generated RPC types can lag migrations
-    (supabase as any)
-      .rpc("get_campaign_sponsors_for_calendar", { p_coordinator_id: coordinatorId, p_limit: 20 })
-      .then(({ data }: { data: CampaignAd[] | null }) => {
+    Promise.all([
+      (supabase as any).rpc("get_public_coordinator_sponsors", {
+        p_coordinator_id: coordinatorId,
+        p_limit: 20,
+      }),
+      (supabase as any).rpc("get_campaign_sponsors_for_calendar", {
+        p_coordinator_id: coordinatorId,
+        p_limit: 20,
+      }),
+    ]).then(([slotResult, campaignResult]: [{ data: SlotAd[] | null }, { data: CampaignAd[] | null }]) => {
         if (!alive) return;
-        const rows = data ?? [];
+        const slots: CampaignAd[] = (slotResult.data ?? []).map((row) => ({
+          ad_key: row.slot_id,
+          scope: "event",
+          business_name: row.business_name,
+          logo_url: row.logo_url,
+          link_url: row.link_url,
+          headline: row.headline,
+          body: row.body,
+        }));
+        const rows = [...slots, ...(campaignResult.data ?? [])];
         const priority = rows[0]?.scope;
         const peers = rows.filter((row) => row.scope === priority);
         const rest = rows.filter((row) => row.scope !== priority);
