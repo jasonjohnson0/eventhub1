@@ -286,7 +286,7 @@ export function SocialFeed({
     ) : null;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-3" data-social-feed data-event-count={upcoming.length}>
+    <div className="-mx-4 w-[calc(100%+2rem)] max-w-3xl space-y-3 sm:mx-auto sm:w-full" data-social-feed data-event-count={upcoming.length}>
       {upcoming.length < 3 ? adBreak("top") : null}
       {shown.map((event, index) => (
         <div key={event.id} className="space-y-3" data-feed-event={event.id}>
