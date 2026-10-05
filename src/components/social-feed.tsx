@@ -289,7 +289,7 @@ export function SocialFeed({
     <div className="mx-auto w-full max-w-3xl space-y-3" data-social-feed data-event-count={upcoming.length}>
       {upcoming.length < 3 ? adBreak("top") : null}
       {shown.map((event, index) => (
-        <div key={event.id} className="space-y-3">
+        <div key={event.id} className="space-y-3" data-feed-event={event.id}>
           <EventFeedCard event={event} />
           {upcoming.length >= 3 && (index + 1) % 3 === 0 ? adBreak(`after-${index + 1}`) : null}
         </div>

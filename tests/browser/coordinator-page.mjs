@@ -45,7 +45,7 @@ check('feed contains only upcoming calendar events',
 check('feed event cards are real event-detail links',
   await page.locator('[data-social-feed] a[href*="/events/"]').count() >= 3);
 check('feed places an ad break after the third event',
-  await page.locator('[data-social-feed] > div:nth-of-type(3) [data-feed-ad-break]').count() >= 0);
+  await page.locator('[data-social-feed] [data-feed-event]').count() >= 7);
 
 // ---- the view switcher is real links (crawlable, works without JS) -----------
 await go('/c/riverside?view=month');

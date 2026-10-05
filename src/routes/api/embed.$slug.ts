@@ -391,7 +391,7 @@ export const Route = createFileRoute("/api/embed/$slug")({
           { p_coordinator_id: coordinator.coordinator_id, p_limit: 20 },
         );
         const campaignSponsors: Sponsor[] = (campaignRows ?? []).map(
-          (c: { ad_key: string; business_name: string; logo_url: string | null; link_url: string | null; headline: string | null; body: string | null }) => ({
+          (c: { ad_key: string; scope: string; business_name: string; logo_url: string | null; link_url: string | null; headline: string | null; body: string | null }) => ({
             slot_id: c.ad_key,
             event_id: "",
             event_title: "",
