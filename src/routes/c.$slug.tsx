@@ -17,14 +17,16 @@ import { TimelineView } from "@/views/TimelineView";
 import { supabase } from "@/integrations/supabase/client";
 import { siteUrl } from "@/lib/site-url";
 import { brandWash, findPresetByColor } from "@/lib/organizer-presets";
+import { SocialFeed } from "@/components/social-feed";
 
 /** Every view the platform has, minus the ones that need geo state the embed
  *  does not carry. Adding a view here is all it takes to expose it. */
-const VIEWS = ["month", "week", "day", "list", "agenda", "photo", "summary", "timeline"] as const;
+const VIEWS = ["feed", "month", "week", "day", "list", "agenda", "photo", "summary", "timeline"] as const;
 type ViewKey = (typeof VIEWS)[number];
 const DEFAULT_VIEW: ViewKey = "month";
 const ANCHOR_RE = /^\d{4}-\d{2}-\d{2}$/;
 const VIEW_LABELS: Record<ViewKey, string> = {
+  feed: "Feed",
   month: "Month",
   week: "Week",
   day: "Day",
@@ -176,6 +178,12 @@ function CoordinatorCalendar() {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSignedIn(!!s));
     return () => sub.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!search.view && window.matchMedia("(max-width: 767px)").matches) {
+      setSearch({ view: "feed" }, true);
+    }
   }, []);
 
   const filtered = useMemo(() => {
@@ -339,7 +347,9 @@ function CoordinatorCalendar() {
           </div>
         )}
 
-        {view === "agenda" ? (
+        {view === "feed" ? (
+          <SocialFeed coordinatorId={coordinator.coordinator_id} slug={coordinator.slug} events={filtered} />
+        ) : view === "agenda" ? (
           <AgendaView
             signedIn={signedIn}
             filters={{ coordinator: coordinator.coordinator_id }}
@@ -396,7 +406,7 @@ function CoordinatorCalendar() {
             </p>
           </div>
         )}
-        <CampaignAds coordinatorId={coordinator.coordinator_id} />
+        {view !== "feed" ? <CampaignAds coordinatorId={coordinator.coordinator_id} /> : null}
       </main>
 
       <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-400">
