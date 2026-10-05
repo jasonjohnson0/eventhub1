@@ -47,6 +47,7 @@ import { Route as AuthenticatedAdminModerationRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminSetupRouteImport } from './routes/_authenticated/admin.setup'
 import { Route as AuthenticatedAdminSponsorshipRouteImport } from './routes/_authenticated/admin.sponsorship'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
+import { Route as AuthenticatedCoordinatorImportRouteImport } from './routes/_authenticated/coordinator.import'
 import { Route as AuthenticatedCoordinatorSubmissionsRouteImport } from './routes/_authenticated/coordinator.submissions'
 import { Route as AuthenticatedSponsorshipsIndexRouteImport } from './routes/_authenticated/sponsorships.index'
 import { Route as AuthenticatedSponsorshipsIdRouteImport } from './routes/_authenticated/sponsorships.$id'
@@ -273,6 +274,12 @@ const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedCoordinatorImportRoute =
+  AuthenticatedCoordinatorImportRouteImport.update({
+    id: '/coordinator/import',
+    path: '/coordinator/import',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCoordinatorSubmissionsRoute =
   AuthenticatedCoordinatorSubmissionsRouteImport.update({
     id: '/coordinator/submissions',
@@ -481,6 +488,7 @@ export interface FileRoutesByFullPath {
   '/admin/setup': typeof AuthenticatedAdminSetupRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/coordinator/import': typeof AuthenticatedCoordinatorImportRoute
   '/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
   '/sponsorships/$id': typeof AuthenticatedSponsorshipsIdRoute
   '/sponsorships/new': typeof AuthenticatedSponsorshipsNewRoute
@@ -550,6 +558,7 @@ export interface FileRoutesByTo {
   '/admin/setup': typeof AuthenticatedAdminSetupRoute
   '/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/coordinator/import': typeof AuthenticatedCoordinatorImportRoute
   '/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
   '/sponsorships/$id': typeof AuthenticatedSponsorshipsIdRoute
   '/sponsorships/new': typeof AuthenticatedSponsorshipsNewRoute
@@ -622,6 +631,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/setup': typeof AuthenticatedAdminSetupRoute
   '/_authenticated/admin/sponsorship': typeof AuthenticatedAdminSponsorshipRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/_authenticated/coordinator/import': typeof AuthenticatedCoordinatorImportRoute
   '/_authenticated/coordinator/submissions': typeof AuthenticatedCoordinatorSubmissionsRoute
   '/_authenticated/sponsorships/$id': typeof AuthenticatedSponsorshipsIdRoute
   '/_authenticated/sponsorships/new': typeof AuthenticatedSponsorshipsNewRoute
@@ -694,6 +704,7 @@ export interface FileRouteTypes {
     | '/admin/setup'
     | '/admin/sponsorship'
     | '/admin/users'
+    | '/coordinator/import'
     | '/coordinator/submissions'
     | '/sponsorships/$id'
     | '/sponsorships/new'
@@ -763,6 +774,7 @@ export interface FileRouteTypes {
     | '/admin/setup'
     | '/admin/sponsorship'
     | '/admin/users'
+    | '/coordinator/import'
     | '/coordinator/submissions'
     | '/sponsorships/$id'
     | '/sponsorships/new'
@@ -834,6 +846,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/setup'
     | '/_authenticated/admin/sponsorship'
     | '/_authenticated/admin/users'
+    | '/_authenticated/coordinator/import'
     | '/_authenticated/coordinator/submissions'
     | '/_authenticated/sponsorships/$id'
     | '/_authenticated/sponsorships/new'
@@ -1172,6 +1185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/coordinator/import': {
+      id: '/_authenticated/coordinator/import'
+      path: '/coordinator/import'
+      fullPath: '/coordinator/import'
+      preLoaderRoute: typeof AuthenticatedCoordinatorImportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/coordinator/submissions': {
       id: '/_authenticated/coordinator/submissions'
       path: '/coordinator/submissions'
@@ -1424,6 +1444,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSubmissionsRoute: typeof AuthenticatedSubmissionsRoute
+  AuthenticatedCoordinatorImportRoute: typeof AuthenticatedCoordinatorImportRoute
   AuthenticatedCoordinatorSubmissionsRoute: typeof AuthenticatedCoordinatorSubmissionsRoute
   AuthenticatedSponsorshipsIdRoute: typeof AuthenticatedSponsorshipsIdRoute
   AuthenticatedSponsorshipsNewRoute: typeof AuthenticatedSponsorshipsNewRoute
@@ -1449,6 +1470,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSubmissionsRoute: AuthenticatedSubmissionsRoute,
+  AuthenticatedCoordinatorImportRoute: AuthenticatedCoordinatorImportRoute,
   AuthenticatedCoordinatorSubmissionsRoute:
     AuthenticatedCoordinatorSubmissionsRoute,
   AuthenticatedSponsorshipsIdRoute: AuthenticatedSponsorshipsIdRoute,

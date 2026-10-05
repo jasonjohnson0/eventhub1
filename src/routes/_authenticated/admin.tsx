@@ -15,6 +15,7 @@ const tabs: ReadonlyArray<{ title: string; to: string; exact?: boolean }> = [
   { title: "Overview", to: "/admin", exact: true },
   { title: "Setup", to: "/admin/setup" },
   { title: "Moderation", to: "/admin/moderation" },
+  { title: "Import events", to: "/coordinator/import" },
   { title: "Sponsorship", to: "/admin/sponsorship" },
   { title: "Billing", to: "/admin/billing" },
   { title: "Users", to: "/admin/users" },

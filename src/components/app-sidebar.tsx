@@ -17,6 +17,7 @@ import {
   Palette,
   Paintbrush,
   Code2,
+  FileUp,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -55,6 +56,7 @@ const main = [
 // implying capability they do not have.
 const coordinator = [
   { title: "Submissions", url: "/submissions", icon: Inbox },
+  { title: "Import events", url: "/coordinator/import", icon: FileUp },
   { title: "Venues", url: "/coordinator/settings/venues", icon: MapPin },
   { title: "Organizers", url: "/coordinator/settings/organizers", icon: UserSquare2 },
   { title: "Custom fields", url: "/coordinator/settings/custom-fields", icon: ListPlus },
