@@ -1,19 +1,15 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   getCampaignsOnMyCalendar,
   getMyAdSettings,
-  setMyAdMode,
+  setMyAdFlags,
   type AdSettings,
 } from "@/lib/sponsor-campaigns.functions";
 import { STATUS_LABEL } from "@/lib/sponsor-pricing";
-
-const MODES = [
-  { value: "local", label: "Local sponsors", help: "Ads aimed at your calendar or your area." },
-  { value: "network", label: "Local + network-wide", help: "Also carries network-wide sponsors." },
-  { value: "ad_free", label: "Ad-free", help: "No platform sponsor ads. Paid plan only." },
-] as const;
 
 /** Coordinator's choice of which platform sponsor ads run on their calendar,
  *  plus the list of sponsorships currently aimed at it. */
@@ -28,12 +24,26 @@ export function AdPolicyCard({ compact = false }: { compact?: boolean }) {
   };
   useEffect(load, [compact]);
 
+  const [local, setLocal] = useState(true);
+  const [network, setNetwork] = useState(false);
+  useEffect(() => {
+    if (s) {
+      setLocal(s.ads_local);
+      setNetwork(s.ads_network);
+    }
+  }, [s]);
+
   if (!s) return null;
 
-  async function choose(mode: (typeof MODES)[number]["value"]) {
+  const neither = !local && !network;
+  const invalid = neither && !s.is_paid;
+  const dirty = local !== s.ads_local || network !== s.ads_network;
+
+  async function save() {
+    if (invalid) return;
     setBusy(true);
     try {
-      await setMyAdMode({ data: { mode } });
+      await setMyAdFlags({ data: { local, network } });
       toast.success("Ad setting saved");
       load();
     } catch (e) {
@@ -43,34 +53,44 @@ export function AdPolicyCard({ compact = false }: { compact?: boolean }) {
     }
   }
 
+  const lapsed = !s.ads_local && !s.ads_network && (s.effective_local || s.effective_network);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Sponsor ads on your calendar</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid gap-2 sm:grid-cols-3">
-          {MODES.map((m) => {
-            const locked = m.value === "ad_free" && !s.is_paid;
-            return (
-              <button
-                key={m.value}
-                type="button"
-                disabled={busy || locked}
-                onClick={() => choose(m.value)}
-                className={`rounded-lg border p-3 text-left text-sm transition disabled:opacity-50 ${s.ad_mode === m.value ? "border-primary ring-2 ring-primary/30" : "hover:bg-muted/50"}`}
-              >
-                <div className="font-semibold">{m.label}</div>
-                <div className="text-xs text-muted-foreground">{m.help}</div>
-              </button>
-            );
-          })}
-        </div>
-        {s.effective_mode !== s.ad_mode && (
+        <label className="flex items-start gap-3 text-sm">
+          <Checkbox checked={local} onCheckedChange={(v) => setLocal(v === true)} disabled={busy} />
+          <span>
+            <span className="font-medium">Local sponsors</span>
+            <span className="block text-xs text-muted-foreground">Businesses sponsoring your area by ZIP code.</span>
+          </span>
+        </label>
+        <label className="flex items-start gap-3 text-sm">
+          <Checkbox checked={network} onCheckedChange={(v) => setNetwork(v === true)} disabled={busy} />
+          <span>
+            <span className="font-medium">Network-wide sponsors</span>
+            <span className="block text-xs text-muted-foreground">Sponsors running across every calendar.</span>
+          </span>
+        </label>
+        <p className="text-xs text-muted-foreground">
+          Sponsors who pick your calendar by name always show.
+          {s.is_paid ? " On the paid plan you can untick both to go ad-free." : " Untick both to go ad-free on the paid plan."}
+        </p>
+        {invalid && (
+          <p className="text-xs text-destructive">Free calendars need at least one of these ticked.</p>
+        )}
+        {neither && s.is_paid && <p className="text-xs">Ad-free: no local or network-wide ads will show.</p>}
+        {lapsed && (
           <p className="text-xs text-muted-foreground">
-            Your paid plan has ended, so local sponsor ads are showing until you renew.
+            Your paid plan has ended, so your last ad setting is showing until you renew.
           </p>
         )}
+        <Button size="sm" onClick={save} disabled={busy || invalid || !dirty}>
+          Save ad setting
+        </Button>
         {!compact && (
           <div className="space-y-1 pt-2">
             <div className="text-sm font-medium">Sponsorships aimed at your calendar</div>

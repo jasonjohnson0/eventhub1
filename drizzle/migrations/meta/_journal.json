@@ -15,6 +15,13 @@
       "when": 1790643372912,
       "tag": "0001_sponsor_campaigns",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791230661295,
+      "tag": "0002_calendar_ads_local_network_flags",
+      "breakpoints": true
     }
   ]
 }

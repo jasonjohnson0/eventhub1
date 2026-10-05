@@ -364,6 +364,10 @@ export type Database = {
         Row: {
           ad_mode: string
           ad_mode_last_choice: string
+          ads_last_local: boolean
+          ads_last_network: boolean
+          ads_local: boolean
+          ads_network: boolean
           company_name: string | null
           contact_email: string | null
           coordinator_id: string
@@ -396,6 +400,10 @@ export type Database = {
         Insert: {
           ad_mode?: string
           ad_mode_last_choice?: string
+          ads_last_local?: boolean
+          ads_last_network?: boolean
+          ads_local?: boolean
+          ads_network?: boolean
           company_name?: string | null
           contact_email?: string | null
           coordinator_id: string
@@ -428,6 +436,10 @@ export type Database = {
         Update: {
           ad_mode?: string
           ad_mode_last_choice?: string
+          ads_last_local?: boolean
+          ads_last_network?: boolean
+          ads_local?: boolean
+          ads_network?: boolean
           company_name?: string | null
           contact_email?: string | null
           coordinator_id?: string
@@ -2683,6 +2695,13 @@ export type Database = {
         Args: { _coordinator_id: string }
         Returns: string
       }
+      coordinator_effective_ads: {
+        Args: { _coordinator_id: string }
+        Returns: {
+          local: boolean
+          network: boolean
+        }[]
+      }
       coordinator_is_paid: {
         Args: { _coordinator_id: string }
         Returns: boolean
@@ -3222,6 +3241,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      restore_lapsed_ad_settings: { Args: never; Returns: number }
       search_events_nearby: {
         Args: {
           _lat: number
