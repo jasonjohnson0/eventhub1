@@ -27,7 +27,41 @@ const OTHER = '99999999-9999-9999-9999-999999999999';
 const EMPTY_COORD = '77777777-7777-4777-8777-777777777777';
 const TWO_COORD = '88888888-8888-4888-8888-888888888888';
 
-const COORDINATORS = [{
+// Calendars whose only purpose is the feed ad-policy suite. Each mirrors one
+// row shape that coordinator_effective_ads() distinguishes: free vs paid vs
+// lapsed, and which of ads_local / ads_network is stored.
+const AD_POLICY = {
+  'a1000000-0000-4000-8000-000000000001': { slug: 'ads-free-local', plan: 'free', local: true, network: false, named: true },
+  'a1000000-0000-4000-8000-000000000002': { slug: 'ads-free-network', plan: 'free', local: false, network: true, named: true },
+  'a1000000-0000-4000-8000-000000000003': { slug: 'ads-free-both', plan: 'free', local: true, network: true, named: true },
+  'a1000000-0000-4000-8000-000000000004': { slug: 'ads-paid-off', plan: 'paid', local: false, network: false, named: true },
+  'a1000000-0000-4000-8000-000000000005': { slug: 'ads-paid-off-unnamed', plan: 'paid', local: false, network: false, named: false },
+  'a1000000-0000-4000-8000-000000000006': { slug: 'ads-paid-network', plan: 'paid', local: false, network: true, named: false },
+  // Paid and ad-free, then the plan ended; its last non-empty choice was Network.
+  'a1000000-0000-4000-8000-000000000007': { slug: 'ads-lapsed', plan: 'lapsed', local: false, network: false, lastLocal: false, lastNetwork: true, named: true },
+  // Lapsed with no remembered choice falls back to Local.
+  'a1000000-0000-4000-8000-000000000008': { slug: 'ads-lapsed-default', plan: 'lapsed', local: false, network: false, named: false },
+};
+
+// Same rule as public.coordinator_effective_ads (migration 0002).
+function effectiveAds(p) {
+  if (p.plan === 'paid') return { local: p.local, network: p.network };
+  if (p.local || p.network) return { local: p.local, network: p.network };
+  if (p.lastLocal || p.lastNetwork) return { local: !!p.lastLocal, network: !!p.lastNetwork };
+  return { local: true, network: false };
+}
+
+const POLICY_CAMPAIGNS = {
+  calendars: { ad_key: 'c_c1000000-0000-4000-8000-00000000000a', scope: 'calendars', business_name: 'Main Street Bakery', headline: 'Picked this calendar' },
+  geo: { ad_key: 'c_c1000000-0000-4000-8000-00000000000b', scope: 'geo', business_name: 'County Hardware', headline: 'Local area ad' },
+  network: { ad_key: 'c_c1000000-0000-4000-8000-00000000000c', scope: 'network', business_name: 'Statewide Credit Union', headline: 'Network-wide ad' },
+};
+
+const COORDINATORS = [...Object.entries(AD_POLICY).map(([id, p]) => ({
+  coordinator_id: id, slug: p.slug, company_name: `Ad policy ${p.slug}`, description: null,
+  logo_url: null, favicon_url: null, primary_color: '#0f766e', secondary_color: '#f97316',
+  setup_completed_at: '2026-01-01T00:00:00.000Z',
+})), {
   coordinator_id: COORD,
   slug: 'riverside',
   company_name: 'Riverside Events Co.',
@@ -767,6 +801,9 @@ function handle(req, res) {
     );
   }
   if (path === '/rest/v1/rpc/get_public_coordinator_sponsors') {
+    let sp = {};
+    try { sp = JSON.parse(req.__body || '{}'); } catch {}
+    if (AD_POLICY[sp.p_coordinator_id]) return send([]);
     return send([
       { slot_id: SLOT_LIVE, event_id: 'e1', event_title: 'Harvest Festival',
         business_name: 'Riverside Auto', logo_url: 'https://cdn.example.com/logo.png',
@@ -997,6 +1034,18 @@ function handle(req, res) {
     return send(row?.slug ?? null);
   }
 
+  if (path === '/rest/v1/rpc/get_campaign_sponsors_for_calendar') {
+    let b = {};
+    try { b = JSON.parse(req.__body || '{}'); } catch {}
+    const p = AD_POLICY[b.p_coordinator_id];
+    if (!p) return send([]);
+    const eff = effectiveAds(p);
+    const rows = [];
+    if (p.named) rows.push(POLICY_CAMPAIGNS.calendars);
+    if (eff.local) rows.push(POLICY_CAMPAIGNS.geo);
+    if (eff.network) rows.push(POLICY_CAMPAIGNS.network);
+    return send(rows.map((r) => ({ logo_url: null, link_url: 'https://advertiser.example/', body: null, ...r })));
+  }
   if (path.startsWith('/rest/v1/rpc/')) return send([]);
 
   // Spec 06: getEventOrganizers (event_id=eq.*, embeds organizers(*)) and
