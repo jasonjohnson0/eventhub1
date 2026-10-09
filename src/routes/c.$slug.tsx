@@ -5,6 +5,7 @@ import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { CalendarDays, ChevronLeft, ChevronRight, Compass, PartyPopper } from "lucide-react";
 import { getPublicCoordinator } from "@/lib/coordinator.functions";
+import { SiteFooter } from "@/components/site-footer";
 import { fetchEvents, fetchNearbyEvents, addDays, startOfWeek, type NearbyEvent } from "@/queries/events";
 import { MonthView } from "@/components/CalendarViews/MonthView";
 import { DayView } from "@/components/CalendarViews/DayView";
@@ -412,11 +413,7 @@ function CoordinatorCalendar() {
         {view !== "feed" ? <CampaignAds coordinatorId={coordinator.coordinator_id} /> : null}
       </main>
 
-      <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-400">
-        <Link to="/events" className="hover:text-slate-600">
-          Powered by EventHub
-        </Link>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

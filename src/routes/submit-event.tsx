@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { CalendarPlus, Loader2, PartyPopper } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SiteFooter } from "@/components/site-footer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -321,6 +322,7 @@ function SubmitEventPage() {
           </CardContent>
         </Card>
       </div>
+      <SiteFooter />
     </div>
   );
 }

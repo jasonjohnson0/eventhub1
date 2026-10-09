@@ -9,6 +9,7 @@ import { purchaseTicket, createTicketCheckout, listMyPurchases } from "@/lib/mon
 import { getEventOrganizers, type Organizer, type PersonKind } from "@/lib/organizers.functions";
 import { Button } from "@/components/ui/button";
 import { PrivateEventGate } from "@/components/private-event-gate";
+import { SiteFooter } from "@/components/site-footer";
 import { categoryClasses, categoryLabel } from "@/lib/categories";
 import { fmtTime } from "@/queries/events";
 import { viewerTimeZone } from "@/lib/timezone";
@@ -1114,6 +1115,7 @@ function PublicEventDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <SiteFooter />
     </div>
   );
 }

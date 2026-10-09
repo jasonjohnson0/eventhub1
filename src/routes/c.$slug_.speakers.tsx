@@ -2,6 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Mic, PartyPopper } from "lucide-react";
 import { getPublicCoordinator } from "@/lib/coordinator.functions";
 import { listPublicPeople } from "@/lib/organizers.functions";
+import { SiteFooter } from "@/components/site-footer";
 
 /** Public speaker directory for one coordinator (spec 06). A flat sibling of
  *  `c.$slug.tsx`, not nested under it -- same pattern `events.$id.manage.tsx`
@@ -95,6 +96,7 @@ function SpeakersDirectory() {
           </div>
         )}
       </main>
+      <SiteFooter />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { SiteFooter } from "@/components/site-footer";
 import { PartyPopper, Check, X, ArrowRight } from "lucide-react";
 import thumbnail from "@/assets/gumroad-thumbnail.jpg";
 import shot01 from "@/assets/tour/01-hero.jpg";
@@ -256,16 +257,7 @@ function TourPage() {
         </div>
       </section>
 
-      <footer className="border-t border-slate-100 py-10 text-center text-xs text-slate-400">
-        Made with ❤️ by EventHub ·{" "}
-        <Link to="/events" className="underline">
-          Live calendar
-        </Link>{" "}
-        ·{" "}
-        <Link to="/submit-event" className="underline">
-          Submit an event
-        </Link>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

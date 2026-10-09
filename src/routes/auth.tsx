@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,9 +6,15 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SiteFooter } from "@/components/site-footer";
 import { toast } from "sonner";
 
-const searchSchema = z.object({ next: z.string().optional() });
+const searchSchema = z.object({
+  next: z.string().optional(),
+  // Lets /sign-up (and anything else) land directly on the signup tab
+  // instead of defaulting to sign-in and making people click through.
+  mode: z.enum(["signin", "signup"]).optional(),
+});
 
 // A dropped connection doesn't always fail fast -- a request that goes into
 // a network black hole can leave the button reading "Please wait…"
@@ -61,11 +67,17 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
-  const { next } = Route.useSearch();
+  const { next, mode: initialMode } = Route.useSearch();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode ?? "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  // What this account is mainly here to do -- there's no "attendee" flag
+  // anywhere else in the data model, so this is what sets it. It's stored
+  // on the user and read back in /auth/callback to route first-time
+  // organizers into onboarding instead of the attendee-facing calendar.
+  const [intent, setIntent] = useState<"attendee" | "organizer">("attendee");
   const [loading, setLoading] = useState(false);
   // Signup only ever issues a session once the confirmation link is clicked --
   // there is no code-level way to skip that, since it's a Supabase Auth/SMTP
@@ -89,7 +101,10 @@ function AuthPage() {
           supabase.auth.signUp({
             email,
             password,
-            options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next ?? "/dashboard")}` },
+            options: {
+              emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next ?? "/dashboard")}`,
+              data: { full_name: fullName.trim(), intent },
+            },
           }),
         );
         if (error) throw error;
@@ -144,7 +159,8 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="flex min-h-screen flex-col bg-background">
+      <div className="flex flex-1 items-center justify-center p-4">
       <div className="w-full max-w-md rounded-lg border bg-card p-8 shadow-sm">
         <h1 className="mb-1 text-2xl font-bold">EventHub</h1>
         <p className="mb-6 text-sm text-muted-foreground">
@@ -165,17 +181,81 @@ function AuthPage() {
         </div>
 
         <form onSubmit={handleEmail} className="space-y-4">
+          {mode === "signup" && (
+            <div>
+              <Label htmlFor="fullName">Name</Label>
+              <Input
+                id="fullName"
+                type="text"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+            </div>
+          )}
           <div>
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div>
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input
+              id="password"
+              type="password"
+              required
+              minLength={mode === "signup" ? 12 : 8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            {mode === "signup" && (
+              <p className="mt-1 text-xs text-muted-foreground">At least 12 characters.</p>
+            )}
           </div>
+          {mode === "signup" && (
+            <div>
+              <Label>What are you here to do?</Label>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIntent("attendee")}
+                  className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                    intent === "attendee"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-input text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Find events
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIntent("organizer")}
+                  className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                    intent === "organizer"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-input text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Run a calendar
+                </button>
+              </div>
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
           </Button>
+          {mode === "signup" && (
+            <p className="text-center text-xs text-muted-foreground">
+              By creating an account you agree to our{" "}
+              <Link to="/terms" className="underline hover:text-foreground">
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link to="/privacy" className="underline hover:text-foreground">
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          )}
         </form>
 
         {pendingEmail && (
@@ -207,6 +287,8 @@ function AuthPage() {
           {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
         </button>
       </div>
+      </div>
+      <SiteFooter />
     </div>
   );
 }
