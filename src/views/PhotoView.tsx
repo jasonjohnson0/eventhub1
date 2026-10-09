@@ -71,7 +71,12 @@ export function PhotoView({ events }: { events: CalendarEvent[] }) {
           >
             <div className="relative">
               {active.image_url ? (
-                <img src={active.image_url} alt={active.title} className="h-56 w-full object-cover sm:h-72" />
+                <img
+                  src={active.image_url}
+                  alt={active.title}
+                  decoding="async"
+                  className="h-56 w-full object-cover sm:h-72"
+                />
               ) : (
                 <div className="flex h-40 w-full items-center justify-center bg-gradient-to-br from-fuchsia-300 to-amber-200 text-6xl">
                   🎊

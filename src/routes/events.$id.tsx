@@ -206,6 +206,8 @@ function PeopleBlock({
                 <img
                   src={p.photo_url}
                   alt=""
+                  loading="lazy"
+                  decoding="async"
                   className="h-9 w-9 shrink-0 rounded-full object-cover"
                 />
               ) : (
@@ -1028,6 +1030,8 @@ function PublicEventDetail() {
               <img
                 src={photos[photoIdx].photo_url}
                 alt={photos[photoIdx].caption ?? "Event photo"}
+                loading="lazy"
+                decoding="async"
                 className="h-96 w-full object-cover"
               />
               {photos[photoIdx].caption && (

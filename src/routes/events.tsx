@@ -41,6 +41,12 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/events")({
   validateSearch: zodValidator(searchSchema),
+  // No cache-control at all before this -- every request re-rendered the
+  // SSR shell from scratch. Short enough that a newly-approved event still
+  // shows up well within the window.
+  headers: () => ({
+    "cache-control": "public, max-age=60, s-maxage=300, stale-while-revalidate=86400",
+  }),
   head: () => ({
     meta: [
       { title: "Discover Events — EventHub" },
