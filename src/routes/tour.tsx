@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { SiteFooter } from "@/components/site-footer";
@@ -23,16 +22,31 @@ import shot15 from "@/assets/tour/15-subscribe.jpg";
 import shot16 from "@/assets/tour/16-mobile.jpg";
 
 export const Route = createFileRoute("/tour")({
+  // Was a client-side useEffect fetch -- real numbers, but only ever
+  // visible after hydration, so SSR (and any crawler) saw permanent "—"
+  // placeholders. Resolving it in the loader means the platform-wide stats
+  // are correct on first paint, same reasoning as c.$slug.tsx's loader.
+  loader: async () => {
+    const { data } = await supabase
+      .from("events")
+      .select("category")
+      .eq("status", "approved")
+      // biome-ignore lint/suspicious/noExplicitAny: visibility not yet in generated types
+      .eq("visibility" as any, "public")
+      .limit(500);
+    const rows = data ?? [];
+    return { events: rows.length, categories: new Set(rows.map((r) => r.category)).size };
+  },
   head: () => ({
     meta: [
       { title: "Product Tour — EventHub Community Calendar Platform" },
       {
         name: "description",
         content:
-          "See EventHub in action: a white-label community event calendar with paid tickets, sponsorships and zero platform fees. Keep 100% of your revenue.",
+          "See EventHub in action: a white-label community event calendar with paid tickets, sponsorships and zero platform fees. We never take a cut of your revenue.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:title", content: "EventHub — Keep 100% of your event revenue" },
+      { property: "og:title", content: "EventHub — No platform fee on your event revenue" },
       {
         property: "og:description",
         content:
@@ -75,28 +89,7 @@ const FEATURES = [
 ];
 
 function TourPage() {
-  const [stats, setStats] = useState<{ events: number; categories: number } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      // "Approved events live, platform-wide" is a public marketing number --
-      // an unlisted event shouldn't inflate it (spec 04, F2).
-      const { data } = await supabase
-        .from("events")
-        .select("category")
-        .eq("status", "approved")
-        // biome-ignore lint/suspicious/noExplicitAny: visibility not yet in generated types
-        .eq("visibility" as any, "public")
-        .limit(500);
-      if (cancelled) return;
-      const rows = data ?? [];
-      setStats({ events: rows.length, categories: new Set(rows.map((r) => r.category)).size });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const stats = Route.useLoaderData();
 
   return (
     <div className="min-h-screen bg-white">
@@ -114,18 +107,19 @@ function TourPage() {
       <section className="mx-auto grid max-w-6xl items-center gap-10 px-6 pb-16 pt-8 md:grid-cols-2">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-fuchsia-100 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-fuchsia-700">
-            Now on Gumroad
+            Multi-tenant · White-label
           </div>
           <h1 className="mt-5 text-5xl font-black leading-tight tracking-tight text-slate-900">
-            Keep{" "}
+            Keep your{" "}
             <span className="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 bg-clip-text text-transparent">
-              100% of your
-            </span>{" "}
-            event revenue.
+              event revenue
+            </span>
+            . We don't take a cut.
           </h1>
           <p className="mt-5 max-w-md text-lg text-slate-600">
             EventHub is a white-label community event calendar you own outright. Sell tickets and sponsorships with
-            your own Stripe account — no per-ticket cut, no Eventbrite fees, no platform tax.
+            your own Stripe account — no per-ticket cut, no Eventbrite fees, no platform tax. You still pay Stripe's
+            own processing cost, same as anywhere else.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg" className="rounded-full">
@@ -140,7 +134,7 @@ function TourPage() {
         </div>
         <img
           src={thumbnail}
-          alt="EventHub — keep 100% revenue, no Eventbrite fees"
+          alt="EventHub — no platform fee, no Eventbrite fees"
           width={600}
           height={600}
           className="mx-auto w-full max-w-sm rounded-3xl shadow-2xl"
@@ -247,8 +241,8 @@ function TourPage() {
             live on the platform today.
           </p>
           <div className="mt-8 grid gap-6 sm:grid-cols-3">
-            <Stat value={stats ? String(stats.events) : "—"} label="Approved events live, platform-wide" />
-            <Stat value={stats ? String(stats.categories) : "—"} label="Categories represented, platform-wide" />
+            <Stat value={String(stats.events)} label="Approved events live, platform-wide" />
+            <Stat value={String(stats.categories)} label="Categories represented, platform-wide" />
             <Stat value="$0" label="Paid in platform fees" />
           </div>
           <Button asChild size="lg" className="mt-8 rounded-full bg-white text-slate-900 hover:bg-white/90">
