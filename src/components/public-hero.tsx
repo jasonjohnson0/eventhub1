@@ -155,12 +155,12 @@ export function PublicHero({ query, onQuery, category, onCategory, theme }: Prop
         >
           <img
             src={thumbnail}
-            alt="EventHub — keep 100% of your event revenue"
+            alt="EventHub — no platform fee on your event revenue"
             width={40}
             height={40}
             className="h-10 w-10 rounded-full object-cover ring-2 ring-white/70"
           />
-          Running your own calendar? Keep 100% of the revenue →
+          Running your own calendar? We don't take a cut →
         </Link>
 
         {/* Search */}
