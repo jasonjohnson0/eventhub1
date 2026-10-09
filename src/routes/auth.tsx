@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SiteFooter } from "@/components/site-footer";
+import { checkAuthAttempt } from "@/lib/auth-rate-limit.functions";
 import { toast } from "sonner";
 
 const searchSchema = z.object({
@@ -85,6 +86,9 @@ function AuthPage() {
   // to ask for the email again if the first one never arrived or got lost.
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  const [forgotPassword, setForgotPassword] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -96,6 +100,7 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      await checkAuthAttempt({ data: { kind: mode } });
       if (mode === "signup") {
         const { error } = await withTimeout(
           supabase.auth.signUp({
@@ -136,6 +141,25 @@ function AuthPage() {
     }
   }
 
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setResetting(true);
+    try {
+      await checkAuthAttempt({ data: { kind: "reset" } });
+      const { error } = await withTimeout(
+        supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/reset-password`,
+        }),
+      );
+      if (error) throw error;
+      setResetSent(true);
+    } catch (err) {
+      toast.error(authErrorMessage(err, "Could not send the reset email"));
+    } finally {
+      setResetting(false);
+    }
+  }
+
   async function handleOAuth(provider: "google" | "apple") {
     setLoading(true);
     try {
@@ -164,9 +188,38 @@ function AuthPage() {
       <div className="w-full max-w-md rounded-lg border bg-card p-8 shadow-sm">
         <h1 className="mb-1 text-2xl font-bold">EventHub</h1>
         <p className="mb-6 text-sm text-muted-foreground">
-          {mode === "signin" ? "Sign in to your account" : "Create your account"}
+          {forgotPassword
+            ? "Reset your password"
+            : mode === "signin"
+              ? "Sign in to your account"
+              : "Create your account"}
         </p>
 
+        {forgotPassword ? (
+          resetSent ? (
+            <div className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+              If an account exists for <span className="font-medium text-foreground">{email}</span>,
+              a password reset link is on its way.
+            </div>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <Label htmlFor="resetEmail">Email</Label>
+                <Input
+                  id="resetEmail"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={resetting}>
+                {resetting ? "Sending…" : "Send reset link"}
+              </Button>
+            </form>
+          )
+        ) : (
+          <>
         <div className="space-y-2">
           <Button variant="outline" className="w-full" disabled={loading} onClick={() => handleOAuth("google")}>
             Continue with Google
@@ -209,6 +262,18 @@ function AuthPage() {
             />
             {mode === "signup" && (
               <p className="mt-1 text-xs text-muted-foreground">At least 12 characters.</p>
+            )}
+            {mode === "signin" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotPassword(true);
+                  setResetSent(false);
+                }}
+                className="mt-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+              >
+                Forgot password?
+              </button>
             )}
           </div>
           {mode === "signup" && (
@@ -286,6 +351,18 @@ function AuthPage() {
         >
           {mode === "signin" ? "Need an account? Sign up" : "Already have an account? Sign in"}
         </button>
+          </>
+        )}
+
+        {forgotPassword && (
+          <button
+            type="button"
+            onClick={() => setForgotPassword(false)}
+            className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground"
+          >
+            Back to sign in
+          </button>
+        )}
       </div>
       </div>
       <SiteFooter />

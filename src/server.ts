@@ -66,7 +66,7 @@ function isEmbeddablePath(pathname: string): boolean {
 // alongside CSP for older browsers that don't honor frame-ancestors.
 function applyFrameProtection(request: Request, response: Response): Response {
   const { pathname } = new URL(request.url);
-  if (isEmbeddablePath(pathname)) return response;
+  const embeddable = isEmbeddablePath(pathname);
   // Not an in-place response.headers.set(): a Response.redirect() response
   // (used by the ad-click endpoint's fallback path) has immutable headers in
   // this runtime, and mutating it threw -- silently turning a redirect into
@@ -74,10 +74,46 @@ function applyFrameProtection(request: Request, response: Response): Response {
   // to handle safely. Building a fresh Response sidesteps that regardless of
   // how the original one was constructed.
   const headers = new Headers(response.headers);
+  // HTTPS-only is already true in production (Vercel); this just tells the
+  // browser to enforce it itself, including on the very first request, so a
+  // stale http:// link or bookmark can't be downgraded to plaintext. Applies
+  // everywhere, including embeddable paths -- it has nothing to do with
+  // framing.
+  headers.set("strict-transport-security", "max-age=63072000; includeSubDomains; preload");
+  if (embeddable) {
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
   headers.set("x-frame-options", "SAMEORIGIN");
+  // script-src/style-src need 'unsafe-inline': TanStack Start's own SSR
+  // streaming/hydration markup ships as inline <script> tags with no nonce
+  // wired up, and plenty of components set inline style="" (brand colors,
+  // custom CSS). Everything else here is a real restriction that wasn't
+  // there before -- no third-party script host, no plugins/objects, no
+  // cross-origin form posts, no framing beyond the one editor-preview
+  // exception this app already depends on.
   headers.set(
     "content-security-policy",
-    "frame-ancestors 'self' https://lovable.dev https://*.lovable.dev",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data:",
+      // The public calendar spins up a blob: worker (verified against a
+      // real browser load of /events) -- script-src's fallback for
+      // worker-src blocked it until this was split out explicitly.
+      "worker-src 'self' blob:",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://lovable.dev https://*.lovable.dev",
+      "frame-src 'self' https://lovable.dev https://*.lovable.dev",
+      "frame-ancestors 'self' https://lovable.dev https://*.lovable.dev",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; "),
   );
   return new Response(response.body, {
     status: response.status,
