@@ -12,9 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TourRouteImport } from './routes/tour'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SubmitEventRouteImport } from './routes/submit-event'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SetupRouteImport } from './routes/setup'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OrganizersRouteImport } from './routes/organizers'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -93,6 +95,11 @@ const SubmitEventRoute = SubmitEventRouteImport.update({
   path: '/submit-event',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SigninRoute = SigninRouteImport.update({
   id: '/signin',
   path: '/signin',
@@ -106,6 +113,11 @@ const SignUpRoute = SignUpRouteImport.update({
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -446,9 +458,11 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/organizers': typeof OrganizersRoute
   '/privacy': typeof PrivacyRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/setup': typeof SetupRoute
   '/sign-up': typeof SignUpRoute
   '/signin': typeof SigninRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/submit-event': typeof SubmitEventRoute
   '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
@@ -515,9 +529,11 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/organizers': typeof OrganizersRoute
   '/privacy': typeof PrivacyRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/setup': typeof SetupRoute
   '/sign-up': typeof SignUpRoute
   '/signin': typeof SigninRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/submit-event': typeof SubmitEventRoute
   '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
@@ -585,9 +601,11 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/organizers': typeof OrganizersRoute
   '/privacy': typeof PrivacyRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/setup': typeof SetupRoute
   '/sign-up': typeof SignUpRoute
   '/signin': typeof SigninRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/submit-event': typeof SubmitEventRoute
   '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
@@ -656,9 +674,11 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/organizers'
     | '/privacy'
+    | '/robots.txt'
     | '/setup'
     | '/sign-up'
     | '/signin'
+    | '/sitemap.xml'
     | '/submit-event'
     | '/terms'
     | '/tour'
@@ -725,9 +745,11 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/organizers'
     | '/privacy'
+    | '/robots.txt'
     | '/setup'
     | '/sign-up'
     | '/signin'
+    | '/sitemap.xml'
     | '/submit-event'
     | '/terms'
     | '/tour'
@@ -794,9 +816,11 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/organizers'
     | '/privacy'
+    | '/robots.txt'
     | '/setup'
     | '/sign-up'
     | '/signin'
+    | '/sitemap.xml'
     | '/submit-event'
     | '/terms'
     | '/tour'
@@ -865,9 +889,11 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   OrganizersRoute: typeof OrganizersRoute
   PrivacyRoute: typeof PrivacyRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
   SetupRoute: typeof SetupRoute
   SignUpRoute: typeof SignUpRoute
   SigninRoute: typeof SigninRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SubmitEventRoute: typeof SubmitEventRoute
   TermsRoute: typeof TermsRoute
   TourRoute: typeof TourRoute
@@ -915,6 +941,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SubmitEventRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signin': {
       id: '/signin'
       path: '/signin'
@@ -934,6 +967,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -1531,9 +1571,11 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   OrganizersRoute: OrganizersRoute,
   PrivacyRoute: PrivacyRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
   SetupRoute: SetupRoute,
   SignUpRoute: SignUpRoute,
   SigninRoute: SigninRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   SubmitEventRoute: SubmitEventRoute,
   TermsRoute: TermsRoute,
   TourRoute: TourRoute,
