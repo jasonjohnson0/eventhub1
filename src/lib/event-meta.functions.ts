@@ -28,7 +28,7 @@ export const getEventMeta = createServerFn({ method: "GET" })
     const [{ data: details }, { data: profile }] = await Promise.all([
       sb
         .from("event_details")
-        .select("landscape_image_url, portrait_image_url")
+        .select("landscape_image_url, portrait_image_url, metadata")
         .eq("event_id", data.id)
         .maybeSingle(),
       sb.from("profiles").select("display_name").eq("id", ev.coordinator_id).maybeSingle(),
@@ -46,5 +46,8 @@ export const getEventMeta = createServerFn({ method: "GET" })
       image: (details?.landscape_image_url ?? details?.portrait_image_url ?? null) as
         | string
         | null,
+      imageAlt: ((details?.metadata as { image_alt_text?: string } | null)?.image_alt_text as
+        | string
+        | undefined) ?? null,
     };
   });

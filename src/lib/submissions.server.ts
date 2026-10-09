@@ -17,6 +17,9 @@ export const submitSchema = z.object({
   start_time: z.string().min(8).max(40),
   end_time: z.string().min(8).max(40),
   image_url: z.string().trim().max(1000).optional().nullable(),
+  // Alt text for image_url -- optional, since not every submitter will
+  // fill it in, but there was no way to supply one at all before this.
+  image_alt: z.string().trim().max(300).optional().nullable(),
   // Honeypot: a field no real visitor fills in (hidden off-screen, not
   // display:none, in the form). A submission bot that fills every input
   // blind trips this; a human never sees it. Anything non-empty here means

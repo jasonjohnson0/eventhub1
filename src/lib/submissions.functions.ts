@@ -35,6 +35,7 @@ export type EventSubmission = {
     start_time: string;
     end_time: string;
     image_url?: string | null;
+    image_alt?: string | null;
     contact_name?: string | null;
   };
   status: SubmissionStatus;
@@ -99,6 +100,7 @@ export const submitEvent = createServerFn({ method: "POST" })
         start_time: data.start_time,
         end_time: data.end_time,
         image_url: data.image_url ?? null,
+        image_alt: data.image_alt ?? null,
         contact_name: data.contact_name ?? null,
       },
     });
@@ -177,6 +179,22 @@ export const approveSubmission = createServerFn({ method: "POST" })
       .select("id, title")
       .single();
     if (evErr) throw new Error(evErr.message);
+
+    // A submitted event's image previously had nowhere to land: events has
+    // no image column of its own (it lives in event_details), and nothing
+    // here ever created that row, so an approved event's uploaded photo
+    // silently vanished on approval. Carrying it over now, alt text
+    // included.
+    if (ed.image_url) {
+      await sb.from("event_details").upsert(
+        {
+          event_id: created.id,
+          landscape_image_url: ed.image_url,
+          metadata: ed.image_alt ? { image_alt_text: ed.image_alt } : {},
+        },
+        { onConflict: "event_id" },
+      );
+    }
 
     const { error: updErr } = await sb
       .from("event_submissions")

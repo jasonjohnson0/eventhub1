@@ -171,10 +171,14 @@ function CalendarPage() {
           <h1 className="ml-2 text-xl font-semibold">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-md border p-0.5">
+          <div role="tablist" aria-label="Calendar view" className="flex rounded-md border p-0.5">
             {(["month", "week", "day"] as const).map((v) => (
               <button
                 key={v}
+                type="button"
+                role="tab"
+                aria-selected={view === v}
+                aria-current={view === v ? "true" : undefined}
                 onClick={() => setView(v)}
                 className={`rounded px-3 py-1 text-sm capitalize ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
               >

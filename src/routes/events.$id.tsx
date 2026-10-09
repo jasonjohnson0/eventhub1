@@ -99,6 +99,7 @@ export const Route = createFileRoute("/events/$id")({
         { property: "og:description", content: description },
         { property: "og:url", content: url },
         ...(m.image ? [{ property: "og:image", content: m.image }] : []),
+        ...(m.image && m.imageAlt ? [{ property: "og:image:alt", content: m.imageAlt }] : []),
         { name: "twitter:card", content: m.image ? "summary_large_image" : "summary" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
@@ -129,6 +130,7 @@ type Detail = {
     visibility?: "public" | "unlisted" | null;
   };
   image: string | null;
+  imageAlt: string | null;
   photos: { id: string; photo_url: string; caption: string | null }[];
   goingCount: number;
   coordinatorName: string | null;
@@ -336,7 +338,7 @@ function PublicEventDetail() {
       ] = await Promise.all([
           supabase
             .from("event_details")
-            .select("landscape_image_url, portrait_image_url")
+            .select("landscape_image_url, portrait_image_url, metadata")
             .eq("event_id", id)
             .maybeSingle(),
           supabase
@@ -389,6 +391,9 @@ function PublicEventDetail() {
           event: ev,
           image:
             detailsRes.data?.landscape_image_url ?? detailsRes.data?.portrait_image_url ?? null,
+          imageAlt:
+            ((detailsRes.data?.metadata as { image_alt_text?: string } | null)
+              ?.image_alt_text as string | undefined) ?? null,
           photos: photosRes.data ?? [],
           goingCount: (rsvpCountsRes.data?.[0]?.going as number | undefined) ?? 0,
           // biome-ignore lint/suspicious/noExplicitAny: profile may not exist
@@ -518,6 +523,7 @@ function PublicEventDetail() {
   const {
     event,
     image,
+    imageAlt,
     photos,
     goingCount,
     coordinatorName,
@@ -647,7 +653,7 @@ function PublicEventDetail() {
         <div className="overflow-hidden rounded-3xl bg-white shadow-[0_20px_60px_-20px_rgba(0,0,0,0.2)]">
           <div className="relative h-72 bg-gradient-to-br from-fuchsia-400 via-pink-400 to-amber-300 md:h-96">
             {image ? (
-              <img src={image} alt={event.title} className="h-full w-full object-cover" />
+              <img src={image} alt={imageAlt ?? event.title} className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-9xl">🎉</div>
             )}

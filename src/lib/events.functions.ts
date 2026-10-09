@@ -76,6 +76,7 @@ export const createEvent = createServerFn({ method: "POST" })
         virtual_link: z.string().url().max(500).optional().nullable(),
         livestream_provider: z.enum(["zoom", "google_meet", "youtube", "none"]).default("none"),
         landscape_image_url: z.string().trim().url().max(1000).optional().nullable(),
+        image_alt_text: z.string().trim().max(300).optional().nullable(),
         // No enum here: the DB trigger falls back to the coordinator's own
         // profile timezone (or America/Chicago) when this is left unset, and
         // rejecting an unrecognized IANA name at write time isn't spec 03's
@@ -141,7 +142,11 @@ export const createEvent = createServerFn({ method: "POST" })
     }
     if (data.landscape_image_url) {
       await context.supabase.from("event_details").upsert(
-        { event_id: row.id, landscape_image_url: data.landscape_image_url },
+        {
+          event_id: row.id,
+          landscape_image_url: data.landscape_image_url,
+          metadata: data.image_alt_text ? { image_alt_text: data.image_alt_text } : {},
+        },
         { onConflict: "event_id" },
       );
     }
@@ -157,13 +162,21 @@ export const updateEventCoverImage = createServerFn({ method: "POST" })
       .object({
         event_id: z.string().uuid(),
         landscape_image_url: z.string().trim().url().max(1000).optional().nullable(),
+        // Optional, but there was no way to set one at all before this --
+        // same "no server-side way to describe an event image" gap the
+        // submission form had.
+        image_alt_text: z.string().trim().max(300).optional().nullable(),
       })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
     await assertEventAccess(context.supabase, context.userId, data.event_id);
     const { error } = await context.supabase.from("event_details").upsert(
-      { event_id: data.event_id, landscape_image_url: data.landscape_image_url ?? null },
+      {
+        event_id: data.event_id,
+        landscape_image_url: data.landscape_image_url ?? null,
+        metadata: data.image_alt_text ? { image_alt_text: data.image_alt_text } : {},
+      },
       { onConflict: "event_id" },
     );
     if (error) throw new Error(error.message);

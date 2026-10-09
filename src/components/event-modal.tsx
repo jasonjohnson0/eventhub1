@@ -58,6 +58,7 @@ export function EventModal({
   const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE);
   const [visibility, setVisibility] = useState<"public" | "unlisted">("public");
   const [imageUrl, setImageUrl] = useState("");
+  const [imageAlt, setImageAlt] = useState("");
   const [category, setCategory] = useState<EventCategory>("other");
   const [tagsText, setTagsText] = useState("");
   const [lat, setLat] = useState("");
@@ -231,6 +232,7 @@ export function EventModal({
             virtual_link: format === "in_person" ? null : virtualLink || null,
             livestream_provider: format === "in_person" ? "none" : provider,
             landscape_image_url: imageUrl.trim() || null,
+            image_alt_text: imageAlt.trim() || null,
             timezone,
             visibility,
           },
@@ -487,6 +489,17 @@ export function EventModal({
               Shown behind the title on the event page. You can change this anytime after
               creating the event too.
             </p>
+            {imageUrl.trim() && (
+              <div className="mt-2">
+                <Label htmlFor="imgAlt">Describe the image (for screen readers)</Label>
+                <Input
+                  id="imgAlt"
+                  value={imageAlt}
+                  onChange={(e) => setImageAlt(e.target.value)}
+                  placeholder="e.g. A crowd dancing at last year's festival"
+                />
+              </div>
+            )}
           </div>
           <div className="rounded-md border p-3 space-y-3">
             <div>
