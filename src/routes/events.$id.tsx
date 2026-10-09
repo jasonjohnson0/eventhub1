@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { upsertRsvp } from "@/lib/tracking.functions";
 import { purchaseTicket, createTicketCheckout, listMyPurchases } from "@/lib/monetization.functions";
 import { getEventOrganizers, type Organizer, type PersonKind } from "@/lib/organizers.functions";
+import { getEventMeta } from "@/lib/event-meta.functions";
+import { siteUrl } from "@/lib/site-url";
 import { Button } from "@/components/ui/button";
 import { PrivateEventGate } from "@/components/private-event-gate";
 import { SiteFooter } from "@/components/site-footer";
@@ -53,12 +55,64 @@ const searchSchema = z.object({
 export const Route = createFileRoute("/events/$id")({
   component: PublicEventDetail,
   validateSearch: (s) => searchSchema.parse(s),
-  head: () => ({
-    meta: [
-      { title: "Event — EventHub" },
-      { name: "description", content: "Event details on EventHub." },
-    ],
-  }),
+  // Separate from (and in addition to) the component's own rich client-side
+  // fetch below -- this one small server round trip is just so <head> and
+  // JSON-LD are per-event instead of the same static "Event — EventHub"
+  // title on all of them, and so a crawler sees real content without
+  // running JS.
+  loader: async ({ params }) => getEventMeta({ data: { id: params.id } }),
+  head: ({ loaderData }) => {
+    const m = loaderData;
+    if (!m) {
+      return {
+        meta: [
+          { title: "Event — EventHub" },
+          { name: "description", content: "Event details on EventHub." },
+        ],
+      };
+    }
+    const title = `${m.title}${m.coordinatorName ? ` — ${m.coordinatorName}` : ""}`;
+    const description =
+      m.description?.slice(0, 200) ||
+      `${m.title}${m.location ? ` at ${m.location}` : ""} — see details, RSVP and tickets.`;
+    const url = siteUrl(`/events/${m.id}`);
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "Event",
+      name: m.title,
+      startDate: m.start_time,
+      endDate: m.end_time,
+      description: m.description || description,
+      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+      eventStatus: "https://schema.org/EventScheduled",
+      url,
+      ...(m.location ? { location: { "@type": "Place", name: m.location } } : {}),
+      ...(m.image ? { image: [m.image] } : {}),
+      ...(m.coordinatorName
+        ? { organizer: { "@type": "Organization", name: m.coordinatorName } }
+        : {}),
+    };
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:type", content: "website" },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:url", content: url },
+        ...(m.image ? [{ property: "og:image", content: m.image }] : []),
+        { name: "twitter:card", content: m.image ? "summary_large_image" : "summary" },
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
+        // TanStack Router's own convention for JSON-LD: a meta entry keyed
+        // "script:ld+json" is detected and rendered as a real
+        // <script type="application/ld+json"> tag (see buildTagsFromMatches
+        // in @tanstack/react-router's headContentUtils.js).
+        { "script:ld+json": jsonLd } as never,
+      ],
+      links: [{ rel: "canonical", href: url }],
+    };
+  },
 });
 
 type Detail = {
