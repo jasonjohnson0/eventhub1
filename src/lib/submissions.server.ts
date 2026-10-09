@@ -17,6 +17,11 @@ export const submitSchema = z.object({
   start_time: z.string().min(8).max(40),
   end_time: z.string().min(8).max(40),
   image_url: z.string().trim().max(1000).optional().nullable(),
+  // Honeypot: a field no real visitor fills in (hidden off-screen, not
+  // display:none, in the form). A submission bot that fills every input
+  // blind trips this; a human never sees it. Anything non-empty here means
+  // treat the submission as spam without telling the caller so.
+  hp: z.string().max(200).optional(),
 });
 
 export const reviewSchema = z.object({
