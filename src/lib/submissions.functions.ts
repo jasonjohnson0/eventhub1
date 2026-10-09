@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { checkAnonRateLimit, clientAddress } from "@/lib/anon-rate-limit.server";
 import type { SubmissionStatus } from "@/lib/submissions.shared";
 import {
   listSchema,
@@ -7,6 +9,19 @@ import {
   reviewSchema,
   submitSchema,
 } from "@/lib/submissions.server";
+
+/** Our own storage bucket's public-URL prefix -- the only shape a
+ *  legitimate upload from the submission form's own upload() call can
+ *  produce. image_url is user-controlled input reaching a public page as a
+ *  live <img src>; rejecting anything outside this prefix is what "server-
+ *  side image validation" means here, since the upload itself goes
+ *  straight from the browser to Supabase Storage and never passes through
+ *  this server function. */
+function isOwnStorageUrl(url: string): boolean {
+  const base = process.env.SUPABASE_URL;
+  if (!base) return false;
+  return url.startsWith(`${base}/storage/v1/object/public/event-photos/`);
+}
 
 export type EventSubmission = {
   id: string;
@@ -34,6 +49,22 @@ export type EventSubmission = {
 export const submitEvent = createServerFn({ method: "POST" })
   .inputValidator((d) => submitSchema.parse(d))
   .handler(async ({ data }) => {
+    // Honeypot tripped -- report success without doing anything, so a bot
+    // filling every field blind has no way to tell it was ever caught.
+    if (data.hp) {
+      return { ok: true };
+    }
+
+    const ip = clientAddress(getRequest().headers);
+    const rate = await checkAnonRateLimit(`submit_event:ip:${ip}`, 5, 60 * 60 * 1000);
+    if (!rate.allowed) {
+      throw new Error("Too many submissions from this network recently. Please try again later.");
+    }
+
+    if (data.image_url && !isOwnStorageUrl(data.image_url)) {
+      throw new Error("Invalid image.");
+    }
+
     if (new Date(data.end_time) <= new Date(data.start_time)) {
       throw new Error("End time must be after the start time");
     }

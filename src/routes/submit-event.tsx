@@ -92,6 +92,7 @@ function SubmitEventPage() {
     date: "",
     start: "",
     end: "",
+    hp: "",
   });
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -132,6 +133,7 @@ function SubmitEventPage() {
           start_time: new Date(`${form.date}T${form.start}`).toISOString(),
           end_time: new Date(`${form.date}T${form.end}`).toISOString(),
           image_url: imageUrl,
+          hp: form.hp,
         } as never,
       });
       setSent(true);
@@ -174,6 +176,20 @@ function SubmitEventPage() {
         </div>
         <Card>
           <CardContent className="space-y-4 p-6">
+            {/* Honeypot: off-screen, not display:none, so it only catches
+                bots that fill every field blindly -- a real visitor never
+                sees or tabs into it. */}
+            <div className="absolute -left-[9999px] top-auto h-0 w-0 overflow-hidden" aria-hidden="true">
+              <Label htmlFor="company">Company</Label>
+              <Input
+                id="company"
+                name="company"
+                tabIndex={-1}
+                autoComplete="off"
+                value={form.hp}
+                onChange={(e) => setForm({ ...form, hp: e.target.value })}
+              />
+            </div>
             {c && coordinatorNotFound ? (
               <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
                 That community calendar could not be found. Double-check the link, or ask the
