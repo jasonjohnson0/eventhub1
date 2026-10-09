@@ -5,6 +5,7 @@ import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PublicHero } from "@/components/public-hero";
+import { SiteFooter } from "@/components/site-footer";
 import { EventCardPublic } from "@/components/event-card-public";
 import { CalendarDays, ChevronLeft, ChevronRight, PartyPopper } from "lucide-react";
 import { fetchEvents, addDays, startOfWeek, distanceMiles, type CalendarEvent } from "@/queries/events";
@@ -408,12 +409,7 @@ function EventsPage() {
         )}
       </main>
 
-      <footer className="border-t border-slate-100 py-8 text-center text-xs text-slate-400">
-        Made with ❤️ by EventHub ·{" "}
-        <Link to="/tour" className="underline hover:text-slate-600">
-          Built with EventHub — see the tour
-        </Link>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

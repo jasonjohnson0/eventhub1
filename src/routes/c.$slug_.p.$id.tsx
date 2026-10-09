@@ -3,6 +3,7 @@ import { Globe, Linkedin, PartyPopper, Twitter } from "lucide-react";
 import { getPublicCoordinator } from "@/lib/coordinator.functions";
 import { getPublicPerson } from "@/lib/organizers.functions";
 import { fmtDateRange } from "@/queries/events";
+import { SiteFooter } from "@/components/site-footer";
 
 /** Public person page (spec 06): bio, credentials, socials, and this
  *  coordinator's upcoming public events they're assigned to. Flat sibling of
@@ -148,6 +149,7 @@ function PersonPage() {
           </div>
         )}
       </main>
+      <SiteFooter />
     </div>
   );
 }

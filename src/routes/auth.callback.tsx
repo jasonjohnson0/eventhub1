@@ -24,13 +24,23 @@ function AuthCallback() {
     const stored = sessionStorage.getItem("eh:post_auth_next");
     sessionStorage.removeItem("eh:post_auth_next");
     const params = new URLSearchParams(window.location.search);
-    const target = safeNext(params.get("next") ?? stored);
+    const explicitNext = params.get("next") ?? stored;
+
+    // A first-time signup with no explicit `next` (i.e. not a deep link back
+    // into something specific) routes on the intent chosen at signup, so
+    // picking "Run a calendar" actually lands in onboarding instead of the
+    // attendee-facing default.
+    function targetFor(session: { user: { user_metadata?: Record<string, unknown> } } | null) {
+      if (explicitNext) return safeNext(explicitNext);
+      if (session?.user.user_metadata?.intent === "organizer") return "/onboarding";
+      return safeNext(explicitNext);
+    }
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) navigate({ to: target, replace: true });
+      if (session) navigate({ to: targetFor(session), replace: true });
     });
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: target, replace: true });
+      if (data.session) navigate({ to: targetFor(data.session), replace: true });
     });
     return () => {
       sub.subscription.unsubscribe();

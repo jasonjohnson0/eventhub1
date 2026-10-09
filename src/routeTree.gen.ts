@@ -10,15 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TourRouteImport } from './routes/tour'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SubmitEventRouteImport } from './routes/submit-event'
 import { Route as SigninRouteImport } from './routes/signin'
+import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SetupRouteImport } from './routes/setup'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as OrganizersRouteImport } from './routes/organizers'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as EventsRouteImport } from './routes/events'
 import { Route as EmbedRouteImport } from './routes/embed'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MarketingUnsubscribeRouteImport } from './routes/marketing.unsubscribe'
@@ -78,6 +83,11 @@ const TourRoute = TourRouteImport.update({
   path: '/tour',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SubmitEventRoute = SubmitEventRouteImport.update({
   id: '/submit-event',
   path: '/submit-event',
@@ -88,9 +98,24 @@ const SigninRoute = SigninRouteImport.update({
   path: '/signin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignUpRoute = SignUpRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrganizersRoute = OrganizersRouteImport.update({
+  id: '/organizers',
+  path: '/organizers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -121,6 +146,11 @@ const EmbedRoute = EmbedRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -407,15 +437,20 @@ const ApiV1EventsIdTicketsTicketIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/auth': typeof AuthRouteWithChildren
   '/embed': typeof EmbedRoute
   '/events': typeof EventsRouteWithChildren
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
+  '/organizers': typeof OrganizersRoute
+  '/privacy': typeof PrivacyRoute
   '/setup': typeof SetupRoute
+  '/sign-up': typeof SignUpRoute
   '/signin': typeof SigninRoute
   '/submit-event': typeof SubmitEventRoute
+  '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -471,15 +506,20 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/auth': typeof AuthRouteWithChildren
   '/embed': typeof EmbedRoute
   '/events': typeof EventsRouteWithChildren
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
+  '/organizers': typeof OrganizersRoute
+  '/privacy': typeof PrivacyRoute
   '/setup': typeof SetupRoute
+  '/sign-up': typeof SignUpRoute
   '/signin': typeof SigninRoute
   '/submit-event': typeof SubmitEventRoute
+  '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/calendar': typeof AuthenticatedCalendarRoute
@@ -536,15 +576,20 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/about': typeof AboutRoute
   '/auth': typeof AuthRouteWithChildren
   '/embed': typeof EmbedRoute
   '/events': typeof EventsRouteWithChildren
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/onboarding': typeof OnboardingRoute
+  '/organizers': typeof OrganizersRoute
+  '/privacy': typeof PrivacyRoute
   '/setup': typeof SetupRoute
+  '/sign-up': typeof SignUpRoute
   '/signin': typeof SigninRoute
   '/submit-event': typeof SubmitEventRoute
+  '/terms': typeof TermsRoute
   '/tour': typeof TourRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -602,15 +647,20 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/auth'
     | '/embed'
     | '/events'
     | '/login'
     | '/mcp'
     | '/onboarding'
+    | '/organizers'
+    | '/privacy'
     | '/setup'
+    | '/sign-up'
     | '/signin'
     | '/submit-event'
+    | '/terms'
     | '/tour'
     | '/.well-known/oauth-protected-resource'
     | '/admin'
@@ -666,15 +716,20 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/auth'
     | '/embed'
     | '/events'
     | '/login'
     | '/mcp'
     | '/onboarding'
+    | '/organizers'
+    | '/privacy'
     | '/setup'
+    | '/sign-up'
     | '/signin'
     | '/submit-event'
+    | '/terms'
     | '/tour'
     | '/.well-known/oauth-protected-resource'
     | '/calendar'
@@ -730,15 +785,20 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/about'
     | '/auth'
     | '/embed'
     | '/events'
     | '/login'
     | '/mcp'
     | '/onboarding'
+    | '/organizers'
+    | '/privacy'
     | '/setup'
+    | '/sign-up'
     | '/signin'
     | '/submit-event'
+    | '/terms'
     | '/tour'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/admin'
@@ -796,15 +856,20 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRouteWithChildren
   EmbedRoute: typeof EmbedRoute
   EventsRoute: typeof EventsRouteWithChildren
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   OnboardingRoute: typeof OnboardingRoute
+  OrganizersRoute: typeof OrganizersRoute
+  PrivacyRoute: typeof PrivacyRoute
   SetupRoute: typeof SetupRoute
+  SignUpRoute: typeof SignUpRoute
   SigninRoute: typeof SigninRoute
   SubmitEventRoute: typeof SubmitEventRoute
+  TermsRoute: typeof TermsRoute
   TourRoute: typeof TourRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   CSlugRoute: typeof CSlugRoute
@@ -836,6 +901,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TourRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/submit-event': {
       id: '/submit-event'
       path: '/submit-event'
@@ -850,11 +922,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SigninRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sign-up': {
+      id: '/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
+      preLoaderRoute: typeof SignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/setup': {
       id: '/setup'
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/organizers': {
+      id: '/organizers'
+      path: '/organizers'
+      fullPath: '/organizers'
+      preLoaderRoute: typeof OrganizersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -897,6 +990,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -1422,15 +1522,20 @@ const ApiV1VenuesRouteWithChildren = ApiV1VenuesRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AboutRoute: AboutRoute,
   AuthRoute: AuthRouteWithChildren,
   EmbedRoute: EmbedRoute,
   EventsRoute: EventsRouteWithChildren,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   OnboardingRoute: OnboardingRoute,
+  OrganizersRoute: OrganizersRoute,
+  PrivacyRoute: PrivacyRoute,
   SetupRoute: SetupRoute,
+  SignUpRoute: SignUpRoute,
   SigninRoute: SigninRoute,
   SubmitEventRoute: SubmitEventRoute,
+  TermsRoute: TermsRoute,
   TourRoute: TourRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
