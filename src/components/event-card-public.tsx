@@ -62,6 +62,8 @@ export function EventCardPublic({ event, index = 0 }: { event: PublicEvent; inde
           <img
             src={event.image_url}
             alt={event.title}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
         ) : (

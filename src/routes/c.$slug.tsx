@@ -71,6 +71,12 @@ function tidy(next: CalendarSearch): CalendarSearch {
 
 export const Route = createFileRoute("/c/$slug")({
   validateSearch: zodValidator(searchSchema),
+  // Same cache window as /api/embed/$slug (the only other place this data
+  // is served) -- a public calendar page had no cache-control at all
+  // before this, every request re-running the loader from scratch.
+  headers: () => ({
+    "cache-control": "public, max-age=60, s-maxage=300, stale-while-revalidate=86400",
+  }),
   // Both the profile and the events resolve server-side, so the crawler
   // receives a populated calendar rather than an empty shell it would have to
   // execute JavaScript to fill. That is what makes this page indexable, and the
