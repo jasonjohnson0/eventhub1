@@ -310,13 +310,16 @@ function CoordinatorCalendar() {
 
       <main className="mx-auto max-w-6xl px-6 py-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-1 rounded-full bg-slate-100 p-1">
+          <div role="tablist" aria-label="Calendar view" className="flex flex-wrap items-center gap-1 rounded-full bg-slate-100 p-1">
             {VIEWS.map((v) => (
               <Link
                 key={v}
                 to="/c/$slug"
                 params={{ slug: coordinator.slug }}
                 search={tidy({ ...search, view: v })}
+                role="tab"
+                aria-selected={view === v}
+                aria-current={view === v ? "true" : undefined}
                 className={`rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${
                   view === v ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"
                 }`}

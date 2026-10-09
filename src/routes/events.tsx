@@ -283,10 +283,14 @@ function EventsPage() {
 
         {/* View switcher */}
         <div className="mb-6 flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap gap-1 rounded-full bg-slate-100 p-1 text-sm font-semibold">
+          <div role="tablist" aria-label="Calendar view" className="flex flex-wrap gap-1 rounded-full bg-slate-100 p-1 text-sm font-semibold">
             {VIEWS.map((v) => (
               <button
                 key={v}
+                type="button"
+                role="tab"
+                aria-selected={view === v}
+                aria-current={view === v ? "true" : undefined}
                 onClick={() => setView(v)}
                 className={`rounded-full px-4 py-1.5 transition-all ${
                   view === v ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"

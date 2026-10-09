@@ -170,22 +170,28 @@ function EventFormatEditor({
 function HeaderImageEditor({
   eventId,
   initialUrl,
+  initialAlt,
   onSaved,
 }: {
   eventId: string;
   initialUrl: string | null;
-  onSaved: (url: string | null) => void;
+  initialAlt: string | null;
+  onSaved: (url: string | null, alt: string | null) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [url, setUrl] = useState(initialUrl ?? "");
+  const [alt, setAlt] = useState(initialAlt ?? "");
   const [saving, setSaving] = useState(false);
 
   async function save() {
     setSaving(true);
     try {
       const next = url.trim() || null;
-      await updateEventCoverImage({ data: { event_id: eventId, landscape_image_url: next } });
-      onSaved(next);
+      const nextAlt = alt.trim() || null;
+      await updateEventCoverImage({
+        data: { event_id: eventId, landscape_image_url: next, image_alt_text: nextAlt },
+      });
+      onSaved(next, nextAlt);
       setEditing(false);
       toast.success(next ? "Header image updated" : "Header image removed");
     } catch (e) {
@@ -203,6 +209,7 @@ function HeaderImageEditor({
         className="absolute right-3 top-3 gap-1.5 shadow"
         onClick={() => {
           setUrl(initialUrl ?? "");
+          setAlt(initialAlt ?? "");
           setEditing(true);
         }}
       >
@@ -213,15 +220,21 @@ function HeaderImageEditor({
   }
 
   return (
-    <div className="absolute inset-x-3 top-3 flex flex-col gap-2 rounded-md border bg-background/95 p-3 shadow-lg sm:flex-row sm:items-center">
+    <div className="absolute inset-x-3 top-3 flex flex-col gap-2 rounded-md border bg-background/95 p-3 shadow-lg">
       <Input
         type="url"
         autoFocus
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         placeholder="https://…"
-        className="flex-1"
       />
+      {url.trim() && (
+        <Input
+          value={alt}
+          onChange={(e) => setAlt(e.target.value)}
+          placeholder="Describe the image (for screen readers)"
+        />
+      )}
       <div className="flex gap-2">
         <Button size="sm" onClick={save} disabled={saving}>
           {saving ? "Saving…" : "Save"}
@@ -349,6 +362,10 @@ function EventPage() {
   const series = (data as unknown as { series: { rrule: string } | null }).series;
   const c = colorForEvent(event.id);
   const cover = details?.landscape_image_url ?? null;
+  const coverAlt =
+    ((details?.metadata as { image_alt_text?: string } | null)?.image_alt_text as
+      | string
+      | undefined) ?? null;
 
   async function handleAnnouncement() {
     if (!announcement.trim()) return;
@@ -565,7 +582,7 @@ function EventPage() {
         className="relative h-56 overflow-hidden rounded-lg border"
         style={{ backgroundColor: c.hex }}
       >
-        {cover && <img src={cover} alt={event.title} className="h-full w-full object-cover" />}
+        {cover && <img src={cover} alt={coverAlt ?? event.title} className="h-full w-full object-cover" />}
         {!cover && (
           <div className="flex h-full items-center justify-center gap-2 text-sm text-white/70">
             <ImageIcon className="h-5 w-5" /> No header image yet
@@ -575,12 +592,17 @@ function EventPage() {
           <HeaderImageEditor
             eventId={id}
             initialUrl={cover}
-            onSaved={(next) =>
+            initialAlt={coverAlt}
+            onSaved={(next, nextAlt) =>
               setData((d) => {
                 if (!d) return d;
                 const details = d.details
-                  ? { ...d.details, landscape_image_url: next }
-                  : { landscape_image_url: next, portrait_image_url: null, metadata: {} };
+                  ? { ...d.details, landscape_image_url: next, metadata: { image_alt_text: nextAlt } }
+                  : {
+                      landscape_image_url: next,
+                      portrait_image_url: null,
+                      metadata: { image_alt_text: nextAlt },
+                    };
                 return { ...d, details };
               })
             }

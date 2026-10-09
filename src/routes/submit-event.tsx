@@ -92,6 +92,7 @@ function SubmitEventPage() {
     date: "",
     start: "",
     end: "",
+    imageAlt: "",
     hp: "",
   });
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -133,6 +134,7 @@ function SubmitEventPage() {
           start_time: new Date(`${form.date}T${form.start}`).toISOString(),
           end_time: new Date(`${form.date}T${form.end}`).toISOString(),
           image_url: imageUrl,
+          image_alt: form.imageAlt || null,
           hp: form.hp,
         } as never,
       });
@@ -323,7 +325,18 @@ function SubmitEventPage() {
                 }}
               />
               {imageUrl ? (
-                <img src={imageUrl} alt="Event preview" className="mt-2 h-28 rounded object-cover" />
+                <>
+                  <img src={imageUrl} alt="Event preview" className="mt-2 h-28 rounded object-cover" />
+                  <Label htmlFor="imageAlt" className="mt-2 block">
+                    Describe the image (for screen readers)
+                  </Label>
+                  <Input
+                    id="imageAlt"
+                    placeholder="e.g. A crowd dancing at last year's festival"
+                    value={form.imageAlt}
+                    onChange={(e) => setForm({ ...form, imageAlt: e.target.value })}
+                  />
+                </>
               ) : null}
             </div>
             <Button
