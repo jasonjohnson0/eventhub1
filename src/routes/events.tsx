@@ -28,15 +28,21 @@ import { ChristmasHero } from "@/components/christmas-hero";
 // Client-only: leaflet touches `window` at module load.
 const MapCanvas = lazy(() => import("@/components/map-canvas"));
 
+// Every field is optional with no .default() -- a .default() makes the
+// router rewrite the bare /events URL to spell out every default
+// (?category=&q=&range=all&view=grid&near=&lat=0&lng=0&radius=25) before
+// it will even render, a implementation-detail-looking URL for the one
+// link every visitor actually lands on. Same reasoning as c.$slug.tsx's
+// searchSchema. fallback() still protects against malformed values.
 const searchSchema = z.object({
-  category: fallback(z.string(), "").default(""),
-  q: fallback(z.string(), "").default(""),
-  range: fallback(z.string(), "all").default("all"),
-  view: fallback(z.string(), "grid").default("grid"),
-  near: fallback(z.string(), "").default(""),
-  lat: fallback(z.number(), 0).default(0),
-  lng: fallback(z.number(), 0).default(0),
-  radius: fallback(z.number(), 25).default(25),
+  category: fallback(z.string(), "").optional(),
+  q: fallback(z.string(), "").optional(),
+  range: fallback(z.string(), "all").optional(),
+  view: fallback(z.string(), "grid").optional(),
+  near: fallback(z.string(), "").optional(),
+  lat: fallback(z.number(), 0).optional(),
+  lng: fallback(z.number(), 0).optional(),
+  radius: fallback(z.number(), 25).optional(),
 });
 
 export const Route = createFileRoute("/events")({
@@ -98,13 +104,14 @@ function EventsPage() {
   const darkHero = !!theme?.dark && holidayTheme !== "christmas";
   const ghostOnHero = darkHero ? "text-white/90 hover:bg-white/10 hover:text-white" : "";
 
-  const query = search.q;
+  const query = search.q ?? "";
   const category = search.category ? search.category : null;
   const range: "all" | "week" | "month" =
     search.range === "week" || search.range === "month" ? search.range : "all";
-  const view: ViewKey = (VIEWS as readonly string[]).includes(search.view)
+  const view: ViewKey = (VIEWS as readonly string[]).includes(search.view ?? "")
     ? (search.view as ViewKey)
     : "grid";
+  const hasActiveFilters = !!query || !!category || range !== "all" || !!search.lat || !!search.lng;
 
   const setQuery = (q: string) =>
     navigate({ to: "/events", search: { ...search, q }, replace: true });
@@ -116,10 +123,10 @@ function EventsPage() {
     navigate({ to: "/events", search: { ...search, view: v }, replace: true });
 
   const geo: GeoState = {
-    near: search.near,
+    near: search.near ?? "",
     lat: search.lat || null,
     lng: search.lng || null,
-    radius: [5, 10, 25, 50].includes(search.radius) ? search.radius : 25,
+    radius: [5, 10, 25, 50].includes(search.radius as number) ? (search.radius as number) : 25,
   };
   const setGeo = (next: Partial<GeoState>) =>
     navigate({
@@ -162,6 +169,13 @@ function EventsPage() {
     const now = Date.now();
     const weekMs = 7 * 24 * 60 * 60 * 1000;
     const monthMs = 30 * 24 * 60 * 60 * 1000;
+    // Intentional, not a bug: grid is a "what's still ahead" feed, so it
+    // drops anything already over. Every calendar-shaped view (month,
+    // week, day, list, etc.) keeps already-elapsed events in the period
+    // being displayed -- a month view hiding the first half of the month
+    // once it's past would be the actual bug. Same filters, same data,
+    // different-looking counts between grid and the other views is by
+    // design.
     const upcomingOnly = view === "grid";
     return events.filter((e) => {
       if (upcomingOnly && new Date(e.end_time).getTime() < now) return false;
@@ -187,6 +201,19 @@ function EventsPage() {
     () => filtered.filter((e) => e.latitude != null && e.longitude != null),
     [filtered],
   );
+
+  // Shown whenever the current filters turn up nothing, regardless of which
+  // view is active -- a calendar view otherwise just renders an empty grid
+  // with no next action, which reads as broken rather than "try something
+  // else." Ignores every active filter on purpose: these are "here's what's
+  // actually happening" picks, not a second attempt at the same search.
+  const suggestedEvents = useMemo(() => {
+    const now = Date.now();
+    return events
+      .filter((e) => new Date(e.end_time).getTime() >= now)
+      .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+      .slice(0, 3);
+  }, [events]);
   const mapCenter: [number, number] =
     geo.lat != null && geo.lng != null
       ? [geo.lat, geo.lng]
@@ -330,7 +357,9 @@ function EventsPage() {
             </h2>
             {view !== "agenda" && (
               <p className="text-sm text-slate-500">
-                {filtered.length} {filtered.length === 1 ? "event" : "events"} · Join the community 🎊
+                {filtered.length > 0
+                  ? `${filtered.length} ${filtered.length === 1 ? "event" : "events"} · Join the community 🎊`
+                  : "Nothing matches — yet. See what's coming up below."}
               </p>
             )}
           </div>
@@ -350,6 +379,50 @@ function EventsPage() {
           </div>
           )}
         </div>
+
+        {!loading && view !== "agenda" && filtered.length === 0 && (
+          <div className="mb-8 rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 p-8 text-center">
+            <div className="text-5xl">🔭</div>
+            <h3 className="mt-3 text-lg font-bold text-slate-900">
+              {hasActiveFilters ? "Nothing matches — yet." : "A quiet week — for now."}
+            </h3>
+            <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+              {hasActiveFilters
+                ? "Try a different search, or see what's actually happening below."
+                : "A slow week is a good week to host something."}
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={() => {
+                    setQuery("");
+                    setCategory(null);
+                    setRange("all");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              )}
+              <Button asChild className="rounded-full">
+                <Link to="/events" search={{ ...search, category: "", q: "", range: "all" }}>
+                  Show all upcoming events
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-full">
+                <Link to="/submit-event">List your event — it's free</Link>
+              </Button>
+            </div>
+            {suggestedEvents.length > 0 && (
+              <div className="mx-auto mt-8 grid max-w-3xl gap-4 text-left sm:grid-cols-3">
+                {suggestedEvents.map((ev, i) => (
+                  <EventCardPublic key={ev.id} event={ev} index={i} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {view === "agenda" ? (
           <AgendaView signedIn={signedIn} />
@@ -395,16 +468,7 @@ function EventsPage() {
               <div className="p-6 text-sm text-slate-500">Loading map…</div>
             )}
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 p-14 text-center">
-            <div className="text-6xl">🕵️‍♀️</div>
-            <h3 className="mt-4 text-xl font-bold text-slate-900">No events match your search</h3>
-            <p className="mt-2 text-sm text-slate-500">Try clearing filters or exploring another category.</p>
-            <Button className="mt-6 rounded-full" onClick={() => { setQuery(""); setCategory(null); setRange("all"); }}>
-              Reset filters
-            </Button>
-          </div>
-        ) : (
+        ) : filtered.length === 0 ? null : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((ev, i) => (
               <EventCardPublic key={ev.id} event={ev} index={i} />

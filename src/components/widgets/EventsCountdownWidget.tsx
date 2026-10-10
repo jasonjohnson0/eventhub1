@@ -55,7 +55,7 @@ export function EventsCountdownWidget({
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-wide text-white/80">Next up</p>
-          <h4 className="truncate text-lg font-black">{target.title}</h4>
+          <h4 className="line-clamp-2 text-lg font-black">{target.title}</h4>
         </div>
         <Timer className="h-6 w-6 shrink-0 text-white/90" />
       </div>

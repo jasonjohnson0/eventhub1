@@ -605,7 +605,14 @@ function PublicEventDetail() {
     return `$${(cents / 100).toFixed(2)}`;
   };
 
-  const sponsorSlots = sponsors.length > 0 ? sponsors : DEMO_SPONSOR_SLOTS;
+  // Demo slots used to render to every visitor whenever an event had zero
+  // real ones configured -- a brand-new coordinator's calendar showed
+  // fake "available" ad inventory to the public before they'd ever set
+  // sponsorship up. Only the owner gets that preview now (so they can see
+  // what unsold inventory looks like); a real visitor sees real slots or
+  // nothing.
+  const showingDemoSlots = sponsors.length === 0 && isOwner;
+  const sponsorSlots = sponsors.length > 0 ? sponsors : showingDemoSlots ? DEMO_SPONSOR_SLOTS : [];
   const availableSponsorSlots = sponsorSlots.filter(
     (s) => s.status === "available" || s.status === "reserved",
   );
@@ -836,16 +843,25 @@ function PublicEventDetail() {
         {/* Platform sponsor campaigns (never on private events) */}
         {event.visibility !== "private" && <CampaignAds eventId={event.id} />}
 
-        {/* Sponsorship / ad slots */}
+        {/* Sponsorship / ad slots -- nothing to show a real visitor when
+            there are no active sponsors and no real slots for sale. */}
+        {(activeSponsors.length > 0 || availableSponsorSlots.length > 0) && (
         <section className="mt-10 rounded-3xl border border-amber-100 bg-gradient-to-b from-amber-50/70 to-white p-5 shadow-sm md:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
               <Megaphone className="h-5 w-5 text-amber-500" /> Featured Sponsors & Ad Slots
             </h2>
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-              {availableSponsorSlots.length} slot{availableSponsorSlots.length === 1 ? "" : "s"}{" "}
-              available
-            </span>
+            <div className="flex items-center gap-2">
+              {showingDemoSlots && (
+                <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+                  Preview — visible only to you
+                </span>
+              )}
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                {availableSponsorSlots.length} slot{availableSponsorSlots.length === 1 ? "" : "s"}{" "}
+                available
+              </span>
+            </div>
           </div>
           <div className="space-y-3">
             {activeSponsors.map((slot) => {
@@ -978,6 +994,7 @@ function PublicEventDetail() {
             ))}
           </div>
         </section>
+        )}
 
         {/* Ticket tiers */}
         {tickets.length > 0 && (

@@ -23,6 +23,7 @@ import { Route as OrganizersRouteImport } from './routes/organizers'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SetupRouteImport } from './routes/setup'
+import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -156,6 +157,11 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignUpRoute = SignUpRouteImport.update({
@@ -519,6 +525,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/setup': typeof SetupRoute
+  '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/signin': typeof SigninRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -599,6 +606,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/setup': typeof SetupRoute
+  '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/signin': typeof SigninRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -680,6 +688,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/setup': typeof SetupRoute
+  '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/signin': typeof SigninRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -762,6 +771,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/robots.txt'
     | '/setup'
+    | '/sign-in'
     | '/sign-up'
     | '/signin'
     | '/sitemap.xml'
@@ -842,6 +852,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/robots.txt'
     | '/setup'
+    | '/sign-in'
     | '/sign-up'
     | '/signin'
     | '/sitemap.xml'
@@ -922,6 +933,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/robots.txt'
     | '/setup'
+    | '/sign-in'
     | '/sign-up'
     | '/signin'
     | '/sitemap.xml'
@@ -1004,6 +1016,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SetupRoute: typeof SetupRoute
+  SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
   SigninRoute: typeof SigninRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -1131,6 +1144,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sign-up': {
@@ -1764,6 +1784,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SetupRoute: SetupRoute,
+  SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
   SigninRoute: SigninRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
