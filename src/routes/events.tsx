@@ -260,11 +260,18 @@ function EventsPage() {
           EventHub
         </Link>
         <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="ghost" className={`rounded-full ${ghostOnHero}`}>
+          {/* "Tour" and the full "Submit an event" label don't fit next to
+              the logo at 390px (measured: pushed the header to 441px) --
+              Tour drops off first since it's the least essential of the
+              three, and "Submit an event" shortens to "Submit". */}
+          <Button asChild size="sm" variant="ghost" className={`hidden rounded-full sm:inline-flex ${ghostOnHero}`}>
             <Link to="/tour">Tour</Link>
           </Button>
           <Button asChild size="sm" variant="ghost" className={`rounded-full ${ghostOnHero}`}>
-            <Link to="/submit-event">Submit an event</Link>
+            <Link to="/submit-event">
+              <span className="sm:hidden">Submit</span>
+              <span className="hidden sm:inline">Submit an event</span>
+            </Link>
           </Button>
           {signedIn ? (
             <Button asChild size="sm" className="rounded-full">
@@ -301,7 +308,12 @@ function EventsPage() {
 
         {/* Widgets */}
         {!loading && filtered.length > 0 && (
-          <div className="mb-8 grid items-start gap-4 md:grid-cols-3">
+          // min-w-0 on the children: a CSS grid item's default min-width
+          // is "auto", i.e. its content's intrinsic width, not 0 -- so
+          // without this, the countdown widget's own unbreakable content
+          // was forcing this row past the viewport on mobile at 390px
+          // (verified: 535px wide inside a 390px viewport).
+          <div className="mb-8 grid items-start gap-4 md:grid-cols-3 [&>*]:min-w-0">
             <EventsCountdownWidget events={filtered} />
             <WeekEventsWidget events={filtered} />
             <FeaturedVenueWidget events={filtered} />
