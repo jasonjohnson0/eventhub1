@@ -66,9 +66,18 @@ export const submitEvent = createServerFn({ method: "POST" })
       throw new Error("Invalid image.");
     }
 
-    if (new Date(data.end_time) <= new Date(data.start_time)) {
+    // Organizers often don't know an exact end time, and requiring one
+    // blocked submission outright over it. Default: start + 2h, flagged
+    // in the description so a reviewer (and later, attendees) know it's
+    // a guess rather than a real published end time.
+    const endTimeEstimated = !data.end_time;
+    const endTime = data.end_time ?? new Date(new Date(data.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
+    if (new Date(endTime) <= new Date(data.start_time)) {
       throw new Error("End time must be after the start time");
     }
+    const description = endTimeEstimated
+      ? `${data.description ?? ""}${data.description ? "\n\n" : ""}(End time is estimated.)`.trim()
+      : data.description ?? null;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // biome-ignore lint/suspicious/noExplicitAny: types regenerate post-migration
     const sb = supabaseAdmin as any;
@@ -94,11 +103,11 @@ export const submitEvent = createServerFn({ method: "POST" })
       status: "pending",
       event_data: {
         title: data.title,
-        description: data.description ?? null,
+        description,
         location: data.location ?? null,
         category: data.category,
         start_time: data.start_time,
-        end_time: data.end_time,
+        end_time: endTime,
         image_url: data.image_url ?? null,
         image_alt: data.image_alt ?? null,
         contact_name: data.contact_name ?? null,

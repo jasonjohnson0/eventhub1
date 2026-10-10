@@ -15,7 +15,10 @@ export const submitSchema = z.object({
   location: z.string().trim().max(300).optional().nullable(),
   category: z.enum(CATEGORIES).default("other"),
   start_time: z.string().min(8).max(40),
-  end_time: z.string().min(8).max(40),
+  // Optional -- organizers often don't know an exact end time, and a hard
+  // requirement blocked submission entirely over that. submitEvent fills
+  // in start + 2h when this is left out.
+  end_time: z.string().min(8).max(40).optional().nullable(),
   image_url: z.string().trim().max(1000).optional().nullable(),
   // Alt text for image_url -- optional, since not every submitter will
   // fill it in, but there was no way to supply one at all before this.

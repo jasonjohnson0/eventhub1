@@ -119,7 +119,7 @@ function SubmitEventPage() {
 
   const submit = async () => {
     if (!coordinatorSlug) return toast.error("Choose which community calendar this is for");
-    if (!form.date || !form.start || !form.end) return toast.error("Add a date and time");
+    if (!form.date || !form.start) return toast.error("Add a date and start time");
     setBusy(true);
     try {
       await submitEvent({
@@ -132,7 +132,9 @@ function SubmitEventPage() {
           location: form.location || null,
           category: form.category,
           start_time: new Date(`${form.date}T${form.start}`).toISOString(),
-          end_time: new Date(`${form.date}T${form.end}`).toISOString(),
+          // Optional -- the server defaults to start + 2h and flags the
+          // description when it has to guess.
+          end_time: form.end ? new Date(`${form.date}T${form.end}`).toISOString() : null,
           image_url: imageUrl,
           image_alt: form.imageAlt || null,
           hp: form.hp,
@@ -269,11 +271,12 @@ function SubmitEventPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>End time</Label>
+                <Label>End time (optional)</Label>
                 <Input
                   type="time"
                   value={form.end}
                   onChange={(e) => setForm({ ...form, end: e.target.value })}
+                  placeholder="Not sure? Leave it blank"
                 />
               </div>
             </div>
