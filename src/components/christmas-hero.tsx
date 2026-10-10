@@ -26,8 +26,19 @@ const PILL_COLORS: Record<string, string> = {
   social: "from-fuchsia-400 to-pink-500",
   fundraiser: "from-rose-400 to-red-500",
   workshop: "from-violet-400 to-purple-500",
+  music: "from-indigo-400 to-blue-500",
+  family: "from-lime-400 to-green-500",
+  arts: "from-pink-400 to-fuchsia-500",
+  theater: "from-orange-400 to-red-500",
+  comedy: "from-yellow-400 to-amber-500",
+  food_drink: "from-teal-400 to-cyan-500",
+  community: "from-cyan-400 to-sky-500",
+  expo: "from-blue-400 to-indigo-500",
+  books: "from-stone-400 to-stone-500",
+  free: "from-green-400 to-emerald-500",
   other: "from-slate-400 to-slate-500",
 };
+const DEFAULT_PILL_COLOR = PILL_COLORS.other;
 
 const CONFETTI_COLORS = ["#dc2626", "#15803d", "#facc15", "#ffffff", "#1d4ed8"];
 
@@ -245,7 +256,7 @@ export function ChristmasHero({ query, onQuery, category, onCategory, variant }:
                 onClick={() => onCategory(active ? null : c)}
                 className={`rounded-full px-4 py-1.5 text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5 ${
                   active
-                    ? `bg-gradient-to-r ${PILL_COLORS[c]} text-white shadow-lg`
+                    ? `bg-gradient-to-r ${PILL_COLORS[c] ?? DEFAULT_PILL_COLOR} text-white shadow-lg`
                     : "bg-white/15 text-white hover:bg-white/25"
                 }`}
               >

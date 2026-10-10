@@ -1,6 +1,7 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { supabaseForUser } from "../supabase";
+import { CATEGORIES } from "@/lib/categories";
 
 export default defineTool({
   name: "create_event",
@@ -12,9 +13,7 @@ export default defineTool({
     location: z.string().max(300).optional(),
     start_time: z.string().describe("ISO 8601 start time, e.g. 2026-10-01T18:00:00Z."),
     end_time: z.string().describe("ISO 8601 end time."),
-    category: z
-      .enum(["sports", "networking", "education", "social", "fundraiser", "workshop", "other"])
-      .default("other"),
+    category: z.enum(CATEGORIES).default("other"),
     tags: z.array(z.string().min(1).max(40)).max(20).default([]),
     event_format: z.enum(["in_person", "virtual", "hybrid"]).default("in_person"),
     virtual_link: z.string().url().max(500).optional(),

@@ -19,6 +19,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { submitEvent } from "@/lib/submissions.functions";
 import { CATEGORIES, type SubmissionCategory } from "@/lib/submissions.shared";
+import { categoryLabel } from "@/lib/categories";
 import { getPublicCoordinator, listLiveCoordinators } from "@/lib/coordinator.functions";
 
 const searchSchema = z.object({ c: z.string().trim().optional() });
@@ -301,7 +302,7 @@ function SubmitEventPage() {
                   <SelectContent>
                     {CATEGORIES.map((c: SubmissionCategory) => (
                       <SelectItem key={c} value={c}>
-                        {c}
+                        {categoryLabel(c)}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -34,6 +34,16 @@ const categoryFallback: Record<string, string> = {
   social: "from-fuchsia-900 via-rose-700 to-orange-500",
   fundraiser: "from-rose-900 via-red-700 to-amber-600",
   workshop: "from-violet-900 via-fuchsia-700 to-pink-600",
+  music: "from-indigo-900 via-blue-700 to-cyan-600",
+  family: "from-lime-800 via-green-700 to-emerald-600",
+  arts: "from-pink-900 via-fuchsia-700 to-rose-600",
+  theater: "from-orange-900 via-red-700 to-rose-600",
+  comedy: "from-yellow-800 via-amber-700 to-orange-600",
+  food_drink: "from-teal-900 via-cyan-700 to-sky-600",
+  community: "from-cyan-900 via-sky-700 to-blue-600",
+  expo: "from-blue-900 via-indigo-700 to-violet-600",
+  books: "from-stone-800 via-stone-700 to-zinc-600",
+  free: "from-green-900 via-emerald-700 to-teal-600",
   other: "from-slate-900 via-slate-700 to-zinc-500",
 };
 

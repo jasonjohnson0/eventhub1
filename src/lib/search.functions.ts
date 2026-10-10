@@ -1,16 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { CATEGORIES } from "@/lib/categories";
 
-const categoryEnum = z.enum([
-  "sports",
-  "networking",
-  "education",
-  "social",
-  "fundraiser",
-  "workshop",
-  "other",
-]);
+const categoryEnum = z.enum(CATEGORIES);
 
 export const searchEvents = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -67,7 +60,9 @@ export const searchEvents = createServerFn({ method: "POST" })
       const q = data.query.trim().replace(/[%,]/g, "");
       qb = qb.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
     }
-    if (data.categories.length) qb = qb.in("category", data.categories);
+    // biome-ignore lint/suspicious/noExplicitAny: the 10 new categories aren't in generated
+    // types until the migration (20261010000000) is applied and types regenerated
+    if (data.categories.length) qb = qb.in("category" as any, data.categories);
     if (data.startDate) qb = qb.gte("start_time", data.startDate);
     if (data.endDate) qb = qb.lte("start_time", data.endDate);
 
@@ -88,7 +83,8 @@ export const getEventsByCategory = createServerFn({ method: "POST" })
       .eq("status", "approved")
       // biome-ignore lint/suspicious/noExplicitAny: visibility not yet in generated types
       .eq("visibility" as any, "public")
-      .eq("category", data.category)
+      // biome-ignore lint/suspicious/noExplicitAny: see note above on the categories filter
+      .eq("category" as any, data.category)
       .order("start_time", { ascending: true })
       .limit(data.limit);
     if (error) throw new Error(error.message);
@@ -167,7 +163,8 @@ export const updateEventCategory = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("events")
-      .update({ category: data.category })
+      // biome-ignore lint/suspicious/noExplicitAny: see note above on the categories filter
+      .update({ category: data.category as any })
       .eq("id", data.eventId)
       .select()
       .single();

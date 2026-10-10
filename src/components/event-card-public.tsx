@@ -33,6 +33,16 @@ const EMOJI_BY_CATEGORY: Record<string, string> = {
   social: "🎉",
   fundraiser: "❤️",
   workshop: "🛠️",
+  music: "🎵",
+  family: "👨‍👩‍👧",
+  arts: "🎨",
+  theater: "🎭",
+  comedy: "😂",
+  food_drink: "🍽️",
+  community: "🏙️",
+  expo: "🏢",
+  books: "📖",
+  free: "🆓",
   other: "✨",
 };
 

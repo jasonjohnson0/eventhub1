@@ -1,6 +1,7 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
 import { supabaseForUser } from "../supabase";
+import { CATEGORIES } from "@/lib/categories";
 
 export default defineTool({
   name: "list_events",
@@ -9,9 +10,7 @@ export default defineTool({
     "List events visible to the signed-in user, optionally filtered by category, status, text search and date range.",
   inputSchema: {
     search: z.string().trim().min(1).max(100).optional().describe("Match against event title."),
-    category: z
-      .enum(["sports", "networking", "education", "social", "fundraiser", "workshop", "other"])
-      .optional(),
+    category: z.enum(CATEGORIES).optional(),
     status: z.enum(["pending", "approved", "rejected", "removed"]).optional(),
     from: z.string().optional().describe("ISO date/time lower bound on start_time."),
     to: z.string().optional().describe("ISO date/time upper bound on start_time."),

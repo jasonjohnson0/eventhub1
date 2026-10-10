@@ -2,10 +2,12 @@
  * Bulk event import: pure parsing for CSV and iCalendar (.ics) sources.
  * Runs in the browser for the preview; the server re-validates every row
  * before inserting (see event-import.functions.ts). No imports beyond the
- * dependency-free timezone helpers and rrule, so it is unit-testable in Node.
+ * dependency-free timezone helpers, rrule, and the equally dependency-free
+ * category list, so it is unit-testable in Node.
  */
 import * as rruleNs from "rrule";
 import { isValidTimeZone, safeTimeZone, toFloating, wallToInstant } from "./timezone.ts";
+import { CATEGORIES } from "@/lib/categories";
 
 // biome-ignore lint/suspicious/noExplicitAny: bridging two module shapes of one package
 const rrule: typeof import("rrule") = (rruleNs as any).rrulestr ? rruleNs : (rruleNs as any).default;
@@ -13,15 +15,9 @@ const rrule: typeof import("rrule") = (rruleNs as any).rrulestr ? rruleNs : (rru
 export const MAX_IMPORT_ROWS = 500;
 export const RECURRENCE_HORIZON_MONTHS = 12;
 
-export const IMPORT_CATEGORIES = [
-  "sports",
-  "networking",
-  "education",
-  "social",
-  "fundraiser",
-  "workshop",
-  "other",
-] as const;
+// Was its own copy of the category list; now the canonical one from
+// categories.ts.
+export const IMPORT_CATEGORIES = CATEGORIES;
 export type ImportCategory = (typeof IMPORT_CATEGORIES)[number];
 export type ImportStatus = "draft" | "approved";
 export type ImportVisibility = "public" | "unlisted" | "private";

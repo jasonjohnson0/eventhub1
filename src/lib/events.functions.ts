@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { ianaTimeZone } from "@/lib/timezone-schema";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { CATEGORIES } from "@/lib/categories";
 
 const isoDate = z.string().datetime({ offset: true });
 
@@ -64,7 +65,7 @@ export const createEvent = createServerFn({ method: "POST" })
         start_time: isoDate,
         end_time: isoDate,
         category: z
-          .enum(["sports", "networking", "education", "social", "fundraiser", "workshop", "other"])
+          .enum(CATEGORIES)
           .default("other"),
         tags: z.array(z.string().min(1).max(40)).max(20).default([]),
         latitude: z.number().min(-90).max(90).optional().nullable(),
@@ -216,7 +217,7 @@ export const updateEvent = createServerFn({ method: "POST" })
         description: z.string().max(4000).optional().nullable(),
         location: z.string().max(300).optional().nullable(),
         category: z
-          .enum(["sports", "networking", "education", "social", "fundraiser", "workshop", "other"])
+          .enum(CATEGORIES)
           .optional(),
         tags: z.array(z.string().min(1).max(40)).max(20).optional(),
         start_time: isoDate.optional(),

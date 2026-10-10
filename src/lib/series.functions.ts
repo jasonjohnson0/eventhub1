@@ -5,20 +5,13 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { DEFAULT_TIMEZONE } from "@/lib/timezone";
 import { computeOccurrences } from "@/lib/recurrence";
+import { CATEGORIES } from "@/lib/categories";
 
 type EventUpdate = Database["public"]["Tables"]["events"]["Update"];
 type SeriesUpdate = Database["public"]["Tables"]["event_series"]["Update"];
 
 const isoDate = z.string().datetime({ offset: true });
-const categoryEnum = z.enum([
-  "sports",
-  "networking",
-  "education",
-  "social",
-  "fundraiser",
-  "workshop",
-  "other",
-]);
+const categoryEnum = z.enum(CATEGORIES);
 
 // MAX_OCCURRENCES and computeOccurrences live in lib/recurrence.ts (pure, so
 // the DST unit suite imports the real code), same behavior as before.
@@ -55,7 +48,9 @@ export const createSeries = createServerFn({ method: "POST" })
         title: data.title,
         description: data.description ?? null,
         location: data.location ?? null,
-        category: data.category,
+        // biome-ignore lint/suspicious/noExplicitAny: the 10 new categories aren't in generated
+        // types until the migration (20261010000000) is applied and types regenerated
+        category: data.category as any,
         tags: data.tags,
         dtstart: data.dtstart,
         duration_minutes: data.duration_minutes,
@@ -121,7 +116,8 @@ export const updateSeriesInstance = createServerFn({ method: "POST" })
     if (data.title !== undefined) patch.title = data.title;
     if (data.description !== undefined) patch.description = data.description;
     if (data.location !== undefined) patch.location = data.location;
-    if (data.category !== undefined) patch.category = data.category;
+    // biome-ignore lint/suspicious/noExplicitAny: see note above on the series insert
+    if (data.category !== undefined) patch.category = data.category as any;
     if (data.tags !== undefined) patch.tags = data.tags;
     if (Object.keys(patch).length === 0) return { updated: 0 };
 
