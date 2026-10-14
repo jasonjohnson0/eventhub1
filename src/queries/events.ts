@@ -61,15 +61,10 @@ export type GeocodeResult = { label: string; latitude: number; longitude: number
 
 /** Geocode a free-form address or ZIP code (OpenStreetMap Nominatim). */
 export async function geocodeAddress(input: string): Promise<GeocodeResult | null> {
-  const q = input.trim();
+  const q = input.trim().slice(0, 200);
   if (!q) return null;
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=${encodeURIComponent(q)}`;
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!res.ok) return null;
-  const rows = (await res.json()) as { lat: string; lon: string; display_name: string }[];
-  const hit = rows[0];
-  if (!hit) return null;
-  return { label: hit.display_name, latitude: Number(hit.lat), longitude: Number(hit.lon) };
+  const { geocodeServer } = await import("@/lib/geocode.functions");
+  return geocodeServer({ data: { q } });
 }
 
 const sel = (s: string): string => s;
