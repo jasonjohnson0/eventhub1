@@ -30,12 +30,19 @@ export const ALL_TIMEZONES: string[] = (() => {
   }
 })();
 
+const validZones = new Map<string, boolean>();
 export function isValidTimeZone(tz: string | null | undefined): tz is string {
   if (!tz) return false;
+  const cached = validZones.get(tz);
+  if (cached !== undefined) return cached;
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    if (validZones.size >= 256) validZones.clear();
+    validZones.set(tz, true);
     return true;
   } catch {
+    if (validZones.size >= 256) validZones.clear();
+    validZones.set(tz, false);
     return false;
   }
 }
@@ -168,11 +175,15 @@ export function instantToWallTimeInput(instant: Date, timeZone: string): string 
  *  the IANA name itself if the environment can't produce a short form. */
 export function zoneAbbr(iso: string | Date, timeZone: string): string {
   const zone = safeTimeZone(timeZone);
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "short" }).formatToParts(
-    new Date(iso),
-  );
+  let formatter = abbreviationFormatters.get(zone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "short" });
+    abbreviationFormatters.set(zone, formatter);
+  }
+  const parts = formatter.formatToParts(new Date(iso));
   return parts.find((p) => p.type === "timeZoneName")?.value ?? zone;
 }
+const abbreviationFormatters = new Map<string, Intl.DateTimeFormat>();
 
 /** The viewer's own browser timezone -- used only to decide whether to show
  *  a secondary "your time" line, never to silently convert the primary
