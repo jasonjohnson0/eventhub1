@@ -23,7 +23,7 @@ const browser = await chromium.launch({
   const errs = [];
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errs.push(String(e)));
-  await page.goto(`${BASE}/events/e1`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/events/aaaaaaaa-1111-4111-8111-111111111111`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(800);
   const body = await page.innerText('body');
 
@@ -42,7 +42,7 @@ const browser = await chromium.launch({
   const errs = [];
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errs.push(String(e)));
-  await page.goto(`${BASE}/events/e1`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/events/aaaaaaaa-1111-4111-8111-111111111111`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(800);
   const body = await page.innerText('body');
 

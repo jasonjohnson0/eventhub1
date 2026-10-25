@@ -168,7 +168,7 @@ const EVENTS = [
   // validate `id` as a real UUID, same as production event ids -- the short
   // 'e1'-style ids above fail that check. This one exists only so
   // manage-authorization.mjs can exercise those routes.
-  { id: 'aaaaaaaa-1111-4111-8111-111111111111', coordinator_id: COORD, title: 'Harvest Festival', description: 'Music, food and a parade.', location: 'Main Street', start_time: day(2), end_time: day(2, 22), category: 'community', status: 'approved' },
+  { id: 'aaaaaaaa-1111-4111-8111-111111111111', coordinator_id: COORD, title: 'Harvest Festival', description: 'Music, food and a parade.', location: 'Main Street', start_time: day(2), end_time: day(2, 22), category: 'community', status: 'approved', timezone: 'America/Chicago' },
 ];
 
 // Spec 05's timeline group-by-venue toggle -- e2 and e5 above both carry
@@ -781,7 +781,7 @@ function handle(req, res) {
   if (path === '/rest/v1/rpc/get_event_rsvp_counts') {
     let b = {};
     try { b = JSON.parse(req.__body || '{}'); } catch {}
-    if (b.p_event_id === 'e1') return send([{ going: 42, interested: 7, declined: 2 }]);
+    if (b.p_event_id === 'e1' || b.p_event_id === HARVEST_UUID) return send([{ going: 42, interested: 7, declined: 2 }]);
     return send([{ going: 0, interested: 0, declined: 0 }]);
   }
   if (path === '/rest/v1/rpc/get_event_rsvp_counts_bulk') {

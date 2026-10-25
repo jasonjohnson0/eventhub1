@@ -48,7 +48,7 @@ async function fillAndSubmit() {
   await fieldByLabel('Event title').fill('Probe Event');
   await fieldByLabel('Date').fill('2027-05-01');
   await fieldByLabel('Start time').fill('18:00');
-  await fieldByLabel('End time').fill('20:00');
+  await fieldByLabel('End time (optional)').fill('20:00');
   await page.getByRole('button', { name: 'Submit for review' }).click();
   await page.waitForTimeout(600);
 }
@@ -110,7 +110,7 @@ await fieldByLabel('Your email').fill('visitor@example.com');
 await fieldByLabel('Event title').fill('Probe Event');
 await fieldByLabel('Date').fill('2027-05-01');
 await fieldByLabel('Start time').fill('18:00');
-await fieldByLabel('End time').fill('20:00');
+await fieldByLabel('End time (optional)').fill('20:00');
 await disabledSubmit.click({ force: true }).catch(() => {});
 await page.waitForTimeout(400);
 subs = await readSubmissions();
