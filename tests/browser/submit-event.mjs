@@ -39,7 +39,7 @@ const readSubmissions = async () => (await fetch(`${MOCK}/__submissions`)).json(
 // htmlFor/id or wrapping, so getByLabel() can't resolve them -- fall back to
 // "the input right after this label's text" instead.
 const fieldByLabel = (text) =>
-  page.locator(
+  ['Date', 'Start time', 'End time (optional)'].includes(text) ? page.getByLabel(text, { exact: true }) : page.locator(
     `xpath=//label[normalize-space(text())="${text}"]/following-sibling::*[self::input or self::textarea or self::button][1]`,
   );
 

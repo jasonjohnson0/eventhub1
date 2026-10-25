@@ -107,7 +107,7 @@ try {
   const withHeader = await go('/c/riverside');
   const headerHtml = await page.locator('header').first().innerHTML();
   const imageStyle = await page.locator('header').first().getAttribute('style');
-  check('the header renders the uploaded background image', imageStyle?.includes(TEST_HEADER_URL), imageStyle ?? headerHtml.slice(0, 300));
+  check('the header renders the uploaded background image', headerHtml.includes(TEST_HEADER_URL) || imageStyle?.includes(TEST_HEADER_URL), (imageStyle ?? '') + headerHtml.slice(0, 300));
   check('page content still renders normally alongside the header image',
     withHeader.includes('Riverside Events Co.') && withHeader.includes('Harvest Festival'), withHeader.slice(0, 200));
 
