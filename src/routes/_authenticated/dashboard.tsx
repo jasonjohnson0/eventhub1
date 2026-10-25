@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar as CalendarIcon, PlusCircle, Users, Megaphone, Sparkles, Compass } from "lucide-react";
 import { BillingStatusCard } from "@/components/billing-status-card";
 import { SponsorPerformance } from "@/components/sponsor-performance";
+import { PendingSubmissionsReminder } from "@/components/pending-submissions-reminder";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -32,7 +33,9 @@ function Dashboard() {
           <>
             {/* Above the quick links: what a calendar costs and what its sponsors
                 are getting are the two things a coordinator is actually running a
-                business on. */}
+                business on. The reminder keeps the review queue from silently
+                backing up -- a thin public calendar is usually a backlog. */}
+            <PendingSubmissionsReminder />
             <BillingStatusCard />
             <SponsorPerformance />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

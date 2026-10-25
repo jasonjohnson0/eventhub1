@@ -20,7 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { submitEvent } from "@/lib/submissions.functions";
 import { CATEGORIES, type SubmissionCategory } from "@/lib/submissions.shared";
 import { categoryLabel } from "@/lib/categories";
-import { getPublicCoordinator, listLiveCoordinators } from "@/lib/coordinator.functions";
+import { getPublicCoordinator, getSiteCoordinator, listLiveCoordinators } from "@/lib/coordinator.functions";
 
 const searchSchema = z.object({ c: z.string().trim().optional() });
 
@@ -77,8 +77,19 @@ function SubmitEventPage() {
         .catch(() => setCoordinatorNotFound(true));
       setLoadingCoordinators(false);
     } else {
-      listLiveCoordinators()
-        .then(setCoordinators)
+      // A white-labeled deployment (DEFAULT_COORDINATOR_SLUG set) belongs to
+      // exactly one community: lock the form to it instead of listing every
+      // community on the platform to its visitors. Only the multi-community
+      // network home (no slug configured) gets the full picker.
+      getSiteCoordinator()
+        .then(async (site) => {
+          if (site) {
+            setCoordinatorSlug(site.slug);
+            setCoordinatorName(site.company_name ?? site.slug);
+          } else {
+            setCoordinators(await listLiveCoordinators());
+          }
+        })
         .finally(() => setLoadingCoordinators(false));
     }
   }, [c]);
@@ -200,7 +211,7 @@ function SubmitEventPage() {
                 That community calendar could not be found. Double-check the link, or ask the
                 organizer for a fresh one.
               </p>
-            ) : c && coordinatorName ? (
+            ) : coordinatorName ? (
               <p className="rounded-md border bg-muted/40 p-3 text-sm">
                 Submitting to <span className="font-medium">{coordinatorName}</span>'s calendar.
               </p>
