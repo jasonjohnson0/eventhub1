@@ -60,6 +60,17 @@ check('locked coordinator name renders', body.includes("Submitting to"), body.sl
 check('shows the coordinator by name, not the raw slug', body.includes('Riverside Events Co.'), body.slice(0, 300));
 check('no picker is shown when a coordinator is already scoped', !body.includes('Choose a community'));
 
+await page.getByRole('button', { name: 'Choose event date', exact: true }).click();
+await page.locator('[data-slot="calendar"] button[data-day]').filter({ hasText: /^15$/ }).first().click();
+check('a mouse-picked day is written to the date input', /^\d{4}-\d{2}-15$/.test(await page.getByLabel('Date', { exact: true }).inputValue()));
+await page.getByRole('button', { name: 'Choose start time', exact: true }).click();
+await page.getByRole('combobox', { name: 'Start time hour', exact: true }).click();
+await page.getByRole('option', { name: '7 PM', exact: true }).click();
+await page.getByRole('combobox', { name: 'Start time minute', exact: true }).click();
+await page.getByRole('option', { name: '30', exact: true }).click();
+await page.getByRole('button', { name: 'Done', exact: true }).click();
+check('mouse-only time selection writes 19:30', await page.getByLabel('Start time', { exact: true }).inputValue() === '19:30');
+
 await fillAndSubmit();
 let landed = await page.innerText('body');
 check('reached the thank-you screen', landed.includes('Thanks — we got it'), landed.slice(0, 200));
