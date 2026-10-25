@@ -357,8 +357,20 @@ function EventsPage() {
       <main className="mx-auto max-w-7xl px-6 py-14">
         <GeoFilter geo={geo} onChange={setGeo} matchCount={geo.lat != null ? mappable.length : null} />
 
+        {/* Widened-search notice: the visitor asked for events near a place
+            and there were none at that radius, so say what we did instead. */}
+        {expandedSearch && filtered.length > 0 && (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Nothing within {geo.radius} miles of <span className="font-semibold">{geo.near}</span> yet —{" "}
+            {effectiveRadius === null
+              ? "showing the nearest events anywhere in the country, closest first."
+              : `we widened the search to ${effectiveRadius} miles.`}{" "}
+            Events without a pinned location are included too, marked approximate.
+          </div>
+        )}
+
         {/* Widgets */}
-        {!loading && filtered.length > 0 && (
+        {filtered.length > 0 && (
           // min-w-0 on the children: a CSS grid item's default min-width
           // is "auto", i.e. its content's intrinsic width, not 0 -- so
           // without this, the countdown widget's own unbreakable content
@@ -443,33 +455,39 @@ function EventsPage() {
           )}
         </div>
 
-        {!loading && view !== "agenda" && filtered.length === 0 && (
+        {view !== "agenda" && filtered.length === 0 && (
           <div className="mb-8 rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 p-8 text-center">
             <div className="text-5xl">🔭</div>
             <h3 className="mt-3 text-lg font-bold text-slate-900">
-              {hasActiveFilters ? "Nothing matches — yet." : "A quiet week — for now."}
+              {geoActive
+                ? `No events near ${geo.near} yet — anywhere.`
+                : hasActiveFilters
+                  ? "Nothing matches — yet."
+                  : "A quiet week — for now."}
             </h3>
             <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
-              {hasActiveFilters
-                ? "Try a different search, or see what's actually happening below."
-                : "A slow week is a good week to host something."}
+              {geoActive
+                ? "We looked nationwide and came up empty. Know something happening there? Add it — you'll be the first on the map."
+                : hasActiveFilters
+                  ? "Try a different search, or see what's actually happening below."
+                  : "A slow week is a good week to host something."}
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               {hasActiveFilters && (
                 <Button
                   variant="outline"
                   className="rounded-full"
-                  onClick={() => {
-                    setQuery("");
-                    setCategory(null);
-                    setRange("all");
-                  }}
+                  onClick={() =>
+                    // Clears EVERYTHING -- search text, category, range and
+                    // the location filter -- not just the text filters.
+                    navigate({ to: "/events", search: { view }, replace: true })
+                  }
                 >
                   Clear filters
                 </Button>
               )}
               <Button asChild className="rounded-full">
-                <Link to="/events" search={{ ...search, category: "", q: "", range: "all" }}>
+                <Link to="/events" search={{ view }}>
                   Show all upcoming events
                 </Link>
               </Button>
@@ -489,12 +507,6 @@ function EventsPage() {
 
         {view === "agenda" ? (
           <AgendaView signedIn={signedIn} />
-        ) : loading ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-80 animate-pulse rounded-3xl bg-slate-100" />
-            ))}
-          </div>
         ) : view === "month" ? (
           <MonthView cursor={cursor} events={filtered} />
         ) : view === "week" ? (
@@ -534,7 +546,17 @@ function EventsPage() {
         ) : filtered.length === 0 ? null : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((ev, i) => (
-              <EventCardPublic key={ev.id} event={ev} index={i} />
+              <EventCardPublic
+                key={ev.id}
+                event={ev}
+                index={i}
+                distance={
+                  geoActive && ev.latitude != null && ev.longitude != null
+                    ? distanceMiles(geo.lat as number, geo.lng as number, ev.latitude, ev.longitude)
+                    : null
+                }
+                approximate={geoActive && (ev.latitude == null || ev.longitude == null)}
+              />
             ))}
           </div>
         )}
@@ -545,7 +567,7 @@ function EventsPage() {
             <CalendarDays className="mx-auto h-10 w-10" />
             <h3 className="mt-4 text-3xl font-black">Ready to RSVP? 🎉</h3>
             <p className="mx-auto mt-2 max-w-md text-white/90">
-              Create a free account to RSVP, save events, and get updates from coordinators.
+              Create a free account to RSVP and get updates from coordinators.
             </p>
             <Button asChild size="lg" className="mt-6 rounded-full bg-white text-fuchsia-600 hover:bg-white/90">
               <Link to="/auth">Sign in to RSVP</Link>
