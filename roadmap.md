@@ -1,5 +1,10 @@
 # Roadmap — Deficiency list 2026-10-24
 
+## Follow-up requested October 25
+- [ ] Diagnose and resolve the previously reported failing checks.
+- [ ] Refresh dashboard billing, sponsor statistics, and pending reviews on navigation.
+- [ ] Verify signed-in dashboard and public event search; deliver an updated Claude report.
+
 - [ ] P0-1: /sign-in 404 → redirect to /auth (route file exists; verify why it 404s)
 - [ ] P0-2a: location default 0,0 + fetch race; IP geolocate or no filter; loading state
 - [ ] P0-2b: empty-market fallback (explained empty state, radius auto-expand, submit CTA)
