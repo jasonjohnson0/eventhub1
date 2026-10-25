@@ -64,7 +64,14 @@ function safeNext(next: string | undefined): string {
 export const Route = createFileRoute("/auth")({
   validateSearch: (s) => searchSchema.parse(s),
   component: AuthPage,
-  head: () => ({ meta: [{ title: "Sign in — EventHub" }] }),
+  head: () => ({ meta: [
+    { title: "Sign in — EventHub" },
+    { name: "description", content: "Sign in to EventHub to RSVP or manage your community calendar." },
+    { property: "og:title", content: "Sign in — EventHub" },
+    { property: "og:description", content: "Access your EventHub account and community calendar." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
 });
 
 function AuthPage() {

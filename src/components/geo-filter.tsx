@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { LocateFixed, MapPin, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RADIUS_OPTIONS, geocodeAddress } from "@/queries/events";
+import { isSpecificLocation } from "@/lib/location-search";
 
 export type GeoState = {
   near: string;
@@ -14,9 +15,10 @@ type Props = {
   geo: GeoState;
   onChange: (next: Partial<GeoState>) => void;
   matchCount: number | null;
+  effectiveRadius?: number | null;
 };
 
-export function GeoFilter({ geo, onChange, matchCount }: Props) {
+export function GeoFilter({ geo, onChange, matchCount, effectiveRadius = geo.radius }: Props) {
   const [input, setInput] = useState(geo.near);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +35,10 @@ export function GeoFilter({ geo, onChange, matchCount }: Props) {
     const q = input.trim();
     if (!q) {
       clear();
+      return;
+    }
+    if (!isSpecificLocation(q)) {
+      setError("Please enter a ZIP code or include the state, such as Springfield, IL.");
       return;
     }
     setBusy(true);
@@ -89,6 +95,7 @@ export function GeoFilter({ geo, onChange, matchCount }: Props) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="ZIP code or City, State (e.g. 36301 or Dothan, AL)"
+              aria-label="ZIP code or City, State"
               inputMode="text"
               className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
             />
@@ -146,7 +153,8 @@ export function GeoFilter({ geo, onChange, matchCount }: Props) {
       {error && <p className="mt-3 text-xs font-medium text-rose-600">{error}</p>}
       {!error && active && (
         <p className="mt-3 text-xs text-slate-500">
-          Showing {matchCount ?? 0} mapped {matchCount === 1 ? "event" : "events"} within {geo.radius} miles of{" "}
+          Showing {matchCount ?? 0} {matchCount === 1 ? "event" : "events"}{" "}
+          {effectiveRadius === null ? "nationwide after widening the search from" : `within ${effectiveRadius} miles of`}{" "}
           <span className="font-semibold text-slate-700">{geo.near}</span>
           {resolved ? <> (resolved to {resolved})</> : null}. Events without a pinned location still appear, marked
           as approximate. If nothing is this close, we automatically widen the search.

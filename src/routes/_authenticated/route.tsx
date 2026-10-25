@@ -1,7 +1,8 @@
-import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { NavigationPending } from "@/components/navigation-pending";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -50,6 +51,7 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthLayout() {
+  const navigating = useRouterState({ select: (state) => state.isLoading });
   const { user, isAdmin, coordinatorState } = Route.useRouteContext();
   const initial = (user.email ?? "?").charAt(0).toUpperCase();
   return (
@@ -70,7 +72,7 @@ function AuthLayout() {
             </Link>
           </header>
           <main className="flex-1 bg-muted/30">
-            <Outlet />
+            {navigating ? <NavigationPending /> : <Outlet />}
           </main>
         </div>
       </div>
