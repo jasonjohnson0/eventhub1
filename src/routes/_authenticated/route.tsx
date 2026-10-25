@@ -51,7 +51,9 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthLayout() {
-  const navigating = useRouterState({ select: (state) => state.isLoading });
+  const navigating = useRouterState({
+    select: (state) => state.isLoading && state.location.pathname !== state.resolvedLocation?.pathname,
+  });
   const { user, isAdmin, coordinatorState } = Route.useRouteContext();
   const initial = (user.email ?? "?").charAt(0).toUpperCase();
   return (
