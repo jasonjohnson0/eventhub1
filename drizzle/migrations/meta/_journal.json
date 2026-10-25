@@ -29,6 +29,13 @@
       "when": 1791241775278,
       "tag": "0003_social_feed_ad_surface",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792930657196,
+      "tag": "0004_fix_critical_security_findings",
+      "breakpoints": true
     }
   ]
 }
