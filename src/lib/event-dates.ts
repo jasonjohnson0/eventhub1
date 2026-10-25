@@ -13,7 +13,7 @@
  *     timezone module), so the unit suite imports it directly rather than
  *     keeping a hand-copied duplicate in sync.
  */
-import { safeTimeZone, toFloating } from "./timezone.ts";
+import { safeTimeZone, toFloating, zoneAbbr } from "./timezone.ts";
 
 type Timed = { start_time: string; end_time: string; timezone?: string | null };
 
@@ -108,18 +108,18 @@ export function isMultiDay(event: Timed): boolean {
  *  that event's own calendar -- "Saturday 6pm" means 6pm in that event's
  *  zone, not a silent conversion to whoever's looking. `abbr: true` appends
  *  the zone abbreviation ("6:00 PM CDT") where there's room. */
+const timeFormatters = new Map<string, Intl.DateTimeFormat>();
 export function fmtTime(iso: string | Date, timeZone?: string | null, opts: { abbr?: boolean } = {}) {
   const zone = timeZone ? safeTimeZone(timeZone) : undefined;
-  const base = new Date(iso).toLocaleTimeString(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-    ...(zone ? { timeZone: zone } : {}),
-  });
+  const key = zone ?? "viewer";
+  let formatter = timeFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", ...(zone ? { timeZone: zone } : {}) });
+    timeFormatters.set(key, formatter);
+  }
+  const base = formatter.format(new Date(iso));
   if (!opts.abbr || !zone) return base;
-  const parts = new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "short" }).formatToParts(
-    new Date(iso),
-  );
-  const abbr = parts.find((p) => p.type === "timeZoneName")?.value;
+  const abbr = zoneAbbr(iso, zone);
   return abbr ? `${base} ${abbr}` : base;
 }
 
