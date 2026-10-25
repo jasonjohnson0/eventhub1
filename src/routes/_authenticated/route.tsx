@@ -74,7 +74,8 @@ function AuthLayout() {
             </Link>
           </header>
           <main className="flex-1 bg-muted/30">
-            {navigating ? <NavigationPending /> : <Outlet />}
+            {navigating && <NavigationPending />}
+            <div hidden={navigating}><Outlet /></div>
           </main>
         </div>
       </div>
