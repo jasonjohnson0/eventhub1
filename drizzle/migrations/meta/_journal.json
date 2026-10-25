@@ -43,6 +43,13 @@
       "when": 1792932529246,
       "tag": "0005_remove_postgis_use_plain_distance",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792932570840,
+      "tag": "0006_grant_nearby_search",
+      "breakpoints": true
     }
   ]
 }
