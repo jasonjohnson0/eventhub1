@@ -82,3 +82,28 @@ export const listLiveCoordinators = createServerFn({ method: "GET" }).handler(
     return (data as PublicCoordinatorListing[] | null) ?? [];
   },
 );
+
+/**
+ * The one community a white-labeled deployment belongs to, when the operator
+ * has set DEFAULT_COORDINATOR_SLUG. /submit-event uses it to lock the
+ * community picker instead of listing every community on the platform -- one
+ * community's visitors should never see another community's name. Returns
+ * null when unset (the multi-community network home keeps the full picker).
+ */
+export const getSiteCoordinator = createServerFn({ method: "GET" }).handler(
+  async (): Promise<PublicCoordinator | null> => {
+    const slug = process.env.DEFAULT_COORDINATOR_SLUG?.trim();
+    if (!slug) return null;
+    const parsed = slugSchema.safeParse({ slug });
+    if (!parsed.success) return null;
+    // biome-ignore lint/suspicious/noExplicitAny: RPC not in generated types yet
+    const { data: rows, error } = await (supabase as any).rpc("get_public_coordinator_profile", {
+      p_slug: parsed.data.slug,
+    });
+    if (error) {
+      console.error("getSiteCoordinator error", error);
+      return null;
+    }
+    return ((rows as PublicCoordinator[] | null) ?? [])[0] ?? null;
+  },
+);

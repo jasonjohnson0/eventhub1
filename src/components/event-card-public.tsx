@@ -46,7 +46,20 @@ const EMOJI_BY_CATEGORY: Record<string, string> = {
   other: "✨",
 };
 
-export function EventCardPublic({ event, index = 0 }: { event: PublicEvent; index?: number }) {
+export function EventCardPublic({
+  event,
+  index = 0,
+  distance = null,
+  approximate = false,
+}: {
+  event: PublicEvent;
+  index?: number;
+  /** Miles from the visitor's searched location, when a location filter is on. */
+  distance?: number | null;
+  /** True when the event has no pinned coordinates and is shown under a
+   *  location filter anyway -- its location text is all we have. */
+  approximate?: boolean;
+}) {
   const date = new Date(event.start_time);
   const dateLabel = date.toLocaleDateString(undefined, {
     month: "short",
@@ -113,6 +126,20 @@ export function EventCardPublic({ event, index = 0 }: { event: PublicEvent; inde
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 shrink-0 text-sky-500" />
               <span className="line-clamp-1">{event.location}</span>
+            </div>
+          )}
+          {distance != null && (
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 shrink-0 text-emerald-500" />
+              <span className="font-medium text-emerald-700">
+                {distance < 1 ? "Under a mile" : `${Math.round(distance)} mi`} away
+              </span>
+            </div>
+          )}
+          {approximate && (
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 shrink-0 text-amber-500" />
+              <span className="text-amber-700">Approximate location — confirm with the organizer</span>
             </div>
           )}
           <div className="flex items-center gap-2">
