@@ -1,18 +1,23 @@
 # Roadmap — Deficiency list 2026-10-24
 
-- [ ] P0-1: /sign-in 404 → redirect to /auth (route file exists; verify why it 404s)
-- [ ] P0-2a: location default 0,0 + fetch race; IP geolocate or no filter; loading state
-- [ ] P0-2b: empty-market fallback (explained empty state, radius auto-expand, submit CTA)
-- [ ] P1-3: slow/async rendering, stale dashboard panels
-- [ ] P1-4: "Reset filters" button does nothing
-- [ ] P1-5: event counts disagree (grid vs map vs sidebar)
-- [ ] P1-6: unpinned events hidden under location filter; geocode at submission
-- [ ] P1-7: fixed 25mi radius, no auto-expansion
-- [ ] P1-8: event times default America/Chicago; per-event timezone display
-- [ ] P2-9: forgot-password link on /auth
-- [ ] P2-10: date/time picker mouse-only selection on /submit-event
-- [ ] P2-11: "save events" copy vs no save feature
-- [ ] P2-12: /submit-event community selector exposes other communities
-- [ ] P2-13: town search state disambiguation (ZIP-first)
-- [ ] Ops-14: moderation backlog reminder (code: pending-submissions reminder)
-- [ ] Verify in browser; write report for Claude
+## Follow-up requested October 25
+- [x] Diagnose and resolve the previously reported failing checks; full browser and unit suites pass.
+- [x] Refresh dashboard billing, sponsor statistics, and pending reviews on navigation.
+- [x] Verify signed-in dashboard and public event search; deliver an updated Claude report.
+
+- [x] P0-1: sign-in aliases redirect to /auth; verified.
+- [x] P0-2a: no 0,0 fallback; query/loading flow repaired. Hosted IP hint remains unverified locally.
+- [x] P0-2b: widening explanation, nearest results and submit CTA.
+- [x] P1-3: refresh dashboard panels; show loading instead of the previous page. Network latency still exists.
+- [x] P1-4: reset clears search/category/location.
+- [x] P1-5: public views use one filtered set; dashboard sidebar/map now upcoming and deployment-community scoped. Sidebar is not a public ZIP-filtered count.
+- [x] P1-6: keep unpinned events; best-effort geocode on approval; five prior published rows backfilled.
+- [x] P1-7: 25 → 50 → 100 miles → nationwide fallback.
+- [x] P1-8: workspace/event timezone display; timezone browser/unit checks pass.
+- [x] P2-9: existing Forgot password link verified; no live reset email sent.
+- [x] P2-10: mouse-only in-page date/time pickers; browser checks pass.
+- [x] P2-11: remove unsupported save-event promise.
+- [x] P2-12: public bare submission locked to Dothan community; shared scoped links preserved.
+- [x] P2-13: ZIP-first; town-only input prompts for state.
+- [x] Ops-14: reminder exists and refreshes; queue intentionally not auto-approved.
+- [x] Verify in browser; write report for Claude.

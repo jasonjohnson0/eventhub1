@@ -94,12 +94,21 @@ export const getEventsByCategory = createServerFn({ method: "POST" })
 export const getCategoryCounts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    let query = context.supabase
       .from("events")
       .select("category")
       .eq("status", "approved")
       // biome-ignore lint/suspicious/noExplicitAny: visibility not yet in generated types
-      .eq("visibility" as any, "public");
+      .eq("visibility" as any, "public")
+      .gte("end_time", new Date().toISOString());
+    const slug = process.env.DEFAULT_COORDINATOR_SLUG?.trim();
+    if (slug) {
+      const { data: profiles } = await context.supabase.rpc("get_public_coordinator_profile", { p_slug: slug });
+      const id = profiles?.[0]?.coordinator_id;
+      if (!id) return {};
+      query = query.eq("coordinator_id", id);
+    }
+    const { data, error } = await query;
     if (error) throw new Error(error.message);
     const counts: Record<string, number> = {};
     for (const r of data ?? []) counts[r.category] = (counts[r.category] ?? 0) + 1;
@@ -109,12 +118,21 @@ export const getCategoryCounts = createServerFn({ method: "GET" })
 export const getMapEvents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    let query = context.supabase
       .from("event_locations")
-      .select("event_id, location_name, latitude, longitude, events!inner(id,title,start_time,category,status,location)")
+      .select("event_id, location_name, latitude, longitude, events!inner(id,title,start_time,end_time,category,status,location,coordinator_id)")
       .eq("events.status", "approved")
       // biome-ignore lint/suspicious/noExplicitAny: events.visibility not yet in generated types
-      .eq("events.visibility" as any, "public");
+      .eq("events.visibility" as any, "public")
+      .gte("events.end_time", new Date().toISOString());
+    const slug = process.env.DEFAULT_COORDINATOR_SLUG?.trim();
+    if (slug) {
+      const { data: profiles } = await context.supabase.rpc("get_public_coordinator_profile", { p_slug: slug });
+      const id = profiles?.[0]?.coordinator_id;
+      if (!id) return [];
+      query = query.eq("events.coordinator_id", id);
+    }
+    const { data, error } = await query;
     if (error) throw new Error(error.message);
     return (data ?? []).map((r) => ({
       id: r.event_id,

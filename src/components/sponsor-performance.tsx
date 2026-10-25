@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getSponsorAdStats, type AdStatRow } from "@/lib/ad-stats.functions";
+import { type AdStatRow } from "@/lib/ad-stats.functions";
+import { sponsorStatsQuery } from "@/queries/dashboard";
 import { BarChart3, Globe } from "lucide-react";
 
 const nf = new Intl.NumberFormat();
@@ -18,12 +19,8 @@ function ctr(row: AdStatRow): string {
  * renewal. Totals and unique counts sit side by side on purpose: the honest
  * number is the one that keeps the renewal, so it is not buried.
  */
-export function SponsorPerformance({ days = 30 }: { days?: number }) {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["sponsor-ad-stats", days],
-    queryFn: () => getSponsorAdStats({ data: { days } }),
-    staleTime: 5 * 60 * 1000,
-  });
+export function SponsorPerformance({ userId, days = 30 }: { userId: string; days?: number }) {
+  const { data, isLoading, error } = useQuery(sponsorStatsQuery(userId, days));
 
   const rows = data ?? [];
   const totals = rows.reduce(

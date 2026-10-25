@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Inbox } from "lucide-react";
-import { listPendingSubmissions } from "@/lib/submissions.functions";
+import { pendingSubmissionsQuery } from "@/queries/dashboard";
 
 /**
  * Dashboard banner so the review queue can't silently back up: a thin public
@@ -9,31 +9,20 @@ import { listPendingSubmissions } from "@/lib/submissions.functions";
  * only when there is at least one pending submission; renders nothing (and
  * stays quiet on error) otherwise.
  */
-export function PendingSubmissionsReminder() {
-  const [pending, setPending] = useState<{ count: number; oldestDays: number } | null>(null);
-
-  useEffect(() => {
-    listPendingSubmissions()
-      .then((rows) => {
-        if (!rows.length) {
-          setPending(null);
-          return;
-        }
-        const oldest = Math.min(...rows.map((r) => new Date(r.submitted_at).getTime()));
-        setPending({
-          count: rows.length,
-          oldestDays: Math.max(0, Math.floor((Date.now() - oldest) / 86_400_000)),
-        });
-      })
-      .catch(() => {});
-  }, []);
-
-  if (!pending) return null;
+export function PendingSubmissionsReminder({ userId }: { userId: string }) {
+  const { data: rows, error } = useQuery(pendingSubmissionsQuery(userId));
+  if (error) return <p role="alert" className="text-sm text-muted-foreground">Pending reviews unavailable right now.</p>;
+  if (!rows?.length) return null;
+  const oldest = Math.min(...rows.map((r) => new Date(r.submitted_at).getTime()));
+  const pending = {
+    count: rows.length,
+    oldestDays: Math.max(0, Math.floor((Date.now() - oldest) / 86_400_000)),
+  };
 
   return (
     <Link
       to="/coordinator/submissions"
-      className="flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 transition-colors hover:bg-amber-100"
+      className="flex items-center gap-3 rounded-lg border border-border bg-accent px-4 py-3 text-sm text-accent-foreground transition-colors hover:bg-muted"
     >
       <Inbox className="h-5 w-5 shrink-0" />
       <span>

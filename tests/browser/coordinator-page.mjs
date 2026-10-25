@@ -99,6 +99,9 @@ const MOCK = process.env.MOCK_URL ?? 'http://127.0.0.1:54199';
 const COORD = '11111111-1111-1111-1111-111111111111';
 const TEST_HEADER_URL = 'https://cdn.example.com/branding/header-test.jpg';
 try {
+  const cacheControl = await page.context().newCDPSession(page);
+  await cacheControl.send('Network.enable');
+  await cacheControl.send('Network.setCacheDisabled', { cacheDisabled: true });
   await fetch(`${MOCK}/rest/v1/coordinator_profiles?coordinator_id=eq.${COORD}`, {
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },
@@ -106,7 +109,8 @@ try {
   });
   const withHeader = await go('/c/riverside');
   const headerHtml = await page.locator('header').first().innerHTML();
-  check('the header renders the uploaded background image', headerHtml.includes(TEST_HEADER_URL), headerHtml.slice(0, 300));
+  const imageStyle = await page.locator('header').first().getAttribute('style');
+  check('the header renders the uploaded background image', headerHtml.includes(TEST_HEADER_URL) || imageStyle?.includes(TEST_HEADER_URL), (imageStyle ?? '') + headerHtml.slice(0, 300));
   check('page content still renders normally alongside the header image',
     withHeader.includes('Riverside Events Co.') && withHeader.includes('Harvest Festival'), withHeader.slice(0, 200));
 

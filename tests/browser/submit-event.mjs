@@ -39,7 +39,7 @@ const readSubmissions = async () => (await fetch(`${MOCK}/__submissions`)).json(
 // htmlFor/id or wrapping, so getByLabel() can't resolve them -- fall back to
 // "the input right after this label's text" instead.
 const fieldByLabel = (text) =>
-  page.locator(
+  ['Date', 'Start time', 'End time (optional)'].includes(text) ? page.getByLabel(text, { exact: true }) : page.locator(
     `xpath=//label[normalize-space(text())="${text}"]/following-sibling::*[self::input or self::textarea or self::button][1]`,
   );
 
@@ -48,7 +48,7 @@ async function fillAndSubmit() {
   await fieldByLabel('Event title').fill('Probe Event');
   await fieldByLabel('Date').fill('2027-05-01');
   await fieldByLabel('Start time').fill('18:00');
-  await fieldByLabel('End time').fill('20:00');
+  await fieldByLabel('End time (optional)').fill('20:00');
   await page.getByRole('button', { name: 'Submit for review' }).click();
   await page.waitForTimeout(600);
 }
@@ -59,6 +59,17 @@ let body = await go('/submit-event?c=riverside');
 check('locked coordinator name renders', body.includes("Submitting to"), body.slice(0, 300));
 check('shows the coordinator by name, not the raw slug', body.includes('Riverside Events Co.'), body.slice(0, 300));
 check('no picker is shown when a coordinator is already scoped', !body.includes('Choose a community'));
+
+await page.getByRole('button', { name: 'Choose event date', exact: true }).click();
+await page.locator('[data-slot="calendar"] button[data-day]').filter({ hasText: /^15$/ }).first().click();
+check('a mouse-picked day is written to the date input', /^\d{4}-\d{2}-15$/.test(await page.getByLabel('Date', { exact: true }).inputValue()));
+await page.getByRole('button', { name: 'Choose start time', exact: true }).click();
+await page.getByRole('combobox', { name: 'Start time hour', exact: true }).click();
+await page.getByRole('option', { name: '7 PM', exact: true }).click();
+await page.getByRole('combobox', { name: 'Start time minute', exact: true }).click();
+await page.getByRole('option', { name: '30', exact: true }).click();
+await page.getByRole('button', { name: 'Done', exact: true }).click();
+check('mouse-only time selection writes 19:30', await page.getByLabel('Start time', { exact: true }).inputValue() === '19:30');
 
 await fillAndSubmit();
 let landed = await page.innerText('body');
@@ -110,7 +121,7 @@ await fieldByLabel('Your email').fill('visitor@example.com');
 await fieldByLabel('Event title').fill('Probe Event');
 await fieldByLabel('Date').fill('2027-05-01');
 await fieldByLabel('Start time').fill('18:00');
-await fieldByLabel('End time').fill('20:00');
+await fieldByLabel('End time (optional)').fill('20:00');
 await disabledSubmit.click({ force: true }).catch(() => {});
 await page.waitForTimeout(400);
 subs = await readSubmissions();

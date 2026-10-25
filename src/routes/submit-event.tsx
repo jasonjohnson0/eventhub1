@@ -21,6 +21,7 @@ import { submitEvent } from "@/lib/submissions.functions";
 import { CATEGORIES, type SubmissionCategory } from "@/lib/submissions.shared";
 import { categoryLabel } from "@/lib/categories";
 import { getPublicCoordinator, getSiteCoordinator, listLiveCoordinators } from "@/lib/coordinator.functions";
+import { SubmissionDate, SubmissionTime } from "@/components/submission-date-time";
 
 const searchSchema = z.object({ c: z.string().trim().optional() });
 
@@ -266,31 +267,9 @@ function SubmitEventPage() {
               <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label>Date</Label>
-                <Input
-                  type="date"
-                  value={form.date}
-                  onChange={(e) => setForm({ ...form, date: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Start time</Label>
-                <Input
-                  type="time"
-                  value={form.start}
-                  onChange={(e) => setForm({ ...form, start: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>End time (optional)</Label>
-                <Input
-                  type="time"
-                  value={form.end}
-                  onChange={(e) => setForm({ ...form, end: e.target.value })}
-                  placeholder="Not sure? Leave it blank"
-                />
-              </div>
+              <SubmissionDate value={form.date} onChange={(date) => setForm({ ...form, date })} />
+              <SubmissionTime id="submission-start" label="Start time" value={form.start} onChange={(start) => setForm({ ...form, start })} />
+              <SubmissionTime id="submission-end" label="End time (optional)" value={form.end} onChange={(end) => setForm({ ...form, end })} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">

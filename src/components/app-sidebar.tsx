@@ -118,7 +118,7 @@ export function AppSidebar({
             </form>
             <div>
               <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Categories
+                Upcoming community events
               </div>
               <div className="flex flex-wrap gap-1">
                 {CATEGORIES.map((c) => (

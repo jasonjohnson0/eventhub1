@@ -14,6 +14,12 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    // Isolate mock-browser tests from real project configuration and the
+    // preview's dependency cache; production and preview defaults stay intact.
+    ...(process.env.EVENTHUB_TEST_RUN === "1" ? {
+      envDir: "/tmp/eh-test-env",
+      cacheDir: "node_modules/.vite-eventhub-tests",
+    } : {}),
     plugins: [mcpPlugin()],
   },
 });

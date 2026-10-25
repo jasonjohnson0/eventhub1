@@ -71,6 +71,8 @@ export const Route = createFileRoute("/events")({
       { name: "description", content: "Browse the community event calendar — concerts, workshops, meetups, fundraisers and more. No account needed to explore." },
       { property: "og:title", content: "Discover Events — EventHub" },
       { property: "og:description", content: "Find your next adventure. A fun, live calendar of events happening near you." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: EventsRouteComponent,
@@ -145,8 +147,8 @@ function EventsPage() {
       search: {
         ...search,
         near: next.near ?? geo.near,
-        lat: next.lat !== undefined ? (next.lat ?? 0) : (geo.lat ?? 0),
-        lng: next.lng !== undefined ? (next.lng ?? 0) : (geo.lng ?? 0),
+        lat: next.lat !== undefined ? (next.lat ?? undefined) : (geo.lat ?? undefined),
+        lng: next.lng !== undefined ? (next.lng ?? undefined) : (geo.lng ?? undefined),
         radius: next.radius ?? geo.radius,
       },
       replace: true,
@@ -355,17 +357,22 @@ function EventsPage() {
       )}
 
       <main className="mx-auto max-w-7xl px-6 py-14">
-        <GeoFilter geo={geo} onChange={setGeo} matchCount={geo.lat != null ? mappable.length : null} />
+        <GeoFilter geo={geo} onChange={setGeo} matchCount={geoActive ? filtered.length : null} effectiveRadius={effectiveRadius} />
 
         {/* Widened-search notice: the visitor asked for events near a place
             and there were none at that radius, so say what we did instead. */}
         {expandedSearch && filtered.length > 0 && (
-          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="mb-6 rounded-lg border border-border bg-accent px-4 py-3 text-sm text-accent-foreground">
             Nothing within {geo.radius} miles of <span className="font-semibold">{geo.near}</span> yet —{" "}
             {effectiveRadius === null
               ? "showing the nearest events anywhere in the country, closest first."
               : `we widened the search to ${effectiveRadius} miles.`}{" "}
             Events without a pinned location are included too, marked approximate.
+            <div className="mt-3">
+              <Button asChild variant="outline" size="sm">
+                <Link to="/submit-event">No events near you yet? Add one</Link>
+              </Button>
+            </div>
           </div>
         )}
 

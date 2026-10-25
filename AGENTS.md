@@ -11,3 +11,7 @@
 
 - Keep the public social feed client-paginated in batches of 20, while the static third-party embed uses URL pagination because it must remain script-free and host-scroll-safe.
 - Feed advertising must use the existing campaign selection RPC and tracking endpoints; impression deduplication is per advertiser per feed load.
+- Dashboard secondary panels share user-scoped query options and are prefetched without blocking navigation; revalidate on return so cached private data cannot cross accounts or stay stale.
+- Route transitions show an immediate pending state rather than retaining the previous page; keep Query in control of preload freshness.
+- Mock-browser tests use isolated environment/dependency caches and a fixed loopback CSP exception only in local development test mode; production security policy remains unchanged.
+- Public submission dates and times retain native inputs plus accessible in-page mouse pickers, avoiding reliance on browser-owned popups.

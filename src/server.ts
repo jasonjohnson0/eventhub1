@@ -65,7 +65,12 @@ function isEmbeddablePath(pathname: string): boolean {
 // everywhere or the in-editor preview breaks; X-Frame-Options is included
 // alongside CSP for older browsers that don't honor frame-ancestors.
 function applyFrameProtection(request: Request, response: Response): Response {
-  const { pathname } = new URL(request.url);
+  const { pathname, hostname } = new URL(request.url);
+  // A local-only fixture origin must be reachable during isolated browser
+  // tests. Never widen production policy or accept a user-controlled origin.
+  const testConnection = import.meta.env.DEV && process.env.EVENTHUB_TEST_RUN === "1" &&
+    (hostname === "127.0.0.1" || hostname === "localhost")
+    ? " http://127.0.0.1:54199" : "";
   const embeddable = isEmbeddablePath(pathname);
   // Not an in-place response.headers.set(): a Response.redirect() response
   // (used by the ad-click endpoint's fallback path) has immutable headers in
@@ -107,7 +112,7 @@ function applyFrameProtection(request: Request, response: Response): Response {
       // real browser load of /events) -- script-src's fallback for
       // worker-src blocked it until this was split out explicitly.
       "worker-src 'self' blob:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://lovable.dev https://*.lovable.dev",
+      `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://lovable.dev https://*.lovable.dev${testConnection}`,
       "frame-src 'self' https://lovable.dev https://*.lovable.dev",
       "frame-ancestors 'self' https://lovable.dev https://*.lovable.dev",
       "object-src 'none'",
