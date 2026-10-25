@@ -50,6 +50,13 @@
       "when": 1792932570840,
       "tag": "0006_grant_nearby_search",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792932601766,
+      "tag": "0007_event_photos_owner_read",
+      "breakpoints": true
     }
   ]
 }
