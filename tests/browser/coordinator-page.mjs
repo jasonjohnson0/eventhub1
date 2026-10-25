@@ -99,6 +99,9 @@ const MOCK = process.env.MOCK_URL ?? 'http://127.0.0.1:54199';
 const COORD = '11111111-1111-1111-1111-111111111111';
 const TEST_HEADER_URL = 'https://cdn.example.com/branding/header-test.jpg';
 try {
+  const cacheControl = await page.context().newCDPSession(page);
+  await cacheControl.send('Network.enable');
+  await cacheControl.send('Network.setCacheDisabled', { cacheDisabled: true });
   await fetch(`${MOCK}/rest/v1/coordinator_profiles?coordinator_id=eq.${COORD}`, {
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },

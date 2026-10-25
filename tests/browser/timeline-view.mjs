@@ -82,8 +82,9 @@ await fetch(`${MOCK}/__events/timeline?n=0`);
 
   // Zoom: week (8px/h) and day (64px/h) re-scale exactly.
   await page.click('[data-zoom-button="week"]');
+  await page.evaluate(() => { document.querySelector('[data-timeline-scroller]').scrollLeft = 1872 - 200; });
   await page.waitForTimeout(300);
-  const multiW = await barBox(page, 'tl-multi');
+  const multiW = await page.locator('[data-timeline-bar][data-event-id="tl-multi"]').evaluate((el) => ({ left: parseFloat(el.style.left), width: parseFloat(el.style.width) })).catch(() => null);
   await shot(page, 'week');
   check('week zoom: the multi-day bar is 4x wider (544px)', near(multiW?.width, 544), JSON.stringify(multiW));
   check('week zoom: its start re-scales too (1872px)', near(multiW?.left, 1872), JSON.stringify(multiW));

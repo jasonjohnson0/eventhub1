@@ -14,3 +14,4 @@
 - Dashboard secondary panels share user-scoped query options and are prefetched without blocking navigation; revalidate on return so cached private data cannot cross accounts or stay stale.
 - Route transitions show an immediate pending state rather than retaining the previous page; keep Query in control of preload freshness.
 - Mock-browser tests use isolated environment/dependency caches and a fixed loopback CSP exception only in local development test mode; production security policy remains unchanged.
+- Public submission dates and times retain native inputs plus accessible in-page mouse pickers, avoiding reliance on browser-owned popups.

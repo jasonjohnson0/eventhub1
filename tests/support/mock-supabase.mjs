@@ -774,6 +774,10 @@ function handle(req, res) {
   }
 
   if (path === '/rest/v1/event_rsvps') return send([], { 'content-range': '0-0/0' });
+  if (path === '/rest/v1/sponsored_slots') {
+    const eventId = parseEq(url.search, 'event_id');
+    return send(eventId === HARVEST_UUID ? [{ id: 'dddddddd-1111-4111-8111-111111111111', event_id: HARVEST_UUID, position: 1, slot_type: 'card', status: 'available', cost_cents: 15000 }] : []);
+  }
   // The public going/interested/declined aggregate. e1 gets a deliberately
   // nonzero, distinctive value so a test can tell "wired to the RPC" apart
   // from "silently fell back to 0" -- the exact failure mode of the bug this
