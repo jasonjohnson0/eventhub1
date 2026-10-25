@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.search_events_nearby(double precision, double precision, double precision, integer) TO anon, authenticated, service_role;
