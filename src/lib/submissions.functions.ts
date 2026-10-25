@@ -205,6 +205,31 @@ export const approveSubmission = createServerFn({ method: "POST" })
       );
     }
 
+    // Geocode the venue text at approval time so the event is pinnable on the
+    // map and countable in radius searches. Best-effort: a failed lookup must
+    // never block an approval -- the event simply stays unpinned (and the
+    // public calendar still shows unpinned events under a location filter,
+    // flagged approximate, so nothing silently vanishes).
+    if (ed.location) {
+      try {
+        const { geocodeAddressServer } = await import("@/lib/geocode.functions");
+        const hit = await geocodeAddressServer(ed.location);
+        if (hit) {
+          await sb.from("event_locations").upsert(
+            {
+              event_id: created.id,
+              location_name: ed.location,
+              latitude: hit.latitude,
+              longitude: hit.longitude,
+            },
+            { onConflict: "event_id" },
+          );
+        }
+      } catch {
+        /* geocoding is best-effort */
+      }
+    }
+
     const { error: updErr } = await sb
       .from("event_submissions")
       .update({

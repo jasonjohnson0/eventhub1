@@ -20,6 +20,9 @@ export function GeoFilter({ geo, onChange, matchCount }: Props) {
   const [input, setInput] = useState(geo.near);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The full resolved place name from the lookup, shown so a duplicated town
+  // name ("Marianna" exists in several states) is visible for confirmation.
+  const [resolved, setResolved] = useState<string | null>(null);
 
   useEffect(() => setInput(geo.near), [geo.near]);
 
@@ -37,9 +40,10 @@ export function GeoFilter({ geo, onChange, matchCount }: Props) {
     try {
       const hit = await geocodeAddress(q);
       if (!hit) {
-        setError("We couldn't find that place. Try a city or ZIP code.");
+        setError("We couldn't find that place. Try a ZIP code, or a town with its state (e.g. Marianna, FL).");
         return;
       }
+      setResolved(hit.label);
       onChange({ near: q, lat: hit.latitude, lng: hit.longitude });
     } catch {
       setError("Location lookup failed. Please try again.");
@@ -71,6 +75,7 @@ export function GeoFilter({ geo, onChange, matchCount }: Props) {
   function clear() {
     setInput("");
     setError(null);
+    setResolved(null);
     onChange({ near: "", lat: null, lng: null });
   }
 
@@ -83,7 +88,7 @@ export function GeoFilter({ geo, onChange, matchCount }: Props) {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Address or ZIP code (e.g. 32202)"
+              placeholder="ZIP code or City, State (e.g. 36301 or Dothan, AL)"
               inputMode="text"
               className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
             />
@@ -142,8 +147,9 @@ export function GeoFilter({ geo, onChange, matchCount }: Props) {
       {!error && active && (
         <p className="mt-3 text-xs text-slate-500">
           Showing {matchCount ?? 0} mapped {matchCount === 1 ? "event" : "events"} within {geo.radius} miles of{" "}
-          <span className="font-semibold text-slate-700">{geo.near}</span>. Events without a pinned location are hidden
-          while this filter is on.
+          <span className="font-semibold text-slate-700">{geo.near}</span>
+          {resolved ? <> (resolved to {resolved})</> : null}. Events without a pinned location still appear, marked
+          as approximate. If nothing is this close, we automatically widen the search.
         </p>
       )}
     </div>

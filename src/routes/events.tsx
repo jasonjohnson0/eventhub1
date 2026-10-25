@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tan
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PublicHero } from "@/components/public-hero";
@@ -9,6 +10,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { EventCardPublic } from "@/components/event-card-public";
 import { CalendarDays, ChevronLeft, ChevronRight, PartyPopper } from "lucide-react";
 import { fetchEvents, addDays, startOfWeek, distanceMiles, type CalendarEvent } from "@/queries/events";
+import { geolocateIpServer } from "@/lib/geocode.functions";
 import { GeoFilter, type GeoState } from "@/components/geo-filter";
 import { MonthView } from "@/components/CalendarViews/MonthView";
 import { WeekView } from "@/views/WeekView";
@@ -45,8 +47,18 @@ const searchSchema = z.object({
   radius: fallback(z.number(), 25).optional(),
 });
 
+const eventsQuery = {
+  queryKey: ["public-events", 400] as const,
+  queryFn: () => fetchEvents({ limit: 400 }),
+  staleTime: 60_000,
+};
+
 export const Route = createFileRoute("/events")({
   validateSearch: zodValidator(searchSchema),
+  // Load events in the route loader so the first paint already has them --
+  // the page previously fetched in a post-mount effect, which is what made
+  // visitors stare at a blank/skeleton page for seconds after navigation.
+  loader: ({ context }) => context.queryClient.ensureQueryData(eventsQuery),
   // No cache-control at all before this -- every request re-rendered the
   // SSR shell from scratch. Short enough that a newly-approved event still
   // shows up well within the window.
@@ -90,8 +102,7 @@ function EventsPage() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/events" });
   const [signedIn, setSignedIn] = useState(false);
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: events } = useSuspenseQuery(eventsQuery);
   const [cursor, setCursor] = useState<Date>(() => new Date());
   const [mapReady, setMapReady] = useState(false);
   useEffect(() => setMapReady(true), []);
@@ -147,43 +158,41 @@ function EventsPage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Location default: approximate the visitor's position from their IP (set
+  // by the edge network, no consent prompt) when the URL carries no location
+  // of its own. If the platform can't provide it, we simply don't filter --
+  // never fall back to 0,0, which would filter to the middle of the ocean.
   useEffect(() => {
+    if (search.near || search.lat || search.lng) return;
     let cancelled = false;
-    async function load() {
-      setLoading(true);
-      try {
-        const rows = await fetchEvents({ limit: 400 });
-        if (!cancelled) setEvents(rows);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
+    geolocateIpServer()
+      .then((hit) => {
+        if (cancelled || !hit) return;
+        setGeo({ near: hit.label, lat: hit.latitude, lng: hit.longitude });
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
+    // Mount-only: a fresh load with no location in the URL.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filtered = useMemo(() => {
+  // Everything except the geo filter. Grid AND map are "what's still ahead"
+  // feeds, so both drop anything already over -- the map previously kept
+  // elapsed events, which is why its count disagreed with the grid's. Every
+  // calendar-shaped view (month, week, day, list, etc.) keeps already-elapsed
+  // events in the period being displayed -- a month view hiding the first
+  // half of the month once it's past would be the actual bug.
+  const baseFiltered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const now = Date.now();
     const weekMs = 7 * 24 * 60 * 60 * 1000;
     const monthMs = 30 * 24 * 60 * 60 * 1000;
-    // Intentional, not a bug: grid is a "what's still ahead" feed, so it
-    // drops anything already over. Every calendar-shaped view (month,
-    // week, day, list, etc.) keeps already-elapsed events in the period
-    // being displayed -- a month view hiding the first half of the month
-    // once it's past would be the actual bug. Same filters, same data,
-    // different-looking counts between grid and the other views is by
-    // design.
-    const upcomingOnly = view === "grid";
+    const upcomingOnly = view === "grid" || view === "map";
     return events.filter((e) => {
       if (upcomingOnly && new Date(e.end_time).getTime() < now) return false;
       if (category && e.category !== category) return false;
-      if (geo.lat != null && geo.lng != null) {
-        if (e.latitude == null || e.longitude == null) return false;
-        if (distanceMiles(geo.lat, geo.lng, e.latitude, e.longitude) > geo.radius) return false;
-      }
       if (q) {
         const hay = `${e.title} ${e.description ?? ""} ${e.location ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -195,12 +204,54 @@ function EventsPage() {
       }
       return true;
     });
-  }, [events, query, category, range, view, geo.lat, geo.lng, geo.radius]);
+  }, [events, query, category, range, view]);
+
+  const geoActive = geo.lat != null && geo.lng != null;
+
+  // Geo narrowing with two nationwide rules:
+  //  1. Events without pinned coordinates are NEVER hidden by a location
+  //     filter -- they trail the pinned results flagged "approximate".
+  //  2. If the chosen radius finds nothing, widen automatically
+  //     (25 -> 50 -> 100 miles -> nationwide) rather than showing a bare
+  //     empty calendar in an otherwise populated region.
+  const { filtered, effectiveRadius } = useMemo(() => {
+    if (!geoActive) return { filtered: baseFiltered, effectiveRadius: null as number | null };
+    const lat = geo.lat as number;
+    const lng = geo.lng as number;
+    const pinned = baseFiltered.filter((e) => e.latitude != null && e.longitude != null);
+    const unpinned = baseFiltered.filter((e) => e.latitude == null || e.longitude == null);
+    const ladder = [...new Set([geo.radius, 50, 100])].sort((a, b) => a - b);
+    let radius: number | null = null;
+    let within: CalendarEvent[] = [];
+    for (const r of ladder) {
+      within = pinned.filter(
+        (e) => distanceMiles(lat, lng, e.latitude as number, e.longitude as number) <= r,
+      );
+      if (within.length > 0) {
+        radius = r;
+        break;
+      }
+    }
+    // Nationwide fallback: every pinned event, nearest first.
+    if (radius === null) {
+      within = [...pinned].sort(
+        (a, b) =>
+          distanceMiles(lat, lng, a.latitude as number, a.longitude as number) -
+          distanceMiles(lat, lng, b.latitude as number, b.longitude as number),
+      );
+    }
+    return { filtered: [...within, ...unpinned], effectiveRadius: radius };
+  }, [baseFiltered, geoActive, geo.lat, geo.lng, geo.radius]);
 
   const mappable = useMemo(
     () => filtered.filter((e) => e.latitude != null && e.longitude != null),
     [filtered],
   );
+
+  // True when the location search found nothing at the chosen radius and the
+  // results come from a wider net (or the whole country) instead.
+  const expandedSearch =
+    geoActive && (effectiveRadius === null || (effectiveRadius ?? 0) > geo.radius);
 
   // Shown whenever the current filters turn up nothing, regardless of which
   // view is active -- a calendar view otherwise just renders an empty grid
@@ -306,8 +357,20 @@ function EventsPage() {
       <main className="mx-auto max-w-7xl px-6 py-14">
         <GeoFilter geo={geo} onChange={setGeo} matchCount={geo.lat != null ? mappable.length : null} />
 
+        {/* Widened-search notice: the visitor asked for events near a place
+            and there were none at that radius, so say what we did instead. */}
+        {expandedSearch && filtered.length > 0 && (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Nothing within {geo.radius} miles of <span className="font-semibold">{geo.near}</span> yet —{" "}
+            {effectiveRadius === null
+              ? "showing the nearest events anywhere in the country, closest first."
+              : `we widened the search to ${effectiveRadius} miles.`}{" "}
+            Events without a pinned location are included too, marked approximate.
+          </div>
+        )}
+
         {/* Widgets */}
-        {!loading && filtered.length > 0 && (
+        {filtered.length > 0 && (
           // min-w-0 on the children: a CSS grid item's default min-width
           // is "auto", i.e. its content's intrinsic width, not 0 -- so
           // without this, the countdown widget's own unbreakable content
@@ -392,33 +455,39 @@ function EventsPage() {
           )}
         </div>
 
-        {!loading && view !== "agenda" && filtered.length === 0 && (
+        {view !== "agenda" && filtered.length === 0 && (
           <div className="mb-8 rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 p-8 text-center">
             <div className="text-5xl">🔭</div>
             <h3 className="mt-3 text-lg font-bold text-slate-900">
-              {hasActiveFilters ? "Nothing matches — yet." : "A quiet week — for now."}
+              {geoActive
+                ? `No events near ${geo.near} yet — anywhere.`
+                : hasActiveFilters
+                  ? "Nothing matches — yet."
+                  : "A quiet week — for now."}
             </h3>
             <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
-              {hasActiveFilters
-                ? "Try a different search, or see what's actually happening below."
-                : "A slow week is a good week to host something."}
+              {geoActive
+                ? "We looked nationwide and came up empty. Know something happening there? Add it — you'll be the first on the map."
+                : hasActiveFilters
+                  ? "Try a different search, or see what's actually happening below."
+                  : "A slow week is a good week to host something."}
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               {hasActiveFilters && (
                 <Button
                   variant="outline"
                   className="rounded-full"
-                  onClick={() => {
-                    setQuery("");
-                    setCategory(null);
-                    setRange("all");
-                  }}
+                  onClick={() =>
+                    // Clears EVERYTHING -- search text, category, range and
+                    // the location filter -- not just the text filters.
+                    navigate({ to: "/events", search: { view }, replace: true })
+                  }
                 >
                   Clear filters
                 </Button>
               )}
               <Button asChild className="rounded-full">
-                <Link to="/events" search={{ ...search, category: "", q: "", range: "all" }}>
+                <Link to="/events" search={{ view }}>
                   Show all upcoming events
                 </Link>
               </Button>
@@ -438,12 +507,6 @@ function EventsPage() {
 
         {view === "agenda" ? (
           <AgendaView signedIn={signedIn} />
-        ) : loading ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-80 animate-pulse rounded-3xl bg-slate-100" />
-            ))}
-          </div>
         ) : view === "month" ? (
           <MonthView cursor={cursor} events={filtered} />
         ) : view === "week" ? (
@@ -483,7 +546,17 @@ function EventsPage() {
         ) : filtered.length === 0 ? null : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((ev, i) => (
-              <EventCardPublic key={ev.id} event={ev} index={i} />
+              <EventCardPublic
+                key={ev.id}
+                event={ev}
+                index={i}
+                distance={
+                  geoActive && ev.latitude != null && ev.longitude != null
+                    ? distanceMiles(geo.lat as number, geo.lng as number, ev.latitude, ev.longitude)
+                    : null
+                }
+                approximate={geoActive && (ev.latitude == null || ev.longitude == null)}
+              />
             ))}
           </div>
         )}
@@ -494,7 +567,7 @@ function EventsPage() {
             <CalendarDays className="mx-auto h-10 w-10" />
             <h3 className="mt-4 text-3xl font-black">Ready to RSVP? 🎉</h3>
             <p className="mx-auto mt-2 max-w-md text-white/90">
-              Create a free account to RSVP, save events, and get updates from coordinators.
+              Create a free account to RSVP and get updates from coordinators.
             </p>
             <Button asChild size="lg" className="mt-6 rounded-full bg-white text-fuchsia-600 hover:bg-white/90">
               <Link to="/auth">Sign in to RSVP</Link>
