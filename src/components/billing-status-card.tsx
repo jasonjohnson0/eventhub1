@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getBillingStatus, type BillingStatus } from "@/lib/ad-stats.functions";
+import { type BillingStatus } from "@/lib/ad-stats.functions";
+import { billingStatusQuery } from "@/queries/dashboard";
 import { BadgeCheck, CircleAlert, Clock, Receipt } from "lucide-react";
 
 const money = (cents: number) =>
@@ -43,12 +44,8 @@ const LOOK: Record<BillingStatus["state"], { ring: string; icon: React.ReactNode
  * and the fee is only assessed after a month has closed, so there is always
  * time to sell a slot and make it moot.
  */
-export function BillingStatusCard() {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["billing-status"],
-    queryFn: () => getBillingStatus({ data: {} }),
-    staleTime: 5 * 60 * 1000,
-  });
+export function BillingStatusCard({ userId }: { userId: string }) {
+  const { data, isLoading, error } = useQuery(billingStatusQuery(userId));
 
   if (isLoading) {
     return (

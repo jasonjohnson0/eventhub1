@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarClock, Check, Inbox, Loader2, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +38,7 @@ export const Route = createFileRoute("/_authenticated/submissions")({
 type Status = "pending" | "approved" | "rejected" | "all";
 
 function SubmissionsPage() {
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<Status>("pending");
   const [rows, setRows] = useState<EventSubmission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +65,10 @@ function SubmissionsPage() {
       const payload = { data: { id, notes: notes[id] ?? null } };
       if (approve) await approveSubmission(payload);
       else await rejectSubmission(payload);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["pending-submissions"] }),
+        queryClient.invalidateQueries({ queryKey: ["public-events"] }),
+      ]);
       toast.success(approve ? "Published to the calendar" : "Submission declined");
       await load(status);
     } catch (e) {

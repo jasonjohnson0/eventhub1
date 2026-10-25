@@ -62,7 +62,8 @@ if [ "$WHICH" = "all" ] || [ "$WHICH" = "browser" ]; then
   node tests/support/mock-supabase.mjs "$MOCK_PORT" >/tmp/eh-mock.log 2>&1 &
   mock_pid=$!
   VITE_SUPABASE_URL="http://127.0.0.1:$MOCK_PORT" SUPABASE_URL="http://127.0.0.1:$MOCK_PORT" \
-  VITE_SUPABASE_ANON_KEY=test SUPABASE_ANON_KEY=test SUPABASE_SERVICE_ROLE_KEY=test-service-key \
+  VITE_SUPABASE_PUBLISHABLE_KEY=test SUPABASE_PUBLISHABLE_KEY=test SUPABASE_SERVICE_ROLE_KEY=test-service-key \
+  DEFAULT_COORDINATOR_SLUG= \
   PUBLIC_SITE_URL=https://events.example AD_STATS_SALT=test-salt \
   PLATFORM_CONFIG_ENC_KEY=test-platform-config-enc-key CRON_SECRET=test-cron-secret \
   TEST_EMAIL_OUTBOX_URL="http://127.0.0.1:$MOCK_PORT/__outbox" \

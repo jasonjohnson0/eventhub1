@@ -5,10 +5,25 @@ import { Calendar as CalendarIcon, PlusCircle, Users, Megaphone, Sparkles, Compa
 import { BillingStatusCard } from "@/components/billing-status-card";
 import { SponsorPerformance } from "@/components/sponsor-performance";
 import { PendingSubmissionsReminder } from "@/components/pending-submissions-reminder";
+import { billingStatusQuery, sponsorStatsQuery, pendingSubmissionsQuery } from "@/queries/dashboard";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  loader: ({ context }) => {
+    if (context.coordinatorState !== "complete") return;
+    // Independent secondary panels start together without delaying navigation.
+    void context.queryClient.prefetchQuery(billingStatusQuery(context.user.id));
+    void context.queryClient.prefetchQuery(sponsorStatsQuery(context.user.id));
+    void context.queryClient.prefetchQuery(pendingSubmissionsQuery(context.user.id));
+  },
   component: Dashboard,
-  head: () => ({ meta: [{ title: "Dashboard — EventHub" }] }),
+  head: () => ({ meta: [
+    { title: "Dashboard — EventHub" },
+    { name: "description", content: "Your EventHub calendar, pending reviews, plan status, and sponsor performance." },
+    { property: "og:title", content: "Dashboard — EventHub" },
+    { property: "og:description", content: "Manage your community calendar and review current sponsor performance." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
 });
 
 function Dashboard() {
@@ -35,9 +50,9 @@ function Dashboard() {
                 are getting are the two things a coordinator is actually running a
                 business on. The reminder keeps the review queue from silently
                 backing up -- a thin public calendar is usually a backlog. */}
-            <PendingSubmissionsReminder />
-            <BillingStatusCard />
-            <SponsorPerformance />
+            <PendingSubmissionsReminder userId={user.id} />
+            <BillingStatusCard userId={user.id} />
+            <SponsorPerformance userId={user.id} />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <QuickCard
                 title="Your calendar"
